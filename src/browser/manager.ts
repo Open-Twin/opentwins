@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { execaCommand } from 'execa';
+import { execa, execaCommand } from 'execa';
 import chalk from 'chalk';
 import {
   getBrowserProfileDir,
@@ -7,6 +7,12 @@ import {
   getBrowserProfilesConfigPath,
 } from '../util/paths.js';
 import * as log from '../util/logger.js';
+
+const PLATFORM_COLORS: Record<string, string> = {
+  reddit: '#FF4500', twitter: '#1DA1F2', linkedin: '#0A66C2', bluesky: '#0085FF',
+  threads: '#000000', medium: '#00AB6C', substack: '#FF6719', devto: '#3B49DF',
+  ph: '#DA552F', ih: '#4F46E5',
+};
 
 interface ProfileConfig {
   platform: string;
@@ -84,6 +90,32 @@ export async function setupProfile(platform: string): Promise<void> {
   });
   config.nextPort = port + 1;
   saveProfilesConfig(config);
+
+  // Register profile with OpenClaw so `openclaw browser --browser-profile ot-{platform}` works
+  const openclawProfileName = `ot-${platform}`;
+  const color = PLATFORM_COLORS[platform] || '#888888';
+  try {
+    const result = await execa('openclaw', [
+      'browser', 'create-profile',
+      '--name', openclawProfileName,
+      '--color', color,
+    ], { reject: false, timeout: 15000 });
+
+    if (result.exitCode === 0) {
+      log.success(`OpenClaw browser profile "${openclawProfileName}" registered`);
+    } else {
+      const stderr = result.stderr || result.stdout || '';
+      if (stderr.includes('already exists') || stderr.includes('duplicate')) {
+        log.info(`OpenClaw profile "${openclawProfileName}" already exists`);
+      } else {
+        log.warn(`Could not register OpenClaw profile "${openclawProfileName}": ${stderr.slice(0, 200)}`);
+        log.info(`  You can register it manually: openclaw browser create-profile --name ${openclawProfileName} --color "${color}"`);
+      }
+    }
+  } catch {
+    log.warn(`OpenClaw CLI not available. Register the profile manually:`);
+    log.info(`  openclaw browser create-profile --name ${openclawProfileName} --color "${color}"`);
+  }
 
   log.success(`Profile for ${platform} configured (port ${port})`);
 }

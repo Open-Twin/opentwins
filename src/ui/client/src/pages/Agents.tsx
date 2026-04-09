@@ -300,15 +300,44 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
   if (!agent) return null;
 
   // Parse schedule
-  const scheduleEntries: Array<{ time: string; action: string; desc?: string }> = [];
+  const TASK_LABELS: Record<string, { label: string; icon: string }> = {
+    search_and_comment: { label: 'Search & Comment', icon: '🔍' },
+    browse_and_engage: { label: 'Browse & Engage', icon: '💬' },
+    create_poll: { label: 'Create Poll', icon: '📊' },
+    create_post: { label: 'Create Post', icon: '✏️' },
+    create_article: { label: 'Write Article', icon: '📝' },
+    create_repost: { label: 'Repost', icon: '🔄' },
+    update_memory: { label: 'Update Memory', icon: '🧠' },
+    check_notifications: { label: 'Check Notifications', icon: '🔔' },
+    reply_to_comments: { label: 'Reply to Comments', icon: '↩️' },
+    connection_requests: { label: 'Send Connections', icon: '🤝' },
+  };
+
+  const scheduleEntries: Array<{ time: string; action: string; desc?: string; status?: string }> = [];
   if (agent.schedule && typeof agent.schedule === 'object') {
     const tasks = ((agent.schedule as Record<string, unknown>).tasks || []) as Array<Record<string, unknown>>;
     if (Array.isArray(tasks)) {
       for (const t of tasks) {
+        const typeKey = String(t.type || t.action || 'unknown');
+        const meta = TASK_LABELS[typeKey];
+        const cfg = (t.config || {}) as Record<string, unknown>;
+
+        // Build a short description from config
+        let desc = t.description ? String(t.description) : '';
+        if (!desc) {
+          const parts: string[] = [];
+          if (cfg.max_comments) parts.push(`${cfg.max_comments} comment${Number(cfg.max_comments) > 1 ? 's' : ''}`);
+          if (cfg.max_likes) parts.push(`${cfg.max_likes} likes`);
+          if (cfg.question) parts.push(`"${String(cfg.question).slice(0, 60)}"`);
+          if (cfg.queries && Array.isArray(cfg.queries)) parts.push(`${cfg.queries.length} queries`);
+          if (parts.length) desc = parts.join(', ');
+        }
+
         scheduleEntries.push({
           time: String(t.time || t.time_scheduled || '-'),
-          action: String(t.action || 'unknown'),
-          desc: t.description ? String(t.description) : undefined,
+          action: meta ? `${meta.icon} ${meta.label}` : typeKey,
+          desc,
+          status: t.status ? String(t.status) : undefined,
         });
       }
     }
@@ -640,7 +669,15 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
                   <div key={i} className="flex items-start gap-3 py-2 rounded px-2 transition-colors hover:bg-white/[0.02]">
                     <span className="mono text-[11px] shrink-0 w-12" style={{ color: 'var(--c-teal-dim)' }}>{t.time}</span>
                     <div className="flex-1 min-w-0">
-                      <span className="mono text-[11px]" style={{ color: 'var(--c-text-dim)' }}>{t.action}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="mono text-[11px]" style={{ color: 'var(--c-text)' }}>{t.action}</span>
+                        {t.status && (
+                          <span className="mono text-[9px] px-1.5 py-0.5 rounded-full" style={{
+                            color: t.status === 'completed' ? 'var(--c-teal)' : t.status === 'failed' ? 'var(--c-red)' : t.status === 'running' ? 'var(--c-amber)' : 'var(--c-text-muted)',
+                            background: t.status === 'completed' ? 'var(--c-teal-glow)' : t.status === 'failed' ? 'rgba(248,113,113,0.1)' : t.status === 'running' ? 'rgba(251,191,36,0.1)' : 'transparent',
+                          }}>{t.status}</span>
+                        )}
+                      </div>
                       {t.desc && <div className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--c-text-muted)' }}>{t.desc}</div>}
                     </div>
                   </div>
