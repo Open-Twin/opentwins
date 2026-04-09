@@ -1,0 +1,66 @@
+# BROWSER-note.md - Substack Note Publishing Patterns
+
+## SS 9. Create & Publish Note
+
+🚨 "New post" button opens Notes composer (NOT "Create post" which opens article editor).
+
+### Step 1 — Open Notes composer
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 1000));
+    var btns = Array.from(document.querySelectorAll('button'));
+    var newPostBtn = btns.find(b => b.innerText.trim() === 'New post' || b.innerText.trim() === "What's on your mind?");
+    if (!newPostBtn) return { error: 'New post button not found' };
+    newPostBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await new Promise(r => setTimeout(r, 2000));
+    var editor = document.querySelector('div[contenteditable="true"]');
+    return { opened: !!editor };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 2 — Type note content and post
+
+Uses `div[contenteditable="true"]` with paste approach. Post button disabled until content typed.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 1000));
+    var editor = document.querySelector('div[contenteditable="true"]');
+    if (!editor) return { error: 'no editor' };
+    var text = ${JSON.stringify(noteText)};
+    editor.focus();
+    editor.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 300));
+    document.execCommand('selectAll');
+    document.execCommand('delete');
+    await new Promise(r => setTimeout(r, 300));
+    var dt = new DataTransfer();
+    dt.setData('text/plain', text);
+    editor.dispatchEvent(new ClipboardEvent('paste', {
+      clipboardData: dt, bubbles: true, cancelable: true
+    }));
+    if (!editor.innerText.trim()) {
+      document.execCommand('insertText', false, text);
+    }
+    editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
+    await new Promise(r => setTimeout(r, 1000));
+    var btns = Array.from(document.querySelectorAll('button'));
+    var postBtn = btns.find(b => b.innerText.trim() === 'Post' && !b.disabled);
+    if (!postBtn) return { typed: true, len: editor.innerText.length, error: 'Post button disabled' };
+    postBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await new Promise(r => setTimeout(r, 3000));
+    var editorGone = !document.querySelector('div[contenteditable="true"]');
+    return { typed: true, submitted: true, editorClosed: editorGone };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+Note content: 100-500 chars, conversational, punchy. Not article-length.

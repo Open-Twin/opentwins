@@ -1,0 +1,167 @@
+# PLAYBOOK.md - Bluesky Agent
+
+**Do NOT load on routine heartbeats.** Read only when executing the relevant task.
+
+---
+
+## Generate Schedule
+
+**When:**
+- Morning Schedule Check (HEARTBEAT.md S 0) - generates TODAY's schedule
+- Scheduled daily - generates TODAY's schedule
+
+1. **Read inputs for schedule generation:**
+   - **Content brief:** `{{pipeline_workspace}}/content-briefs/{target_date}.md` — provides today's theme, engagement targets, suggested hooks, hashtags. Update `search_queries` in tasks to include brief-specific keywords. Write theme into each task's `description`. Adapt to Bluesky style, don't copy verbatim.
+   - **INSIGHTS.md** — provides what's been working: engagement patterns, timing, hashtag performance, starter pack results.
+   - **How they work together:** Content brief sets the THEME (what to talk about). INSIGHTS.md sets the STRATEGY (which hashtags work, when to post, what format gets engagement). If no content brief exists, use INSIGHTS.md alone.
+
+2. **Extract patterns:**
+   - Timing: which slots got best engagement?
+   - Content: which topics/post types worked?
+   - Hashtags: which drove discovery?
+   - Limits: did we hit them too early?
+
+3. **Load base template** for today's day of week. Alternate categories (pm, ai, career, dev, trending), never same twice in a row.
+
+   **Weekdays (Mon-Fri):** (10 comments/day)
+   - 09:00 Search & comment - ai (max_comments: 2)
+   - 11:00 Search & comment - pm (max_comments: 2)
+   - 🚨 **11:30 Original post — Monday and Wednesday** (rotate category, see TOOLS.md)
+   - 13:00 Quote post — Mon/Wed/Fri (rotate category)
+   - 14:00 Search & comment - dev or trending (max_comments: 2)
+   - 17:00 Quote post — Tue/Thu (rotate category)
+   - 18:00 Search & comment - career or trending (max_comments: 2)
+   - 20:00 Search & comment - ai or pm (max_comments: 2)
+   - 22:00 update_memory (PLAYBOOK.md - Memory Update)
+
+   **Weekends (Sat-Sun):** (10 comments/day)
+   - 10:00 Search & comment - ai (max_comments: 2)
+   - 12:00 Search & comment - pm or trending (max_comments: 2)
+   - 🚨 **13:00 Original post — Saturday only** (rotate category, see TOOLS.md)
+   - 14:00 Quote post — every Sat (rotate category)
+   - 16:00 Search & comment - dev (max_comments: 2)
+   - 18:00 Search & comment - career (max_comments: 2)
+   - 20:00 Search & comment - ai or trending (max_comments: 2)
+   - 22:00 update_memory (PLAYBOOK.md - Memory Update)
+
+   🚨 **Original posts: MANDATORY 3/week.** Monday + Wednesday + Saturday. Always include in schedule — do NOT skip.
+   🚨 **Original post quality:** Abstract framing posts get 0 engagement (confirmed Apr 1-4). Every original post MUST include a concrete operational detail — a specific number, a real incident, a tool name, something that happened. "influence without authority" = 0 likes. "broke 3 agents yesterday because..." = engagement.
+   - 🚨 MUST include `content_source` in `original_post` config:
+     ```json
+     "config": {
+       "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/bluesky-post.md",
+       ...
+     }
+     ```
+   - `quote_post` tasks are EXCLUDED from content_source — always generate inline (reactive content).
+
+   🚨 **No spacing rule.** Execute tasks back-to-back when due.
+
+   **Capacity check (mandatory):** After building the schedule, validate before writing:
+   - Σ(max_comments across all tasks) MUST = `daily.comments.limit` from limits.json (10)
+   - Weekly quotes MUST NOT exceed `weekly.quotes.limit` (4)
+   - Weekly posts MUST NOT exceed `weekly.posts.limit` (3)
+   - If mismatch → adjust task count or max_comments values until they match exactly
+   - Example: limit=10 → 2+2+2+2+2=10 ✅ | 2+2+2+2+3=11 ❌
+
+   **Assign queries:** for each search_and_comment and quote_post task, pick 2-3 queries from `queries.json` matching its category. Write them into the task's `config.search_queries`. All queries are fresh (generated daily by content planner) — no rotation needed.
+   🚨 **Validate queries before assigning:** Bluesky search is simple keyword match on a small user base. If a query has 4+ words, specific names, or jargon — simplify it to 2-3 common words.
+
+4. **Apply conservative adjustments** (only if pattern seen 2+ times):
+   - Shift time +/-30min or add 1 task of a successful type
+   - Never remove task types that previously worked
+
+5. **Apply jitter** (+/-30 min per task):
+   - Store `time_scheduled` (base), `time` (with jitter), `jitter_applied` (minutes)
+
+6. **Anti-collision:** sort by time; if two tasks within 10 min, shift the second by +10min
+
+7. **Active hours:** clamp all times to {{active_hours.start}}-{{active_hours.end}} {{timezone}}
+
+8. **Write:** `schedule.json` with metadata.for_date = target date (TODAY), all tasks
+
+**Note:** `update_memory` at 22:00 is MANDATORY in every schedule — never skip it.
+
+---
+
+## Target Account Strategy
+
+**Priority: Comment on posts from accounts with 1k-10k followers.** Their followers see your comments in feeds, giving you exposure to larger audiences.
+
+When searching, **prefer posts where:**
+1. Author has 1k-10k followers (sweet spot - active community, not too big to get buried)
+2. Post has 1-20 likes (recent posts are fresh - even 0-1 likes is fine if the account has followers)
+3. Post has <10 replies (your comment stays near top, recent posts won't have many yet)
+
+**How to estimate account size from search results:**
+- If post has 20+ likes within hours -> likely 1k+ followers
+- If author name has verification badge -> likely larger account
+- When in doubt, check profile after navigating to post
+
+**Do NOT comment on:**
+- Accounts with <100 followers (no exposure benefit)
+- Accounts with 50k+ followers (your comment gets buried in hundreds)
+- Brand/corporate accounts (low reply chance)
+
+---
+
+## Hashtag Strategy
+
+**Add 3-5 hashtags to every quote post and original post.** Do NOT add hashtags to comments/replies.
+
+**Core hashtags (rotate, use 2-3 per post):**
+- PM: #projectmanagement #agile #PMtips #scrum #leadership
+- AI: #AIagents #artificialintelligence #AItools #automation #machinelearning
+- Dev: #coding #developer #buildinpublic #opensource #devtools
+- Career: #techleadership #PMcareer #remotework #management #director
+
+**Trending hashtags (use 1-2 per post, check what's active):**
+- #bluesky #bsky (platform-specific discovery)
+- Topic-specific trending tags from search results
+
+**Rules:**
+- English hashtags only
+- Never use more than 5 hashtags (looks spammy)
+- Place hashtags at end of post, separated by line break
+
+---
+
+## Memory Update
+
+**When:** task action = "update_memory"
+
+**GRACEFUL DEGRADATION:** Steps 1-2 use browser. If ANY step fails (timeout, error), **skip it and continue** to the next step. Step 3 (INSIGHTS.md update) is MANDATORY and does NOT require browser - it reads local memory files. Never skip step 3 because an earlier step failed.
+
+---
+
+### Step 1: Check follower count (browser - best effort)
+
+Go to @{{handle}} profile, log current count. Note weekly change if previous count is in INSIGHTS.md.
+
+If browser fails -> log "Follower check: browser unavailable" and **continue to step 2**.
+
+### Step 2: Check post performance (browser - best effort)
+
+For each original post and quote post from the last 48h, check likes/replies/views. Log what worked or didn't.
+
+If browser fails -> log "Post performance check: browser unavailable" and **continue to step 3**.
+
+### Step 3: Update `INSIGHTS.md` (MANDATORY - no browser needed)
+
+**This step MUST always run**, even if steps 1-2 failed. It reads LOCAL files only.
+
+**Read inputs:**
+- `memory/{today}.md` - today's activities and outcomes
+- `memory/{yesterday}.md` - recent patterns (if exists)
+- Follower data from step 1 (if available) or last known value from INSIGHTS.md
+- Post performance from step 2 (if available)
+
+**Update `INSIGHTS.md`** with:
+- follower count + weekly delta (use browser data or "unchanged - browser unavailable")
+- what worked (post type, hashtag, topic with above-average replies)
+- what didn't (style or hashtag with no engagement)
+- new active accounts engaging with our content
+- patterns or strategy changes worth keeping
+- which hashtags drove the most engagement
+
+Keep INSIGHTS.md under 100 lines. Replace outdated entries instead of appending.

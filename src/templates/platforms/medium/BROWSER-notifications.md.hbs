@@ -1,0 +1,63 @@
+# BROWSER-notifications.md - Medium Notification & Reply Detection Patterns
+
+## § 1. Extract Notifications
+
+Page: `https://medium.com/me/notifications` (embed 3s wait in evaluate)
+
+Only returns actionable types (response + note). Follows/subscribes/claps filtered out in JS.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    const tabpanel = document.querySelector('div[role="tabpanel"]');
+    if (!tabpanel) return { count: 0, items: [] };
+    const notifications = Array.from(tabpanel.children);
+    const items = [];
+    for (let i = 0; i < notifications.length && items.length < 10; i++) {
+      const n = notifications[i];
+      const text = n.innerText;
+      const isResponse = text.includes('responded');
+      const isNote = text.includes('left a note');
+      if (!isResponse && !isNote) continue;
+      const author = text.split('\\n')[0] || '';
+      if (author.toLowerCase().includes('{{handle}}')) continue;
+      const links = Array.from(n.querySelectorAll('a'));
+      const aLink = links.find(a => a.href.includes('/p/'));
+      items.push({
+        type: isResponse ? 'response' : 'note',
+        author: author.slice(0, 40),
+        articleUrl: aLink ? aLink.href.split('?')[0] : ''
+      });
+    }
+    return { count: items.length, items };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+---
+
+## § 2. Check Already Replied (browse_and_engage only — NOT for notifications)
+
+🚨 False-positives on notification pages (our original comment has `/@{{handle}}` link). Use tracking file dedup for notifications.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    // Only works on regular articles — NOT on notification response pages
+    const {{handle}}Links = Array.from(document.querySelectorAll('a[href*="/@{{handle}}"]'))
+      .filter(a => !a.href.includes('sidebar_menu'));
+    const hasOurComment = {{handle}}Links.length > 0 ||
+                          /\\nYou\\n\\n\\d+\\s+(mins?|hours?|days?)\\s+ago/.test(document.body.innerText);
+    return {
+      alreadyCommented: hasOurComment,
+      {{handle}}LinksCount: {{handle}}Links.length
+    };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```

@@ -1,0 +1,332 @@
+# BROWSER-engage.md - Search, Comment, Quote & Follow Patterns
+
+## Comment Quality Rules
+
+### A. Don't Default to "Agree + Expand" (per-comment check)
+
+Before writing each comment, ask: **"Am I about to agree with their point and expand on it?"** If yes, consider instead:
+- A **short reaction** ("lol this. the coordination tax is real")
+- A **personal anecdote** ("honestly i ran into this myself last week...")
+- A **disagree** ("idk i think the real issue is...", "hot take but this misses the...")
+
+Pick whichever fits the post naturally. Not every comment needs to be an insight.
+
+**Per-batch rule:** If you just wrote a 2-3 sentence insight, make the next comment in this heartbeat shorter or structurally different.
+
+### B. Length Variation (MANDATORY per batch)
+
+In every batch of 3+ comments, enforce:
+- At least one comment MUST be under 15 words (short reaction style)
+- At least one comment MUST include a first-person "I" / "my" / "we" statement
+- NEVER post 3 comments in a row that are all 2-3 sentences — break the pattern
+
+If you realize all comments so far are similar length, force the next one short.
+
+### E. High-Follower Post Rule
+
+When commenting on posts from accounts with high engagement signals (20+ likes within hours, verified badge, or 5k+ followers visible on profile):
+- Be SHORT and punchy — max 1 sentence or a fragment
+- Go for the memorable reaction that gets likes, not a thoughtful essay
+- Your comment competes with hundreds of others — stand out by being concise
+- Examples: "this is the part nobody talks about", "lol yep. learned this the hard way", "the quiet part out loud"
+
+### F. Anti-AI Check for Proactive Comments
+
+SOUL.md anti-AI rules apply to ALL comments, not just replies. Before posting any proactive comment:
+
+1. **Casual opener check:** At least 1 in 3 comments should start with a casual word (tbh, honestly, lol, ngl, oh, haha, idk, yo, man, wait)
+2. **Structure check:** If your last 2+ comments all follow "agree + reframe + takeaway" — rewrite as disagreement, tangent, or short reaction
+
+If you catch yourself writing "exactly" or "the X is the right frame" for the 2nd time in a session, stop and pick a different opener.
+
+🚨 **NEVER mention company.** No "at my company", "at my org", "at work we", "a large company", or any company reference. Frame as individual: "I've seen this", "ran into this myself", "in my setup".
+
+### G. Hard Disagreement Rule (per-batch)
+
+🚨 **In every heartbeat with 3+ comments, at least 1 MUST disagree with or challenge the author's point.** Actual pushback: "idk i think the real problem is different", "this sounds good but breaks in practice", "nah opposite in my experience." Check before finishing the batch.
+
+### H. Topic Diversity
+
+🚨 **1 in 5 comments should be on an adjacent topic WITHOUT forcing PM/AI.** React to posts about dev culture, career frustration, remote work, tooling opinions — as a person, not as "The AI-Native PM."
+
+### I. Platform Voice (Threads-specific)
+
+- **Ultra-casual is the norm.** Threads is closer to texting than to LinkedIn. Fragments, half-thoughts, emoji reactions are all natural.
+- **Very short comments are normal** — "lol true", "oh fr?", "haha yeah same" are legitimate Threads comments. Don't over-explain.
+- **No hashtags in comments** — only in original posts and quotes.
+- **Don't sound like Twitter** — Threads users migrated FROM Twitter to escape hot-take culture. Be warmer, less debate-oriented.
+
+### J. Pre-Post Self-Review (concrete checklist)
+
+Re-read your text before submitting. Check these 4 things:
+1. **Sentence structure:** Do all sentences follow the same grammatical pattern? → rewrite one differently
+2. **Sentence length:** Are all sentences roughly the same length? → shorten or lengthen one
+3. **Originality:** Did you just rephrase what the author already said? → add something new or just react instead
+4. **Natural voice:** Would you send this exact text to a friend? → if too formal or structured, loosen it
+5. **Structure:** Does your comment have intro-body-conclusion? → cut the intro or conclusion. Just start in the middle.
+6. **Dashes:** Replace every `—` and `--` with ` - `. No exceptions.
+7. **Opener dedup:** Does your comment start similarly to `last_snippet` in today_summary.json? → rewrite the opener.
+
+---
+
+## S 3. Search Page Extraction
+
+**Called once per query** (see HEARTBEAT.md §4 for multi-query loop).
+Navigate to `https://www.threads.com/search?q={QUERY}&serp_type=default&filter=recent`, then extract with 3s embedded wait.
+
+Returns enriched posts with `bio`, `ageHours` fields. `postId` extracted from URL — use directly for grep pre-check.
+
+**Filters applied inline:**
+- Skips `/media` URL variants (duplicate links from image posts)
+- Skips posts with noise keywords: hiring, job seekers, apply now, dm me for, check my link, onlyfans, follow back
+- Skips posts with < 30 chars of real text (link spam / emoji only)
+- Skips posts with 0 likes AND 0 replies (zero engagement — not worth commenting)
+- Skips posts older than 4h with 0 likes (nobody cared)
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    const posts = [];
+    const links = Array.from(document.querySelectorAll('a[href*="/post/"]'));
+    const seen = new Set();
+    const noiseKw = ['hiring', 'job seekers', 'apply now', 'dm me for', 'check my link', 'onlyfans', 'follow back'];
+
+    links.forEach(link => {
+      if (link.href.includes('/media')) return;
+      if (seen.has(link.href) || posts.length >= 10) return;
+      seen.add(link.href);
+
+      let container = link;
+      for (let i = 0; i < 9; i++) {
+        container = container.parentElement;
+        if (!container) return;
+      }
+
+      const author = link.href.split('/')[3].replace('@', '');
+      const postId = link.href.match(/\\/post\\/([^/?]+)/)?.[1] || '';
+      const lines = container.innerText.split('\\n').filter(l => l.trim());
+
+      // lines[0]=username, lines[1]=bio OR timestamp, lines[2]=timestamp OR text
+      const tsPattern = /^\\d+[smhdw]$|^\\d+\\/\\d+\\/\\d+$/;
+      let bio = '', timeStr = '', contentStart = 1;
+      if (lines[1] && !tsPattern.test(lines[1])) {
+        bio = lines[1]; timeStr = lines[2] || ''; contentStart = 3;
+      } else {
+        timeStr = lines[1] || ''; contentStart = 2;
+      }
+
+      // Parse age in hours
+      let ageHours = 0;
+      const tsMatch = timeStr.match(/^(\\d+)([smhdw])$/);
+      if (tsMatch) {
+        const n = parseInt(tsMatch[1]), u = tsMatch[2];
+        if (u === 's') ageHours = n / 3600;
+        else if (u === 'm') ageHours = n / 60;
+        else if (u === 'h') ageHours = n;
+        else if (u === 'd') ageHours = n * 24;
+        else if (u === 'w') ageHours = n * 168;
+      } else if (/^\\d+\\/\\d+\\/\\d+$/.test(timeStr)) {
+        ageHours = 72; // date shown = old post
+      }
+
+      const contentLines = lines.slice(contentStart);
+      const numbers = contentLines.filter(l => /^\\d+$/.test(l));
+      const likes = numbers.length > 0 ? parseInt(numbers[0]) : 0;
+      const replies = numbers.length > 1 ? parseInt(numbers[1]) : 0;
+      const textLines = contentLines.filter(l => !/^\\d+$/.test(l));
+      const text = textLines.join(' ').slice(0, 200);
+
+      // Noise filter
+      const textLower = text.toLowerCase();
+      if (noiseKw.some(kw => textLower.includes(kw))) return;
+      if (textLines.join('').replace(/\\s/g, '').length < 30) return;
+
+      // Reply filter: skip posts that are replies to other posts (navigating shows parent, not this post)
+      var isReply = lines.some(function(l) { return l.trim().startsWith('Replying to'); });
+      if (isReply) return;
+
+      // Engagement filter: skip posts with zero engagement (0 likes AND 0 replies)
+      if (likes === 0 && replies === 0) return;
+      // Age filter: skip posts > 4h with 0 likes
+      if (ageHours > 4 && likes === 0) return;
+
+      // Media detection — can't see images, meme posts get wrong-tone replies
+      var imgs = Array.from(container.querySelectorAll('img')).filter(img => img.getBoundingClientRect().width > 100);
+      var hasMedia = imgs.length > 0 || container.querySelectorAll('video').length > 0;
+      var isMemeLikely = hasMedia && text.length < 80;
+
+      posts.push({ author, postId, url: link.href, text, likes, replies, bio, ageHours, hasMedia, isMemeLikely });
+    });
+
+    return posts;
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+---
+
+## S 4a. Duplicate Check + Post Text (combined, on post page)
+
+After navigating to post. Combines 3s wait + DOM duplicate check + post text read into ONE evaluate:
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    const alreadyCommented = document.querySelectorAll('a[href*="/@{{handle}}"]').length > 1;
+    const links = Array.from(document.querySelectorAll('a[href*="/post/"]'));
+    if (!links[0]) return { alreadyCommented, text: 'no post' };
+    let container = links[0];
+    for (let i = 0; i < 9; i++) container = container.parentElement;
+    const lines = container ? container.innerText.split('\\n').filter(l => l.trim()) : [];
+    const text = lines.slice(2).filter(l => !/^\\d+$/.test(l)).join(' ').slice(0, 400);
+    return { alreadyCommented, text };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If `alreadyCommented: true` → backfill to `memory/commented_posts.txt`, skip to next candidate.
+
+## S 4b. Click Reply Button (for post pages)
+
+Use when commenting on posts (NOT for replies from activity page).
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    const icons = document.querySelectorAll('svg[aria-label="Reply"]');
+    if (!icons[0]) return { error: 'no_reply_button' };
+
+    let el = icons[0];
+    while (el && el !== document.body) {
+      if (el.getAttribute && el.getAttribute('role') == 'button') {
+        el.click();
+        return { clicked: true };
+      }
+      el = el.parentElement;
+    }
+    return { error: 'button_not_found' };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+After clicking, the 1.5s wait is embedded in S 5 (Reply/Comment Flow).
+
+---
+
+## S 6. Click Quote
+
+🚨 **Verified 2026-03-26:** Repost → Quote is ONE evaluate (not two). Splitting into two calls causes the menu to close before Step 2 runs (5-8s LLM overhead between calls).
+🚨 **Menu items use `[role="menuitem"]`**, NOT `div[role="button"]`.
+
+**Step 1:** Click repost icon → wait 1.5s → click Quote menuitem (ONE evaluate):
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 1000));
+    const repostSvg = document.querySelector('svg[aria-label*="Repost"]');
+    if (!repostSvg) return { error: 'no repost svg' };
+    const btn = repostSvg.closest('div[role="button"]');
+    if (!btn) return { error: 'no repost button' };
+    btn.click();
+    await new Promise(r => setTimeout(r, 1500));
+    const menuItems = Array.from(document.querySelectorAll('[role="menuitem"]'));
+    const quoteItem = menuItems.find(m => m.innerText.trim() === 'Quote');
+    if (!quoteItem) return { repostClicked: true, error: 'no Quote menuitem', items: menuItems.map(m => m.innerText.trim()) };
+    quoteItem.click();
+    await new Promise(r => setTimeout(r, 2000));
+    const dialog = document.querySelector('[role="dialog"]');
+    const textbox = dialog ? dialog.querySelector('[role="textbox"]') : null;
+    return { repostClicked: true, quoteClicked: true, dialogReady: !!textbox };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If `dialogReady: true` → proceed to Step 2.
+If `error: 'no Quote menuitem'` → retry once (click repost again). If still fails → skip, log error.
+
+**Step 2:** Use BROWSER-core.md S 5 (Reply/Comment Flow — has 1.5s embedded wait + type + submit in ONE evaluate).
+
+---
+
+## S 7. Follow User (from post page — no navigation needed)
+
+🚨 **MANDATORY before every comment and quote.** Every engagement = follow. No limit. No profile navigation.
+🚨 **Verified 2026-03-28:** Post pages have a small "+" icon (`svg[aria-label="Follow"]`) next to the author's avatar. Clicking it opens a popup with a "Follow" button. After following, the icon changes to `svg[aria-label="Following"]`.
+
+**ONE evaluate — check icon, click if needed, follow from popup:**
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 1000));
+    // Find the topmost Follow/Following icon (post author's, not commenters')
+    var svgs = Array.from(document.querySelectorAll('svg[aria-label="Follow"], svg[aria-label="Following"]')).filter(s => s.getBoundingClientRect().y > 0);
+    var topSvg = svgs.reduce((best, s) => {
+      var y = s.getBoundingClientRect().y;
+      return (!best || y < best.getBoundingClientRect().y) ? s : best;
+    }, null);
+    if (!topSvg) return { alreadyFollowing: true }; // icon disappears entirely when following
+    if (topSvg.getAttribute('aria-label') === 'Following') return { alreadyFollowing: true };
+
+    var btn = topSvg.closest('div[role="button"]') || topSvg.parentElement;
+    btn.click();
+    await new Promise(r => setTimeout(r, 1500));
+
+    var buttons = Array.from(document.querySelectorAll('div[role="button"]'));
+    var followBtn = buttons.find(b => b.innerText.trim() === 'Follow' && b.getBoundingClientRect().width > 100);
+    if (!followBtn) return { popupOpened: true, error: 'no Follow button in popup' };
+
+    followBtn.click();
+    await new Promise(r => setTimeout(r, 500));
+
+    // Close the popup so it does not interfere with reply/quote dialog
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await new Promise(r => setTimeout(r, 500));
+    return { followed: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If `alreadyFollowing`: skip silently. If `error`: skip follow, proceed with comment (don't block engagement).
+
+---
+
+## S 8. Open Compose Dialog (for original posts)
+
+🚨 **Verified 2026-03-28:** Compose dialog is identical to reply/quote dialog — same `[role="dialog"]`, `[role="textbox"]`, "Post" button. Use S 5 from BROWSER-core.md to type + submit.
+
+**ONE evaluate — click Create button in nav:**
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 1000));
+    var createSvg = document.querySelector('svg[aria-label="Create"]');
+    if (!createSvg) return { error: 'no Create button' };
+    var btn = createSvg.closest('div[role="button"]');
+    if (!btn) return { error: 'no parent button' };
+    btn.click();
+    await new Promise(r => setTimeout(r, 2000));
+    var dialog = document.querySelector('[role="dialog"]');
+    var textbox = dialog ? dialog.querySelector('[role="textbox"][contenteditable="true"]') : null;
+    return { dialogReady: !!textbox };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If `dialogReady: true` → proceed to BROWSER-core.md S 5 (type + submit).
+If `dialogReady: false` → retry once. Still fails → skip, log error.

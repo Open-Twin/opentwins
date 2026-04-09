@@ -1,0 +1,28 @@
+# USER.md - About Your Human
+
+*Learn about the person you're helping. Update this as you go.*
+
+- **Name:** {{name}} ({{display_name}})
+- **Role:** {{role}}
+- **Brand:** "{{brand_tagline}}"
+{{#if certifications_text}}- **Certifications:** {{certifications_text}}{{/if}}
+{{#if conferences_text}}- **Conferences:** {{conferences_text}}{{/if}}
+- **Timezone:** {{timezone}}
+
+## Content Pillars
+{{#each pillars}}
+- **{{this.name}}**: {{#each this.topics}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+{{/each}}
+
+{{#if experience_hooks}}
+## Experience Hooks
+{{#each experience_hooks}}
+- "{{this}}"
+{{/each}}
+{{/if}}
+
+## Context
+
+*(What do they care about? What projects are they working on? What annoys them? What makes them laugh? Build this over time.)*
+
+---

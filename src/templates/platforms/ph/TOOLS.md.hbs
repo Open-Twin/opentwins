@@ -1,0 +1,148 @@
+# TOOLS.md - Product Hunt Agent
+
+## Local Files
+
+**schedule.json** — Daily tasks with jitter-randomized timing. Read every heartbeat for due tasks.
+
+**limits.json** — Source of truth for action counts and timing. Never hardcode limit values.
+- Structure: `daily.comments`, `daily.upvotes`, `daily.follows`, `daily.bookmarks` (each has: limit, current, last_reset)
+- Resets: daily at midnight
+- Comment = limited daily (8). Reply = unlimited. Upvote = limited daily (12). Follow = auto (every comment). Bookmark = limited daily (50).
+- Increment `current` directly on each action — do NOT re-count from memory files
+
+**queries.json** — Topics and products for browsing. Pick 2-3 topics per session. Generated daily by content planner.
+
+**forum_threads.json** — Tracks forum discussions we've commented on for reply checking.
+- Structure: `{threads: [{url, last_reply_at, our_comment_count}]}`
+- Add entry when posting to a new forum thread
+- Update `last_reply_at` when we reply to existing thread
+- Use to check for new replies without scanning memory logs
+
+**followed_makers.json** — Tracks makers we've already followed (dedup across heartbeats).
+- Structure: `{followed: [username1, username2, ...]}`
+- Check before following: if username in array → skip (already following)
+- Append username after clicking Follow button
+- Prevents duplicate follow attempts across days
+
+**memory/{date}.md** — Append-only activity log. WRITE-ONLY during routine heartbeats. Only read when generating tomorrow's schedule, creating original posts, or debugging.
+- Types: Heartbeat, Comment, Reply, Upvote, Forum Comment, Error, Alert
+
+---
+
+## Product Hunt API (MANDATORY PRE-CHECK)
+
+Before opening browser for engagement tasks, ALWAYS use API to discover launches first.
+
+Use browser automation for all interactions
+
+**Pre-check steps:**
+1. Run `ph-api.sh today 15` + `ph-api.sh newest 10`
+2. Filter for relevant topics (vibe coding, AI, productivity, AI agents)
+3. Identify 2-3 launches worth commenting on (5+ votes, relevant topic)
+4. THEN open browser to comment and upvote
+
+**Commands:**
+- `today [count]` — Today's top launches
+- `newest [count]` — Today's newest launches
+- `topic <slug> [count]` — Posts in a topic
+- `search-topics <query>` — Find topic slugs
+- `post <slug>` — Full post details
+- `comments <slug> [count]` — Comments on a post
+
+---
+
+## Post Quality Filter
+
+Skip any launch that fails:
+1. Fresh (from today only)
+2. Has traction (5+ upvotes minimum)
+3. Relevant topic (AI, AI agents, tools in your field, productivity, dev tools)
+4. Not too crowded (skip 50+ comments)
+5. Sweet spot (3-20 comments ideal)
+
+---
+
+## Self-Review Gate (MANDATORY)
+
+Before posting ANY comment:
+1. Re-read your draft
+2. Ask: "If I saw this with no context, would I think AI wrote it?"
+3. Check for: parallel structure, too-clean grammar, bullet points, hedging, intro-body-conclusion
+4. PH-specific: Is it conversational? Maker-to-maker?
+5. If ANY doubt → rewrite messier
+6. Only post after passing
+
+---
+
+## Reply Deduplication (CRITICAL)
+
+PH notifications persist for hours/days after replying. **Tracking-file-first** approach — NO browser navigation for known notifications.
+
+**Tracking file:** `memory/replied_notifications_ph.json` — `{"replied": ["commentId1", "commentId2", ...]}`
+
+**For notification replies (HEARTBEAT.md §3):**
+1. Read `replied_notifications_ph.json` FIRST
+2. Extract `commentId` from each notification URL (`?comment=XXXXX`)
+3. If `commentId` in `replied[]` → **SKIP entirely** (no browser navigation)
+4. If `commentId` NOT in `replied[]` → attempt reply (max 5 browser ops per notification)
+5. Skip own comments (from @{{handle}} / {{display_name}}) → SKIP
+6. Language matching: Reply in SAME language as the comment
+
+🚨 **PH does NOT render threaded replies in the DOM.** Do NOT search for the reply text on the page — it won't be there. Use the notification preview text (~150 chars) as context to compose your reply.
+
+**After replying OR after 3 failed attempts:** ALWAYS add `commentId` to `replied_notifications_ph.json` to prevent re-checking. ALWAYS log to memory (Type = "Reply" or "Error").
+
+---
+
+## Collections Strategy
+
+PH collections are highly visible curated lists. Creating collections = authority.
+
+**Collections to create:**
+1. "Vibe Coding Stack 2026" → tools for AI-assisted development
+2. "AI Project Management Tools" → AI-powered PM dashboards, tools related to your works, team coordination tools
+3. "Open Source PM Dashboards" → open-source alternatives for project management and tracking
+4. "AI-Native Team Tools" → tools for managing AI agents as team members, orchestration, monitoring
+
+**Rules:**
+- 8-12 products per collection (not just yours)
+- Genuine descriptions for each product
+- Your tools in your field included naturally among others
+- Update monthly
+
+---
+
+## Schedule Base Templates
+
+**Mon-Sat:**
+- 10:00 Kyiv: `browse_and_engage` — API pre-check → top launches, comment on 2-3
+- 14:00 Kyiv: `browse_and_engage` — newest launches, comment on 1-2
+- 17:00 Kyiv: `browse_and_engage` — rising launches, engage with 1-2
+- Wed/Fri: Look for vibe coding / AI agent launches
+
+**Tue/Thu:**
+- 15:00 Kyiv: `forum_engagement` — browse PH discussions, comment on 1 thread
+
+**Sunday (lighter — 4 comments max):**
+- 13:00 Kyiv: `browse_and_engage` — top launches, comment on 2
+- 17:00 Kyiv: `browse_and_engage` — rising launches, comment on 2
+
+**Daily (end-of-day):**
+- 20:00 Kyiv: `streak_keeper` — ensure ≥1 upvote today to maintain PH streak
+- 22:00 Kyiv: `update_memory` — review today's learnings, update INSIGHTS.md
+- 22:30 Kyiv: `generate_tomorrow_schedule` — create tomorrow's schedule
+
+**Monthly:**
+- 1 `collection_task` — create or update a curated collection
+
+**Recurring threads to watch:**
+- "What are you working on this week?" (Mon/Tue)
+- "Who's Hiring?" / "Who wants to be hired?" (periodic)
+- "Share your side project" (periodic)
+- "Feedback Friday" or similar
+
+---
+
+## Browser
+
+`profile: "promo-ph"` on every call. See BROWSER-core.md for selectors.

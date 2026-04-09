@@ -1,0 +1,39 @@
+# BROWSER-core.md - Dev.to Global Rules & Selectors
+
+**CRITICAL RULES (apply to ALL sections):**
+- Pass `profile: "{{browser_profile}}"` on EVERY browser call
+- NEVER use `args` parameter in evaluate — gateway ignores it. Inline text via template literals.
+- NEVER use `snapshot()` — Dev.to buttons work with `.click()` via evaluate
+- 🚨 **NEVER use `browser.act({ kind: "wait" })` as a separate step** — each step adds 5-8s LLM overhead
+- ✅ **Embed waits at START of next evaluate:** `async () => { await new Promise(r => setTimeout(r, 3000)); ... }`
+- NEVER use `browser.wait({ load: "networkidle" })` — causes 20s timeout
+- Already-commented check MUST scope to `#comment-trees-container` (unscoped matches nav profile link!)
+
+## Selectors Reference
+
+| Element | Selector |
+|---------|----------|
+| Notification card | `div.crayons-card.notification` |
+| Comment preview | `a.notification__reply-title` |
+| Their comment link | `a[href*="/comment/"]` (NOT containing "/{{handle}}/") |
+| Already replied badge | HTML contains `>Replied<` |
+| Reply button | `button` with innerText "Reply" |
+| Reply textarea | `textarea[placeholder="Reply..."]` |
+| Submit button | `button` with innerText "Submit" |
+| Comment section | `#comments` |
+| Comment textarea | `textarea#text-area` |
+| Already commented | `#comment-trees-container a[href*="/{{handle}}"]` (length > 0) |
+| Reaction drawer | `button[aria-label="reaction-drawer-trigger"]` |
+| Like button | `button[aria-label="Like"]` (aria-pressed="true" = liked) |
+| Unicorn button | `button[aria-label="Unicorn"]` (aria-pressed="true" = reacted) |
+| Follow tag btn | `button.c-btn.c-btn--primary` (text "Follow") |
+| Following tag btn | `button.crayons-btn.crayons-btn--outlined` (text "Following") |
+
+## SS 6: Recovery Rules
+
+- **Browser timeout** -> close tab, reopen URL, retry once. If fails -> `exec openclaw browser --browser-profile {{browser_profile}} open "URL"` (NOT `openclaw browser start`!), wait 3s, retry. Still fails -> skip browser tasks.
+- **NEVER use `browser.stop`** — kills Chrome process. Use `browser.close`.
+- **Typing fails** -> use evaluate with `textarea.value = text` + dispatchEvent. Still fails -> skip, retry next heartbeat.
+- **"matched N elements" error** -> selector too broad, use evaluate instead of snapshot.
+- If evaluate returns unexpected -> 1 snapshot to inspect DOM, use discovered selector for rest of heartbeat.
+- If retry fails -> skip action, log Type="Error", move to next task.

@@ -1,0 +1,56 @@
+# BROWSER-core.md - LinkedIn Global Rules & Selectors
+
+All calls MUST include `profile: "{{browser_profile}}"`.
+NEVER use `args` param in evaluate — inline values via template literals.
+NEVER use `kind: "fill"` — this action does not exist.
+NEVER `snapshot({ selector: "button" })` — matches 20+ elements → strict mode. Use evaluate to find buttons.
+
+🚨 **Embedded-wait rule:** All waits MUST be `await new Promise(r => setTimeout(r, N))` INSIDE async evaluate. NEVER use separate `browser.act({ kind: "wait" })` — each adds ~5s overhead.
+
+## 🚨 Shadow DOM — Post/Poll/Repost Creation
+
+LinkedIn renders the post creation modal inside `#interop-outlet` shadow DOM.
+**ALL post creation UI (buttons, inputs, editors) are ONLY accessible via shadowRoot:**
+```javascript
+const host = document.querySelector('#interop-outlet');
+const shadow = host.shadowRoot;
+shadow.querySelector('button');  // ✅ finds modal buttons
+document.querySelector('button'); // ❌ CANNOT see modal buttons
+```
+
+See **BROWSER-post.md** for full post/poll/repost patterns.
+
+## Selectors Reference
+
+| Element | Selector |
+|---------|----------|
+| Notification container | `[data-finite-scroll-hotkey-item]` |
+| Notification card | `.nt-card` (unread: `.nt-card--unread`) |
+| Profile link | `a[href*="/in/"]` |
+| Activity link | `a[href*="/feed/update/"]`, `a[href*="/pulse/"]`, `a[href*="/posts/"]`, `a[href*="/activity/"]` |
+| Reaction count | `innerText.match(/(\d+)\s+reaction/)` on post container |
+| Comment count | `innerText.match(/(\d+)\s+comment/)` on post container |
+| Comment input | `div.tiptap.ProseMirror[role="textbox"]` — click `div[role="textbox"]` to activate |
+| Submit comment | `button[data-view-name="comment-post"]` (appears after typing text) |
+| Feed post container | `div[role="listitem"]` |
+| Profile headline | `.text-body-medium` |
+| Connection modal | `[role="dialog"]` |
+| Note textarea | `textarea[name="message"]` or `textarea` |
+| Inline editor (search/feed) | `div.tiptap.ProseMirror[role="textbox"]` or `[contenteditable="true"][role="textbox"]` |
+| Inline comment toggle | `button[data-view-name="feed-comment-button"]` (opens/closes comment section — NOT submit!) |
+| Inline comment SUBMIT | `button[data-view-name="comment-post"]` ← USE THIS to submit! |
+| Article title | `textarea.article-editor-headline__textarea` (maxLength 150) |
+| Article body editor | `[role="textbox"][aria-label="Article editor content"]` (ProseMirror, contenteditable) |
+| Article "Next" btn | Find by `innerText === 'Next'` (class: `article-editor-nav__publish`) |
+| Article "Publish" btn | Find by `innerText === 'Publish'` (in publish dialog) |
+| Article share text | `.ql-editor[data-placeholder*="Tell your network"]` (Quill, contenteditable) |
+| Article cover area | `.article-editor-cover-media` (has "Upload from computer" button) |
+
+### Like Buttons (TWO TYPES)
+
+**Type A (USE THESE):** `button[aria-label="Reaction button state: no reaction"]` — single click toggles. JS `.click()` works.
+After click: `button[aria-label="Reaction button state: Like"]`
+
+**Type B (NEVER USE):** `button[aria-label="Open reactions menu"]` — opens dropdown, requires 2 clicks, fails consistently.
+
+Feed shows BOTH types. Always filter for Type A only.

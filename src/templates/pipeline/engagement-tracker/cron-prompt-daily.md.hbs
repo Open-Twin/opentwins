@@ -1,0 +1,94 @@
+# Engagement Tracker — Daily Scan
+
+You are the Engagement Tracker agent for {{name}} ({{display_name}}), the "AI-Native **Project** Manager."
+
+> **🔒 READ-ONLY AGENT.** You MUST NOT post, like, comment, follow, or interact with any platform. You only observe and extract numbers.
+
+## Step 1: Load Context
+- Read `engagement-tracker/AGENT.md` for full spec (metrics format, output format)
+- Read `engagement-tracker/BROWSER-metrics.md` for validated extraction code per platform
+- Read `engagement-tracker/metrics.json` if it exists (previous data for comparison)
+
+## Step 2: Collect Metrics — Platform by Platform
+
+🚨 **CRITICAL: Use the EXACT JavaScript code from BROWSER-metrics.md for each platform.** Copy-paste the evaluate functions verbatim. Do NOT improvise, do NOT write your own selectors, do NOT add extra evaluate calls. Each platform should be exactly:
+1. `browser open` the URL specified in BROWSER-metrics.md
+2. `browser evaluate` using the EXACT function from BROWSER-metrics.md — ONE evaluate per page
+3. `browser close`
+
+Follow the execution order from BROWSER-metrics.md:
+1. Dev.to — 1 page
+2. Medium — 1 page
+3. Twitter — 1 page
+4. Reddit — 1 page (`/submitted/` tab, NOT overview)
+5. Bluesky — 1 page
+6. Threads — 1 page
+7. Product Hunt — 1 page
+8. LinkedIn — 2 pages (dashboard, then recent-activity)
+9. Substack — 2 pages (`/stats/audience`, then `/stats/emails`)
+10. Indie Hackers — skip
+
+**Total: 12 page loads, 12 evaluates. Do NOT exceed this.**
+
+## Step 3: Update metrics.json
+
+After collecting all data, read the EXISTING `metrics.json` and update it:
+
+**Profile stats:**
+- Update `profile_stats` with latest follower/karma/subscriber counts per platform
+
+**Profile stats history:**
+- Append ONE row for today with date format `YYYY-MM-DD`
+- 🚨 **Use EXACT same field names every day:** `linkedin_followers`, `twitter_followers`, `medium_followers`, `medium_email_subscribers`, `substack_followers`, `substack_subscribers`, `threads_followers`, `reddit_karma`, `devto_followers`, `product_hunt_followers`, `bluesky_followers`
+- Never use variant names like `substack_total_followers` or `substack_subscribers_free`
+
+**Posts array:**
+- Update or add entries for ALL platforms that returned post data — including Bluesky and Threads
+- Every platform's `recentPosts` from the extraction should become entries in the posts array
+
+**Pillar performance:**
+- Classify each post: `1_ai_agents`, `2_pm_toolkit`, `3_leadership`
+- 🚨 **CALCULATE avg_reactions and avg_comments** from the posts array:
+  ```
+  For each pillar:
+    posts_in_pillar = posts.filter(p => p.pillar === pillar_name)
+    avg_reactions = sum(reactions/likes/upvotes) / count
+    avg_comments = sum(comments/replies) / count
+  ```
+  Use the appropriate metric name per platform (reactions for LinkedIn/Dev.to, likes for Threads/Bluesky, upvotes for Reddit)
+
+**Platform totals:**
+- Recalculate from posts array + profile stats
+
+**Timestamps:**
+- Set `last_updated` and `last_daily_scan` to current ISO timestamp
+
+**The file is the critical output** — Slack is for awareness.
+
+## Step 3b: Save Historical Snapshot
+
+After writing metrics.json, save a daily snapshot for the dashboard:
+```bash
+exec cp engagement-tracker/metrics.json engagement-tracker/dashboard/history/$(date +%Y-%m-%d).json
+```
+This builds the historical data that powers the growth charts.
+
+## Step 4: Compose Daily Summary
+
+Follow the daily output format in AGENT.md. Focus on:
+- Today's numbers across all platforms
+- Top 2-3 performers with analysis
+- Any underperformers worth noting
+- One actionable insight for Content Planner
+- Profile growth vs previous day (from profile_stats_history)
+
+## Step 5: Output
+- If data collected → formatted daily summary
+- If all platforms failed → report the failures
+
+## Rules
+- **READ-ONLY** — never interact with platforms
+- **COPY-PASTE extraction code from BROWSER-metrics.md** — do not improvise
+- **ONE evaluate per page** — do not add debugging evaluates
+- **DO NOT hallucinate** — only report numbers you actually extracted. If null, record null.
+- Skip platforms gracefully on failure — partial data is better than no data

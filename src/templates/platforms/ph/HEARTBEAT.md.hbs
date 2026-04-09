@@ -1,0 +1,232 @@
+# HEARTBEAT.md - PH Agent
+
+## Global Rules (read once, apply everywhere)
+
+**CLI syntax:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
+- **evaluate:** `... evaluate --fn 'async () => { ... }' 2>&1` (JS after `--fn`)
+- **open/navigate/close:** `... open "URL" 2>&1` / `... navigate "URL" 2>&1` / `... close 2>&1`
+- 🚨 **Tab reuse:** Use `open` ONLY for the FIRST page. Use `navigate` for ALL subsequent pages.
+- **snapshot:** `... snapshot --selector '...' --compact --interactive --depth 6 --json 2>&1`
+- PH API: use `ph-api.sh` for discovery/data, browser only for actions
+- If cached selector breaks: snapshot once to re-discover, reuse for rest of heartbeat
+
+**File loading:** BROWSER-core.md is ALWAYS read. Other BROWSER-*.md files are read ON-DEMAND only when needed.
+
+### Step Budget (MANDATORY)
+- **Target: <40 steps.** Budget: ~10 setup + ~10 per product.
+- NEVER `exec sleep` — embed waits in evaluate. NEVER separate scroll step. NEVER call S4 separately (S7 Step 3 returns `makerUsername`).
+- Pattern: navigate → ONE evaluate with embedded 3s wait → action.
+
+## Decision Tree
+
+```
+Heartbeat fires
+  -> Read limits.json + schedule.json + BROWSER-core.md (global rules/recovery)
+  -> Browser startup (with retry)
+  -> Notification reply check (MANDATORY FIRST)
+     (🚨 Read BROWSER-notifications.md BEFORE extracting notifications)
+  -> Forum reply check
+  -> Execute due tasks from schedule.json
+     (Read BROWSER-engage.md for engagement/upvote/comment/follow tasks)
+  -> Log heartbeat + update limits.json
+  -> Close browser
+  -> HEARTBEAT_OK
+```
+
+🚨 **ALL steps mandatory every heartbeat.** Browser + notifications MUST run even if no tasks are due.
+🚨 **NEVER use `sessions_spawn` or sub-sessions.** Execute ALL commands directly — no child sessions.
+
+## 0. Morning Schedule Check
+
+If `schedule.json` missing or `metadata.for_date != today`:
+1. Generate INSIGHTS.md (PLAYBOOK.md -> Memory Update)
+2. Generate today's schedule (PLAYBOOK.md -> Generate Schedule)
+
+🚨 **NEVER generate a schedule for tomorrow.** Only generate for TODAY. Schedule generation happens once per day in the morning. If all today's tasks are done, return HEARTBEAT_OK — do NOT create a new schedule.
+
+## 1. Read Limits
+
+Read `limits.json`. For each counter (comments, upvotes, bookmarks):
+- If `last_reset != today` -> set `current = 0`, `last_reset = today`
+- Available = `limit - current`
+
+## 1b. Read Today Summary
+
+Read `memory/today_summary.json`. Use tallies to inform comment decisions:
+- `disagreements` < 25% of `comments` AND `comments >= 4` → next MUST disagree (e.g., 4 comments need 1, 8 need 2)
+- `last_style` was insight → next must be short/personal/pushback
+- Any style is 60%+ of total → MUST use a different style
+- `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question
+- `avg_words` above platform cap → next comment MUST be under 20 words
+
+If file doesn't exist or `date != today`, initialize:
+```bash
+exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+```
+
+## 2. Browser Startup (with retry)
+
+1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://www.producthunt.com/notifications" 2>&1`
+2. If CDP error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
+
+## 3. Reply Check (MANDATORY FIRST)
+
+**Read BROWSER-notifications.md first.**
+
+1. Navigate to https://www.producthunt.com/notifications
+2. Batch extract notifications using BROWSER-notifications.md S1 (embed `await new Promise(r => setTimeout(r, 3000));` at start of evaluate — NO separate sleep step)
+3. Filter via tracking file (NEVER `read` tool on tracking file):
+   ```bash
+   exec printf '%s\n' "ID1" "ID2" | grep -vxF -f memory/replied_notifications_ph.txt || true
+   ```
+   🚨 Empty output = ALL already tracked → skip. Lines printed = NEW. NEVER cat/read the tracking file to verify — grep is authoritative.
+   Empty result -> all tracked, skip to S4
+
+5. For each NEW notification (max 5 browser ops per notification):
+   - **A:** Navigate to threadUrl/replyUrl
+   - **B:** Wait 3s. Check our comment on page using BROWSER-notifications.md S2 (max 2 evaluate calls)
+   - **C:** Comment found -> reply using BROWSER-notifications.md S8, compose from notification preview text
+   - **D:** Comment NOT found after 2 evals -> SKIP, track anyway
+   - **E:** ALWAYS reply in English (Ukrainian only if comment is Ukrainian, per SOUL.md)
+   - **F:** Verify reply (editor count dropped to 1 or text on page)
+   - **G:** Verification fails -> retry ONCE. Still fails -> log Error, track, continue
+
+   PH does NOT render threaded replies in DOM. Notification URLs navigate to page but nested reply not visible. Use notification preview as context.
+
+6. After each notification (success OR skip): append to tracking file with dedup guard:
+   ```bash
+   exec grep -qxF 'COMMENT_ID' memory/replied_notifications_ph.txt 2>/dev/null || printf '%s\n' 'COMMENT_ID' >> memory/replied_notifications_ph.txt
+   ```
+
+7. Finish ALL replies before forum check.
+
+## 4. Forum Reply Check (NOTIFICATION-DRIVEN ONLY)
+
+🚨 **NEVER navigate to forum threads just to check for activity.** Direct replies trigger PH notifications (caught in § 3). Checking all threads every heartbeat wastes 6+ steps for nothing.
+
+**Only check a forum thread when:**
+- A notification from § 3 contains a `threadUrl` or `replyUrl` matching a URL in `forum_threads.json`
+
+**When triggered by notification:**
+1. Navigate to the thread URL from the notification
+2. Run BROWSER-notifications.md S10 (ONE combined evaluate with embedded 3s wait)
+3. If `hasOurComment: false` AND `pageCount > 1`: navigate to `?page={pageCount}#comments`, run S10 again
+4. If reply needed: compose reply, post using BROWSER-notifications.md S8, update `forum_threads.json`
+
+**If NO notifications match forum threads → skip § 4 entirely.**
+
+## 5. Schedule Check
+
+**Read BROWSER-engage.md first** (for upvote/comment/follow tasks).
+
+Filter `schedule.json`: `status = "pending"` AND `time <= now`, sort earliest first.
+MANDATORY: Execute ALL overdue tasks in sequence.
+
+### action: browse_and_engage
+
+1. API pre-check: `ph-api.sh today` + `ph-api.sh newest`
+2. Pick 2-3 topics from `queries.json`
+3. Apply Post Quality Filter (TOOLS.md)
+4. 🚨 **MANDATORY: Grep pre-check** — extract PH post slug from URL (e.g. `agent-bar` from `/posts/agent-bar`):
+   ```bash
+   exec grep -q "^{post_slug}$" memory/commented_posts.txt && echo "SKIP" || echo "OK"
+   ```
+   If "SKIP" → pick next post (already commented)
+5. Upvote launch BEFORE commenting using BROWSER-engage.md S3 (CDP snapshot+click required)
+   - `alreadyVoted: true` -> skip to comment
+   - Only increment upvotes counter if verified
+6. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) — check if defaulting to agree+expand, enforce 40-word cap, don't quote their framing, rotate angles, no company mentions
+7. Apply Self-Review Gate (TOOLS.md). Check limits.json
+8. Post comment using BROWSER-engage.md S7
+9. **After successful comment:** use `makerUsername` from S7 Step 3 verify result + `exec echo "{post_slug}" >> memory/commented_posts.txt`
+10. 🚨 **CRITICAL — Follow maker for EVERY product. NEVER skip this even to save steps.**
+   - Extract maker username from S7 Step 3 verify result (`makerUsername` field) — do NOT call S4 separately
+   - 🚨 **CHECK `followed_makers.json` FIRST** via grep:
+     ```bash
+     exec grep -q '"${makerUsername}"' followed_makers.json && echo "SKIP" || echo "OK"
+     ```
+   - Skip if: "SKIP" (already tracked) or maker not found. No follow limit — every comment = follow.
+   - If "OK" + quota available:
+     - Navigate to `https://www.producthunt.com/@${makerUsername}`
+     - Wait 3s. Check state using BROWSER-engage.md S5
+     - `alreadyFollowing: true` -> add to `followed_makers.json` (sync stale file), skip click
+     - `followBtn: true` -> snapshot `"button:has-text('Follow')"` -> click ref
+     - Success: append to `followed_makers.json`, log Type = "Follow"
+     - Failure: skip silently
+
+### Content-Ready Comment Angles (optional enhancement)
+
+Before executing `browse_and_engage` tasks, read:
+`{{pipeline_workspace}}/content-ready/{today_date}/ph-comment-angles.md`
+
+Use the angles and hooks from it to guide comment writing on today's launches. This supplements (does not replace) the agent's own comment generation.
+
+### action: forum_engagement
+
+1. Navigate to https://www.producthunt.com/discussions
+2. evaluate() to extract threads as JSON: title, author, reply count, URL
+3. Look for recurring threads ("What are you working on?", "Feedback Friday", "Share your side project")
+4. Upvote threads, then comment on 1 thread using BROWSER-engage.md S7 (adapted for forum)
+5. Apply Self-Review Gate (TOOLS.md)
+6. After posting: add to `forum_threads.json` (url, last_reply_at = now, our_comment_count = 1)
+
+### action: collection_task
+Use collection templates from TOOLS.md.
+
+### action: update_memory
+Read PLAYBOOK.md -> Memory Update.
+
+### Engagement Execution
+
+1. Upvote on homepage BEFORE comment target (best-effort, NOT mandatory):
+   - If available upvotes < 1 → skip upvote step entirely
+   - Navigate to https://www.producthunt.com/
+   - Use BROWSER-engage.md S9 (batch click with embedded wait + delta verify)
+   - Update `daily.upvotes.current`. 🚨 Per-task max: 2 upvotes (NEVER more)
+2. Navigate to comment target launch page
+3. Execute:
+   - Post 1 comment per task. **No spacing rule — execute back-to-back when due.**
+   - Log Type = "Comment" / "Forum Comment"
+   - Increment `daily.comments.current`
+   - Increment task `comments_done`. If `comments_done >= config.max_comments` -> mark "done", else "pending"
+   - NEVER mark task "done" with `comments_done: 0`. If all attempts failed -> keep "pending" with error note
+4. Continue to NEXT overdue task.
+
+### Error Handling
+
+- Retry with fresh element ref (max 2 retries)
+- Still fails -> log Error, skip comment, continue
+- NEVER mark task "done" after errors. Keep "pending". Only "done" when `comments_done >= config.max_comments`
+
+## 6. Log & Update Limits
+
+1. Append to `memory/{today}.md` using `exec` with shell append (NEVER `edit`/`read` tools):
+   ```bash
+   cat >> memory/2026-02-08.md <<'EOF'
+   ## 2026-02-08 14:15 - Comment
+   - Launch: URL
+   - Style: {insight|short|personal|pushback}
+   - Our comment: "{full text of what was posted - 120 chars min}"
+   EOF
+   ```
+   🚨 **MANDATORY: Log full comment text.** `Our comment:` MUST contain the actual text posted, not a topic summary. Topic summaries make quality audits impossible.
+   Types: Heartbeat, Comment, Reply, Upvote, Follow, Forum Comment, Error, Alert
+
+2. Update `limits.json`: increment `current` per action.
+
+3. 🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
+
+4. MANDATORY Slack report (output as text, gateway routes automatically):
+   Include: PH Heartbeat {time}, Actions completed, Limits (Comments/Upvotes {c}/{l}), Follows: {count} (auto), Next task.
+   🚨 Use `channel: "slack"` ONLY. NEVER use `channel: "telegram"` (wrong format, will error).
+   NEVER skip this step.
+
+## 7. Close Browser
+
+`browser.close({ profile: "{{browser_profile}}" })`. If close fails → retry once. NEVER `browser.stop()` or `pkill`.
+
+## 8. HEARTBEAT_OK
+
+Reply `HEARTBEAT_OK` when ALL true:
+- No PH replies pending (notifications + forum)
+- No PH tasks due

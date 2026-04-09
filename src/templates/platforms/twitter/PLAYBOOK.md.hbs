@@ -1,0 +1,187 @@
+# PLAYBOOK.md - Twitter/X Agent
+
+End-of-day / on-demand. DO NOT load on routine heartbeats. Read sections as needed.
+
+---
+
+## Generate Schedule
+
+**When:**
+- Morning Schedule Check (HEARTBEAT.md § 0) - generates TODAY's schedule
+- Scheduled daily - generates TODAY's schedule
+
+1. **Read inputs for schedule generation:**
+   - **Content brief:** `{{pipeline_workspace}}/content-briefs/{target_date}.md` — provides today's theme, engagement targets, suggested hooks, hashtags. Adapt to Twitter style, don't copy verbatim.
+   - **INSIGHTS.md** — provides what's been working: engagement patterns, timing insights, conversion triggers, key accounts.
+   - **How they work together:** Content brief sets the THEME (what to talk about). INSIGHTS.md sets the STRATEGY (who to target, when to post, what format works). If no content brief exists, use INSIGHTS.md alone.
+
+2. **Extract patterns** (2+ occurrences only):
+   - Conversions: "what app?" triggers?
+   - Timing: best slots?
+   - Brand pillars covered? ({{#each pillars}}{{this.name}}{{#unless @last}}, {{/unless}}{{/each}})
+   - Trending: caught any?
+   - Strategic replies: which accounts got engagement?
+   - Quote tweets: which topics performed?
+
+3. **Daily template** (ALL days):
+
+```
+{{active_hours}} schedule:
+
+08:00-10:00: Morning warmup
+  - 1x non_promo_engagement (3 likes + 1 genuine reply = 4 budget, coffee brain voice)
+  - 1x strategic_reply (browse target accounts, find 100+ like tweet, reply with value)
+
+10:00-13:00: Focus block
+  - 2x search_and_promo_reply (topic rotation, max_replies: 1 each)
+  - 1x original_tweet (with 2-3 hashtags from hashtag_pools) [if weekly quota available]
+
+13:00-16:00: Peak hours (BEST window)
+  - 3x search_and_promo_reply (highest engagement targets, max_replies: 1 each)
+  - 1x quote_tweet (browse trending, 10K+ accounts, 500+ likes) [if weekly quota]
+  - 1x strategic_reply (peak visibility)
+
+16:00-19:00: Afternoon flow
+  - 2x search_and_promo_reply (topic rotation, max_replies: 1 each)
+  - 1x strategic_reply (target account browsing)
+  - 1x non_promo_engagement (4 likes + 1 genuine reply = 5 budget)
+
+19:00-22:00: Evening
+  - 1x search_and_promo_reply (if quota remains, max_replies: 1)
+  - 1x non_promo_engagement (5 likes + 1 reply = 6 budget, evening voice)
+  - 1x quote_tweet [if weekly quota, else skip]
+  - 1x strategic_reply (if quota remains)
+
+22:00-23:00: Wind down
+  - update_memory (~22:30)
+```
+
+**Weekly content distribution:**
+- Daily: 2 original tweets/day (14/week)
+- Tue-Fri: 1 quote tweet/day (4-5/week)
+- Wed + Thu: 1 article each (2/week, peak focus hours 10:00-13:00)
+- Daily: 5 promo (max_replies: 1 each) + 3-4 strategic + 3 non-promo
+
+4. **MANDATORY capacity match:**
+   - Sum promo `max_replies` = `daily.promo_replies.limit` (5). No spacing rule — execute back-to-back when due.
+   - Sum non-promo `likes + replies` across scheduled tasks ≤ `daily.non_promo_engagement.limit` (20). **Distribute: ~4 morning + ~5 afternoon + ~6 evening = 15 scheduled** (remaining 5 reserved for mention replies which also count toward this limit per § 3e).
+   - Sum strategic reply tasks × 1 reply each = `daily.strategic_replies.limit` (5). E.g. 4-5 tasks
+   - Adjust to match exactly.
+
+5. **Adjustments** (2+ occurrences):
+   - Topic angle got conversions → prioritize
+   - Trend matched → add trending task
+   - Hit limits early → spread
+   - Strategic reply got engagement → target same account type
+   - Small changes (±30min, prioritize winners)
+
+6. **Jitter:** ±30min random. Store `time_scheduled` + `time` + `jitter_applied`.
+
+7. **Anti-collision:** Sort by time. < 10min apart → shift +10min, update jitter.
+
+8. **Active hours:** {{active_hours}} {{timezone}}. Clamp if needed.
+
+9. **Write:** `schedule.json` with metadata.for_date = target date (TODAY), all tasks
+
+**Note:** `update_memory` at 22:00 is MANDATORY in every schedule — never skip it.
+
+### Task Config Examples
+
+**search_and_promo_reply:**
+```json
+{
+  "action": "search_and_promo_reply",
+  "config": {
+    "topic": "AI Project Management",
+    "max_replies": 1,
+    "trending_check": true,
+    "angle": "{{role}} running AI agents daily, building open-source tools in your field",
+    "min_likes": 20
+  }
+}
+```
+
+**strategic_reply:**
+```json
+{
+  "action": "strategic_reply",
+  "config": {
+    "niche": "ai_dev",
+    "target_accounts": [{{#if behavior.target_accounts}}{{#each behavior.target_accounts}}"@{{this}}"{{#unless @last}}, {{/unless}}{{/each}}{{else}}"browse trending accounts in your niche"{{/if}}],
+    "min_likes": 100,
+    "max_replies": 1
+  }
+}
+```
+
+**quote_tweet:**
+```json
+{
+  "action": "quote_tweet",
+  "config": {
+    "target_followers": "10K+",
+    "content_types": ["viral (500+ likes)", "hot take", "founder story"],
+    "brand_tie_in_optional": true,
+    "browse_sources": ["trending", "target_accounts", "growth_queries"]
+  }
+}
+```
+
+**original_tweet:** 🚨 MUST include `content_source` pointing to today's twitter-thread file.
+```json
+{
+  "action": "original_tweet",
+  "config": {
+    "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/twitter-thread.md",
+    "hashtags": true,
+    "peak_hours": true,
+    "engagement_hook": true
+  }
+}
+```
+
+**article:** 🚨 MUST include `content_source` pointing to today's twitter-article file.
+```json
+{
+  "action": "article",
+  "config": {
+    "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/twitter-article.md",
+    "pillar": "AI Agent Management",
+    "word_target": "500-800",
+    "hashtags": false
+  }
+}
+```
+
+🚨 `quote_tweet` tasks are EXCLUDED from content_source — always generate inline (reactive content).
+
+**non_promo_engagement:**
+```json
+{
+  "action": "non_promo_engagement",
+  "config": {
+    "likes": 5,
+    "replies": 1
+  }
+}
+```
+
+---
+
+## Memory Update
+
+**When:** Scheduled task `action = "update_memory"` (~22:00 daily, before schedule generation)
+
+Review today's activity and update `INSIGHTS.md`:
+- What Works: style/topic/time with strong engagement
+- What Doesn't: flopped/ignored
+- Key Relationships: reciprocal/conversion moments
+- Content Insights: successful angles and approaches
+- Strategy Adjustments: approach changes
+- Strategic Reply Performance: which accounts/niches got engagement
+- Hashtag Performance: which hashtags appeared in high-engagement tweets
+
+**Rules:**
+- < 100 lines
+- Replace outdated, don't append forever
+- Specifics: numbers, topics, timing

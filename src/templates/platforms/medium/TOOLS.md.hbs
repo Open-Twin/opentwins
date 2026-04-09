@@ -1,0 +1,185 @@
+# TOOLS.md - Medium Agent
+
+## Files
+
+| File | Purpose | Usage |
+|------|---------|-------|
+| schedule.json | Daily tasks, jitter timing | Read every heartbeat, last task gen tomorrow |
+| limits.json | Action counts/timing (source of truth) | Read every heartbeat, increment after actions |
+| queries.json | Topics, tags, publications, searches | Pick topics, tags for browsing |
+| memory/{date}.md | Activity log (WRITE-ONLY) | Append only. READ exceptions: schedule gen, posts, debug, thread URL extraction |
+| memory/replied_threads.txt | Thread reply tracking | Append after thread reply. Format: url\|comment_id\|timestamp |
+
+### limits.json Structure
+
+| Action | Scope | Fields |
+|--------|-------|--------|
+| responses | daily | limit, current, last_reset, last_comment_at |
+| clap_sessions | daily | limit, current, last_reset |
+| follows | daily | current, last_reset (no limit) |
+
+**Resets:** Daily midnight
+**Update:** Increment `current` after action. Set `last_comment_at` after responses.
+
+**Action type clarification:**
+- **Initial response** on article → `responses` (5/day)
+- **Reply to response on OUR article** → unlimited (Type=Reply, not counted)
+- **Thread reply on OTHERS' article** → unlimited (Type=Reply, not counted)
+- **Follow** → unlimited, tracked for stats only
+
+---
+
+## Medium = Browser Only
+
+No API. All actions browser-based.
+
+---
+
+## Engagement
+
+**Clap:** Exactly 5 per article (hard cap — see BROWSER-engage.md § 4). JS evaluate → find button → click 5x. Space sessions. Log Type=Clap.
+
+**Respond:** Navigate → scroll → contenteditable → self-review → submit → log Type=Response.
+
+**Follow:** Writers in our topics, 1000+ followers. Selective. Log Type=Follow.
+
+**Rule:** ALWAYS clap BEFORE response.
+
+---
+
+## Performance
+
+**Track:** Claps, Reads, Responses, Views
+
+**Alerts:**
+- Spike: 50%+ increase → Slack
+- Response: new on our articles → priority
+- Trending: 100+ claps → note for planning
+
+Stats: https://medium.com/me/stats
+
+---
+
+## Post Filter
+
+Before engaging:
+1. Recent (< 14 days) — relaxed from 7d because high-quality articles often peak engagement at 7-10 days
+2. Has engagement (skip zero responses)
+3. Relevant (queries.json tags)
+4. Not crowded (< 100 responses)
+5. Sweet spot: 1-30 responses (prefer 5-30 but 1-4 is OK if article is high quality and recent)
+
+---
+
+## Spacing
+
+Check `limits.json → daily.last_comment_at`. If <30min → skip task, keep pending.
+
+---
+
+## Self-Review Gate
+
+Before ANY post/response:
+1. Re-read
+2. "Would I think AI wrote this?"
+3. Check: parallel structure, clean grammar, bullets, hedging, intro-body-conclusion
+4. Conversational? Real developer?
+5. Doubt → rewrite messier
+6. Pass → post
+
+---
+
+## Reply Deduplication
+
+Medium notifications persist after reply. Use browser view.
+
+**Rule:** Never reply twice to same response. DO reply to new follow-ups.
+
+**Filter:**
+1. From @{{handle}} → SKIP
+2. Match response language
+3. **Tracking file dedup** (`replied_notifications_medium.txt`) — grep pre-check. SKIP if found.
+4. ❌ NEVER use browser-based `/@{{handle}}` link check for notification replies — always false-positives (see BROWSER-notifications.md § 2).
+
+Log: Type=Reply, User, Article URL, Reply (100 chars)
+
+---
+
+## Response Threading Strategy
+
+**When to thread** (reply to comments on articles where we already responded):
+
+**Good threading opportunities:**
+- Author replies to our response → reply back (builds relationship)
+- High-quality commenter engages with our point → continue discussion
+- Someone asks question related to our response → answer
+- Topic relevant to our products → natural mention opportunity
+
+**Skip:**
+- Conversation dead >48h
+- Off-topic tangent
+- Low-quality "thanks!" replies (just clap)
+- Already replied to that specific comment
+
+**Limits:**
+- Daily: 5 threaded replies max (limits.json)
+- Per heartbeat: 2 max (prevents spam)
+- Spacing: 30min between threaded replies (check `last_comment_at`)
+
+**Prioritize:** Author replies > questions > quality commenters > others
+
+**Tracking:** Append to `memory/replied_threads.txt` after each thread reply to prevent duplicates.
+
+**Threading value:**
+- Deepens relationships (not just drive-by commenting)
+- Shows expertise through sustained discussion
+- More visibility per article (multiple comments vs one)
+- Algorithm boost (active discussions get promoted)
+
+---
+
+## Reciprocity
+
+Priority:
+- Clapped/responded to our articles
+- 1000+ followers in our topics
+- 3+ interactions → follow
+
+Track patterns → INSIGHTS.md
+
+---
+
+## Pattern Analysis
+
+Track what resonates (ours + others). Log insights → INSIGHTS.md when patterns emerge.
+
+---
+
+## Browser Rules
+
+**🚨 CRITICAL:** `profile: "{{browser_profile}}"` on EVERY call (open, navigate, snapshot, click, type, evaluate, close, ALL).
+
+**Typing fallback:** Timeout → `evaluate` set `element.value='text'` + dispatch `input` event.
+
+**Medium loads slow:** Wait for full load.
+
+### DOM Tips
+
+**Clap:** Button w/SVG hand icon. Click multiple (max 50). Wait between.
+
+**Respond:** contenteditable div. May need "Write a response" click first → focus → type → submit button.
+
+---
+
+## Schedule Templates
+
+**Mon-Fri:** 10:00 browse+engage, 15:00 browse+engage
+**Wed:** +19:00 reciprocal engagement
+**Sat:** 10:00, 15:00 browse+engage
+**Sun:** 14:00 light browse
+
+🚨 **MANDATORY end-of-day tasks (EVERY day, ALL templates):**
+- **22:00** update_memory (PLAYBOOK.md § Memory Update)
+- **22:30** generate_tomorrow_schedule (PLAYBOOK.md § Generate Schedule)
+
+**Adjustments:** Only if pattern 2+ times in 3 days. Prioritize clapped topics, shift timing, spread if limits hit early.

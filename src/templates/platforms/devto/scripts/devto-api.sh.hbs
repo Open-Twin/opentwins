@@ -1,0 +1,140 @@
+#!/bin/bash
+# Dev.to API helper script
+# Usage: devto-api.sh <command> [args]
+
+API_KEY="{{api_keys.devto_api_key}}"
+BASE_URL="https://dev.to/api"
+UA="OpenClaw/1.0"
+
+case "$1" in
+  # --- Articles ---
+  
+  my-articles)
+    # List our published articles
+    curl -s -H "api-key: $API_KEY" -H "User-Agent: $UA" \
+      "$BASE_URL/articles/me/published?per_page=${2:-10}" | \
+      jq '[.[] | {id, title, url, comments_count, reactions: .public_reactions_count, published_at}]'
+    ;;
+    
+  publish)
+    # Publish an article from a markdown file
+    # Usage: devto-api.sh publish <file.md> [--draft] [--series "Series Name"]
+    if [ -z "$2" ]; then echo "Usage: devto-api.sh publish <file.md> [--draft] [--series \"Name\"]"; exit 1; fi
+    FILE="$2"
+    PUBLISHED="true"
+    SERIES=""
+    shift 2
+    while [[ $# -gt 0 ]]; do
+      case $1 in
+        --draft) PUBLISHED="false"; shift ;;
+        --series) SERIES="$2"; shift 2 ;;
+        *) shift ;;
+      esac
+    done
+    BODY=$(cat "$FILE")
+    if [ -n "$SERIES" ]; then
+      jq -n --arg body "$BODY" --argjson pub "$PUBLISHED" --arg series "$SERIES" \
+        '{"article": {"body_markdown": $body, "published": $pub, "series": $series}}' | \
+      curl -s -X POST "$BASE_URL/articles" \
+        -H "api-key: $API_KEY" \
+        -H "Content-Type: application/json" \
+        -H "User-Agent: $UA" \
+        -d @- | jq '{id, title, url, series, published_at}'
+    else
+      jq -n --arg body "$BODY" --argjson pub "$PUBLISHED" \
+        '{"article": {"body_markdown": $body, "published": $pub}}' | \
+      curl -s -X POST "$BASE_URL/articles" \
+        -H "api-key: $API_KEY" \
+        -H "Content-Type: application/json" \
+        -H "User-Agent: $UA" \
+        -d @- | jq '{id, title, url, published_at}'
+    fi
+    ;;
+    
+  update)
+    # Update an existing article
+    # Usage: devto-api.sh update <article_id> <file.md>
+    if [ -z "$2" ] || [ -z "$3" ]; then echo "Usage: devto-api.sh update <id> <file.md>"; exit 1; fi
+    BODY=$(cat "$3")
+    jq -n --arg body "$BODY" '{"article": {"body_markdown": $body}}' | \
+    curl -s -X PUT "$BASE_URL/articles/$2" \
+      -H "api-key: $API_KEY" \
+      -H "Content-Type: application/json" \
+      -H "User-Agent: $UA" \
+      -d @- | jq '{id, title, url}'
+    ;;
+
+  # --- Search & Discovery ---
+  
+  search)
+    # Search articles by tag
+    # Usage: devto-api.sh search <tag> [days] [per_page]
+    TAG="${2:-vibecoding}"
+    DAYS="${3:-7}"
+    PER_PAGE="${4:-10}"
+    curl -s -H "User-Agent: $UA" \
+      "$BASE_URL/articles?tag=$TAG&top=$DAYS&per_page=$PER_PAGE" | \
+      jq '[.[] | {id, title, url, comments_count, reactions: .public_reactions_count, user: .user.username, tags}]'
+    ;;
+    
+  fresh)
+    # Get fresh/rising articles
+    # Usage: devto-api.sh fresh [rising|fresh]
+    STATE="${2:-fresh}"
+    curl -s -H "User-Agent: $UA" \
+      "$BASE_URL/articles?state=$STATE&per_page=15" | \
+      jq '[.[] | {id, title, url, tags, user: .user.username, reactions: .public_reactions_count}]'
+    ;;
+
+  # --- Comments (read-only) ---
+  
+  comments)
+    # Get comments on an article
+    # Usage: devto-api.sh comments <article_id>
+    curl -s -H "User-Agent: $UA" \
+      "$BASE_URL/comments?a_id=$2" | \
+      jq 'def flatten_comments: . as $c | [{id: $c.id_code, user: $c.user.username, body: ($c.body_html | gsub("<[^>]*>"; "") | ltrimstr("\n") | .[0:200])}] + ([($c.children // [])[] | flatten_comments] | add // []); [.[] | flatten_comments] | add // []'
+    ;;
+    
+  check-replies)
+    # Check all our articles for new comments (reply tracking)
+    echo "Checking comments on our articles..."
+    ARTICLES=$(curl -s -H "api-key: $API_KEY" -H "User-Agent: $UA" \
+      "$BASE_URL/articles/me/published?per_page=10")
+    echo "$ARTICLES" | jq -r '.[] | select(.comments_count > 0) | "\(.id) \(.comments_count) \(.title)"' | \
+    while read -r AID COUNT TITLE; do
+      echo "--- $TITLE ($COUNT comments) ---"
+      curl -s -H "User-Agent: $UA" "$BASE_URL/comments?a_id=$AID" | \
+        jq -r '.[] | "  \(.user.username): \(.body_html | gsub("<[^>]*>"; "") | ltrimstr("\n") | .[0:150])"'
+    done
+    ;;
+
+  # --- Profile ---
+  
+  me)
+    curl -s -H "api-key: $API_KEY" -H "User-Agent: $UA" "$BASE_URL/users/me" | jq .
+    ;;
+    
+  *)
+    echo "Dev.to API Helper"
+    echo ""
+    echo "Articles:"
+    echo "  my-articles [count]     - List our published articles"
+    echo "  publish <file.md> [--draft] - Publish article from markdown"
+    echo "  update <id> <file.md>   - Update existing article"
+    echo ""
+    echo "Search:"
+    echo "  search <tag> [days] [per_page] - Search by tag"
+    echo "  fresh [rising|fresh]    - Get fresh/rising articles"
+    echo ""
+    echo "Comments:"
+    echo "  comments <article_id>   - Get comments on article"
+    echo "  check-replies           - Check all our articles for comments"
+    echo ""
+    echo "Profile:"
+    echo "  me                      - Show profile info"
+    echo ""
+    echo "NOTE: Comments/reactions CANNOT be created via API."
+    echo "      Use browser for: posting comments, liking/reacting."
+    ;;
+esac

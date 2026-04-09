@@ -1,0 +1,179 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --c-void: #06080d;
+  --c-surface: #0c1018;
+  --c-panel: #111827;
+  --c-border: #1e293b;
+  --c-border-dim: #151d2e;
+  --c-teal: #2dd4bf;
+  --c-teal-dim: #0d9488;
+  --c-teal-glow: rgba(45, 212, 191, 0.12);
+  --c-amber: #fbbf24;
+  --c-red: #f87171;
+  --c-green: #34d399;
+  --c-blue: #60a5fa;
+  --c-purple: #a78bfa;
+  --c-text: #e2e8f0;
+  --c-text-dim: #64748b;
+  --c-text-muted: #475569;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-border) transparent;
+}
+
+body {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--c-void);
+  color: var(--c-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+}
+
+/* Glow pulse for status indicators */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 4px var(--c-teal), 0 0 8px rgba(45, 212, 191, 0.2); }
+  50% { box-shadow: 0 0 8px var(--c-teal), 0 0 20px rgba(45, 212, 191, 0.35); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.4s ease-out both;
+}
+
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+
+.glow-pulse {
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+.shimmer-bg {
+  background: linear-gradient(90deg, transparent 0%, rgba(45, 212, 191, 0.04) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* Panel card styling */
+.panel {
+  background: var(--c-panel);
+  border: 1px solid var(--c-border-dim);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--c-teal-dim), transparent);
+  opacity: 0.4;
+}
+
+.panel-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--c-border-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-teal);
+}
+
+/* Data mono styling */
+.mono {
+  font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+/* Teal underline accent for section titles */
+.section-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--c-text-dim);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--c-border-dim);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  background: var(--c-teal);
+  border-radius: 2px;
+}
+
+/* Status dot */
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.online { background: var(--c-green); box-shadow: 0 0 6px var(--c-green); }
+.status-dot.offline { background: var(--c-red); box-shadow: 0 0 6px var(--c-red); }
+.status-dot.pending { background: var(--c-text-muted); }
+
+/* Custom select */
+select, input[type="date"] {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+/* Noise texture overlay for panels */
+.noise {
+  position: relative;
+}
+.noise::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.015;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}

@@ -1,0 +1,23 @@
+# AGENTS.md - Medium Promo Agent
+
+Single-platform agent. See SOUL.md for identity/style.
+
+## Session Init
+
+**Load once:**
+- `SOUL.md`, `IDENTITY.md`
+
+**Never auto-load:**
+- `memory/` — **WRITE-ONLY** during heartbeats. READ exceptions: schedule generation, original posts, debugging, thread discovery (§ 3B only - extract URLs). Use `exec cat >> file` only.
+- `INSIGHTS.md` — on-demand only (schedule gen, engagement insights)
+
+**Read every heartbeat:**
+- `schedule.json`, `limits.json`
+
+## Model
+
+Sonnet (configured in openclaw.json)
+
+## Execution
+
+Follow `HEARTBEAT.md` every heartbeat.

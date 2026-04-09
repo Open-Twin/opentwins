@@ -1,0 +1,222 @@
+# BROWSER-core.md - Medium Global Rules, Shared Patterns & Selectors
+
+**Profile: `{{browser_profile}}`** — pass on EVERY browser call.
+
+---
+
+## § 2. Read Article Content + Clap (combined — ONE evaluate)
+
+Reads article content AND claps 5x in a single evaluate. Saves one step per article.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 2000));
+    const h1 = document.querySelector('h1');
+    const article = document.querySelector('article');
+    const content = article ? article.innerText : document.body.innerText;
+    const lines = content.split('\\n').filter(l => l.trim());
+    const contentStart = lines.findIndex(l => l.length > 80);
+    const body = contentStart >= 0 ? lines.slice(contentStart).join('\\n') : content;
+    // Clap 5x
+    const btn = document.querySelector('[data-testid="headerClapButton"]');
+    var clapped = 0;
+    if (btn) {
+      for (let i = 0; i < 5; i++) {
+        btn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 50));
+        btn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+        btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        await new Promise(r => setTimeout(r, 500));
+      }
+      clapped = 5;
+    }
+    return { title: h1 ? h1.innerText : '', content: body.slice(0, 1200), clapped: clapped };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+🚨 Use `article` element — NOT `document.body.innerText` (includes sidebar/nav junk).
+🚨 mousedown→50ms→mouseup→click→500ms per clap. Without delays, rapid-fire triggers hold-to-clap (50 instead of 5).
+
+---
+
+## § 3. Write Response (Inline Editor)
+
+🚨 **Uses the INLINE editor at the bottom of the article page — NOT the dialog.** The dialog editor has intermittent Slate state bugs where the Respond button stays disabled. The inline editor is reliable.
+🚨 **Submit buttons:** Use `dispatchEvent(new MouseEvent('click', ...))` — NOT `.click()`.
+🚨 **Response text escaping:** ALWAYS use double-quoted strings or `JSON.stringify()` for response text in evaluate. Single quotes break on apostrophes (e.g. "it's", "don't") → `Invalid or unexpected token`.
+🚨 **NEVER use the dialog** (`div[role="dialog"]`) for typing responses. NEVER open the responses panel before typing.
+🚨 **Medium 500 errors:** Submitting a response often triggers a server-side 500 error that crashes the page. **The response IS saved despite the 500.** The verify step (Step 2) handles this by reloading and checking the responses panel.
+🚨 **Slate text persistence:** Medium's Slate.js editor persists typed text across page reloads via localStorage. ALWAYS clear the editor before typing to prevent text duplication on retries.
+
+**Step 1a — Scroll to editor, clear, type (evaluate ~800 chars):**
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 2000));
+    window.scrollTo(0, document.body.scrollHeight);
+    await new Promise(r => setTimeout(r, 1000));
+    var dialog = document.querySelector('div[role="dialog"]');
+    var allTb = Array.from(document.querySelectorAll('div[contenteditable="true"][role="textbox"]'));
+    var tb = allTb.find(function(el) { return !dialog || !dialog.contains(el); });
+    if (!tb) return { error: 'no inline textbox found' };
+    tb.focus();
+    document.execCommand('selectAll');
+    document.execCommand('delete');
+    await new Promise(r => setTimeout(r, 300));
+    var text = ${JSON.stringify(responseText)};
+    tb.focus();
+    var dt = new DataTransfer();
+    dt.setData('text/plain', text);
+    tb.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    tb.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText' }));
+    tb.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
+    await new Promise(r => setTimeout(r, 500));
+    return { typed: true, len: tb.innerText.length };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+**Step 1b — Find Respond button + submit (evaluate ~500 chars):**
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    var btn = null;
+    for (var attempt = 0; attempt < 5; attempt++) {
+      await new Promise(r => setTimeout(r, 1000));
+      var dialog = document.querySelector('div[role="dialog"]');
+      var allBtns = Array.from(document.querySelectorAll('button'));
+      btn = allBtns.find(function(b) {
+        return (!dialog || !dialog.contains(b)) && b.innerText.trim() === 'Respond' && !b.disabled;
+      });
+      if (btn) break;
+      btn = null;
+    }
+    if (!btn) return { error: 'no Respond button' };
+    btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    return { submitted: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+🚨 Whether Step 1b returns `submitted: true` OR `error: 'no Respond button'` → **ALWAYS proceed to Step 2 (verify)**. Medium often saves the response even when the button isn't found.
+🚨 **Medium 500s after EVERY submit.** Do NOT check the current page. Navigate to the article URL directly.
+
+**Step 2 — Navigate to article + verify (ONE evaluate, handles 500 automatically):**
+
+After submit, page ALWAYS 500s — response IS saved. Navigate back to article URL and check responses panel in one call.
+
+**Before calling Step 2:** `browser.navigate("{articleUrl}")` — navigate to the ORIGINAL article URL (not the response post URL). Wait 5s.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 5000));
+
+    // Scroll to bottom to render responses area
+    window.scrollTo(0, document.body.scrollHeight);
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Try to open responses panel — click "See all" or response count button
+    var btns = Array.from(document.querySelectorAll('button'));
+    var seeAll = btns.find(function(b) { return b.innerText.includes('See all'); });
+    if (seeAll) { seeAll.click(); }
+    else {
+      var countBtn = btns.find(function(b) {
+        var n = parseInt(b.innerText.trim());
+        return n > 0 && n < 500 && b.innerText.trim().length <= 3;
+      });
+      if (countBtn) countBtn.click();
+    }
+    await new Promise(r => setTimeout(r, 3000));
+
+    // Check for our text in responses dialog OR in page body
+    var snippet = ${JSON.stringify(responseText.slice(0, 40))};
+    var dialog = document.querySelector('div[role="dialog"]');
+    if (dialog && dialog.innerText.includes(snippet)) return { verified: true };
+
+    // Fallback: check page body (for response posts where dialog doesn't exist)
+    var hasOurText = document.body.innerText.includes(snippet);
+    var hasOurName = document.body.innerText.includes('{{name}}') || document.body.innerText.includes('{{display_name}}');
+    return { verified: hasOurText && hasOurName, fallback: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+🚨 If `verified: true` → success, proceed to tracking.
+🚨 If `verified: false` → response was likely NOT posted. Retry Step 1 once (with clear). Max 1 retry → skip article.
+🚨 **Total steps per response: Step 1 (type+submit) + navigate + Step 2 (verify) = 3 steps.** NOT 8-13 steps with 500 reload loops.
+
+---
+
+## Selectors Reference
+
+### Notifications Page
+- Container: `div[role="tabpanel"]`, items: direct children
+- Type detection: "responded"=response, "left a note"=note (only actionable types)
+- Article URL: `a[href*="/p/"]`
+- Author name: `n.innerText.split('\n')[0]`
+
+### Article Page (browse_and_engage dedup ONLY)
+- Our comment: `a[href*="/@{{handle}}"]` filtered by `.filter(a => !a.href.includes('sidebar_menu'))` count > 0
+- Secondary: `/\nYou\n\n\d+\s+(mins?|hours?|days?)\s+ago/` on body text
+- ❌ **NEVER use this for notification replies** — our original comment's `/@{{handle}}` link always causes false positives on response pages (tested 2026-02-19: 4/4 false positives). Use tracking file dedup only.
+
+### Editor (Inline Slate.js — NOT dialog)
+- Selector: `div[contenteditable="true"][role="textbox"]` — pick the one NOT inside `div[role="dialog"]`
+- DOM signature: `data-slate-node`, `data-slate-leaf`, `data-slate-string` attributes
+- Submit: button text "Respond" ONLY (NOT "Reply" — those are for comment threads) — pick the one NOT inside `div[role="dialog"]`
+- ✅ Atomic clear+type+submit (§ 3 Step 1): scroll to bottom → **clear editor** → focus → paste → InputEvent → **retry loop (5x 1000ms, re-query dialog)** → submit — ALL in one async evaluate
+- ✅ ALWAYS clear editor before typing (`selectAll` + `delete` + InputEvent) — Slate persists text in localStorage across reloads
+- ✅ ALWAYS use `JSON.stringify(text)` for response text (handles apostrophes, quotes, newlines)
+- ✅ ALWAYS dispatch `InputEvent('input', { inputType: 'insertText' })` after typing — syncs Slate state
+- ✅ ALWAYS retry Respond button detection (5x, 1000ms gaps) with **re-queried dialog ref** after InputEvent before giving up
+- ✅ ALWAYS verify via responses panel (§ 3 Step 2) — NEVER via `document.body.innerText`
+- ❌ NEVER: use the dialog (`div[role="dialog"]`) for typing — intermittent Slate state bug leaves Respond disabled
+- ❌ NEVER: open the responses panel before typing — it creates a dialog that interferes
+- ❌ NEVER: `execCommand('insertText')` alone — does NOT enable Respond button (Slate ignores it)
+- ❌ NEVER: separate evaluate calls for type and submit
+- ❌ NEVER: separate `browser.act({ kind: "wait" })` steps — embed in evaluate with `await new Promise(r => setTimeout(r, N))`
+- ❌ NEVER: `tb.innerHTML = ''` — permanently destroys Slate editor DOM
+- ❌ NEVER: verify response using `document.body.innerText` — false-positives on text still in editor, fails on 500 pages
+- ❌ NEVER: snapshot→click→type (2 textboxes on page → ref collision → CDP timeout)
+- ❌ NEVER: `innerText`, `textContent`, `value` (editor ignores them)
+- ❌ NEVER: single-quoted strings with apostrophes in response text → JS syntax error
+
+### Clap Button
+- `button[data-testid="headerClapButton"]`
+- Batch evaluate: mousedown+mouseup+click loop
+
+### Follow Button
+- `querySelectorAll('button')` → find text "Follow"
+- `.click()` works for follow
+
+### Search Results
+- Container: `article` elements
+- Title: `h2, h3` inside article
+- ✅ Both `/@author/` and publication URLs accepted (regex: `/medium\.com\/((@[^/]+)|([^@][^/]+))\/[^/]+-[a-f0-9]{8,}/`)
+- Publication URLs may redirect to custom domains — this works. If SSL error → skip immediately.
+
+### General
+- Reliable: `role` attributes, element tags, text content
+- Unreliable: class names (obfuscated)
+
+---
+
+## Recovery
+
+- **Browser timeout** → close + reopen. If fails → `browser.start({ profile: "{{browser_profile}}" })`, wait 3s, retry once.
+- **Strict mode** → selector too broad. Narrow it. NEVER snapshot search pages.
+- **Editor typing fails** → reload page, wait 5s, retry § 3 Step 1 once. Max 1 retry → skip.
+- **Respond button not found OR page 500 after submit** → both are NORMAL. Navigate to the original article URL, wait 5s, run § 3 Step 2 (verify). The response is almost always saved. Do NOT reload the 500 page — navigate to the article instead. If not verified → retry Step 1 once. Max 1 retry → skip.
+- 🚨 **Do NOT loop on 500 pages** — each reload+check costs 2 steps. Navigate away from the 500 page immediately.
+- **SSL error** → skip URL immediately. NEVER retry.

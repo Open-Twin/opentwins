@@ -1,0 +1,127 @@
+# PLAYBOOK.md - Dev.to Agent
+
+**End-of-day and on-demand tasks. Do NOT load on routine heartbeats.**
+
+Read only when: (1) schedule generation task, (2) updating INSIGHTS.md, (3) debugging
+
+---
+
+## Generate Schedule
+
+**When:**
+- Morning Schedule Check (HEARTBEAT.md § 0) - generates TODAY's schedule
+- Scheduled daily - generates TODAY's schedule
+
+1. **Read inputs for schedule generation:**
+   - **Content brief:** `{{pipeline_workspace}}/content-briefs/{target_date}.md` — provides today's theme, article topics, SEO keywords. Adapt to Dev.to technical audience.
+   - **INSIGHTS.md** — provides what's been working: tag performance, comment timing, reciprocal authors, article stats.
+   - **How they work together:** Content brief sets the THEME (what to talk about). INSIGHTS.md sets the STRATEGY (which tags work, when to comment, who engages back). If no content brief exists, use INSIGHTS.md alone.
+2. Extract: tag performance, comment timing, reciprocal authors
+
+3. Load base template (TOOLS.md § Schedule Generation):
+   - Weekdays: 10:00 browse+comment, 14:00 trending. Wed: article. Fri: #vibecoding + #ai
+   - Saturday: 10:00 reactions, 14:00 browse+comment
+   - Sunday: 10:00 browse+comment (3 comments, 7 reactions), 14:00 browse+comment (3 comments, 8 reactions)
+   - 🚨 **MANDATORY end-of-day (EVERY day):** 22:00 update_memory
+   - **🚨 "Light" does NOT mean under-scheduling.** Sunday still uses FULL daily limits (6 comments + 15 reactions).
+   - **🚨 NEVER create a Sunday schedule with max_comments=0.** Every day must use the full comment capacity.
+
+4. **Assign tags to each browse_and_engage task:**
+   - Pick 2-3 tags from queries.json (all fresh, generated daily by content planner)
+   - Add to task config: `"tags": ["vibecoding", "ai"]`
+
+5. Apply adjustments (only if pattern seen 2+ times in 3 days):
+   - Prioritize: trending tags, reciprocal authors
+   - Shift timing to engagement patterns
+   - Spread tasks if hitting limits early
+
+6. **🚨 MANDATORY capacity check (DO NOT SKIP):**
+   - Sum of ALL tasks' `max_comments` MUST = `daily.comments.limit` (currently 6)
+   - Sum of ALL tasks' `max_reactions` MUST = `daily.reactions.limit` (currently 15)
+   - If sums don't match → adjust task configs until they do
+   - **Example:** 3 tasks → task1: max_comments=2, max_reactions=5; task2: max_comments=2, max_reactions=5; task3: max_comments=2, max_reactions=5 → total: 6 comments, 15 reactions ✅
+   - **WRONG:** 1 task with max_comments=1, max_reactions=5 → total: 1/6 comments, 5/15 reactions ❌
+
+7. 🚨 **Articles: MANDATORY 2/week.** Wednesday + Sunday. Always include `publish_article` task in schedule on those days — do NOT skip.
+   - Wednesday at 10:00, Sunday at 10:00
+   - If `weekly.articles.current >= limit` → skip the task but keep other tasks
+   - Series selection from trending category (step 2 tag performance):
+     - ai_dev trending → "Vibe Coding Lessons"
+     - building trending → "Building in Public"
+     - productivity trending → "Developer Productivity"
+     - Default: "Vibe Coding Lessons"
+   - 🚨 MUST include `content_source` in `publish_article` config:
+     ```json
+     "config": {
+       "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/devto-article.md",
+       ...
+     }
+     ```
+
+8. Apply: jitter (±30min), anti-collision (10min spacing), active hours (08:00-23:00)
+
+9. **Write:** `schedule.json` with metadata: generated_at, for_date (TODAY), **day_of_week** (use `date +%A | tr '[:upper:]' '[:lower:]'` — do NOT hardcode or guess), active_hours, all tasks
+
+**Note:** `update_memory` at 22:00 is MANDATORY in every schedule — never skip it.
+
+---
+
+## Memory Update
+
+🚨 **GRACEFUL DEGRADATION:** Steps 1-2 use API/browser. If ANY step fails, **skip it and continue**. Step 3 (INSIGHTS.md) is MANDATORY and reads local files only. Never skip step 3 because an earlier step failed.
+
+---
+
+### Step 1: Check article performance (API — no browser needed)
+
+Use `exec` to call the Dev.to public API:
+```bash
+curl -s "https://dev.to/api/articles?username={{handle}}&per_page=10"
+```
+
+Extract from each article: `title`, `positive_reactions_count`, `comments_count`, `published_at`, `tag_list`.
+
+**Analyze tag performance:**
+- Count articles per tag with high engagement (10+ reactions, 5+ comments)
+- Tags with 3+ high-performing articles in last 7 days = "hot tag"
+- Tags with 0 high-performing articles in 14 days = "cold tag"
+
+If API fails → log "Dev.to API unavailable" and **continue to step 2**.
+
+### Step 2: Follow/unfollow tags (browser — best effort)
+
+Weekly limit = 2. Only run if tag analysis from step 1 identified actionable changes.
+
+- Hot tag NOT in `followed_tags[]` + `current < limit`:
+  - Navigate: `https://dev.to/t/{tag}`
+  - Find: `button.c-btn.c-btn--primary` (text "Follow")
+  - Click button → verify text changes to "Following"
+  - Update limits: `followed_tags.push(tag)`, `current += 1`, append history
+  - Log Type = "Tag Follow" (tag, action: "follow")
+- Cold tag in followed_tags[] 2+ weeks:
+  - Navigate: `https://dev.to/t/{tag}`
+  - Find: `button.crayons-btn.crayons-btn--outlined` (text "Following")
+  - Click → verify text changes to "Follow"
+  - Update: remove from followed_tags[]
+  - Log Type = "Tag Follow" (tag, action: "unfollow")
+
+If browser fails → log "Tag follow/unfollow: browser unavailable" and **continue to step 3**.
+
+### Step 3: Update INSIGHTS.md (MANDATORY — no browser needed)
+
+🚨 **This step MUST always run**, even if steps 1-2 failed. It reads LOCAL files only.
+
+**Read inputs:**
+- `memory/{today}.md` — today's activities and outcomes
+- `memory/{yesterday}.md` — recent patterns (if exists)
+- Article performance from step 1 (if available)
+
+**Update INSIGHTS.md** with confirmed patterns (2+ observations):
+- What Works: tags, styles, formats that perform
+- What Doesn't: approaches to avoid
+- Key Relationships: reciprocal authors
+- Content Insights: performance patterns, timing
+- Strategy Adjustments: patterns for future schedules
+- Tag Performance: hot tags to prioritize, cold tags to avoid (use API data or memory-based estimates)
+
+Keep <100 lines. Archive old insights when new confirmed.

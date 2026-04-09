@@ -1,0 +1,98 @@
+# PLAYBOOK.md - Schedule Generation & Memory Update
+
+## Schedule Generation
+
+### Timezone & Hours
+- **Timezone**: {{timezone}}
+- **Active hours**: {{active_hours.start}} – {{active_hours.end}}
+- **Browser profile**: {{browser_profile}}
+
+### Content Pipeline Paths
+- **Content briefs**: `{{pipeline_workspace}}/content-briefs/`
+- **Content ready**: `{{pipeline_workspace}}/content-ready/`
+
+### Daily Schedule Template
+
+Generate a schedule that fits within active hours ({{active_hours.start}}–{{active_hours.end}} {{timezone}}).
+
+#### Morning Block ({{active_hours.start}} – +2h)
+1. **Check notifications** — reply to any replies on u/{{handle}} comments
+2. **Browse feed** — scan home feed and 2-3 active subreddits
+3. **Engage** — comment on 2-3 relevant posts
+
+#### Midday Block (+3h – +5h)
+1. **Content check** — look for ready content in `{{pipeline_workspace}}/content-ready/`
+2. **Original post** — if content is available, publish 1 post
+3. **Engage** — comment on 2-3 more posts in different subreddits
+
+#### Evening Block (+6h – {{active_hours.end}})
+1. **Check notifications** — reply to afternoon replies
+2. **Browse & engage** — 2-3 more comments
+3. **Memory update** — write daily summary
+
+### Weekly Targets
+- **Comments**: 15-25 per week
+- **Original posts**: 2-3 per week
+- **Notification replies**: all within 24h
+- **Karma goal**: net positive each week
+
+### Content Brief Integration
+When a content brief is available at `{{pipeline_workspace}}/content-briefs/`:
+1. Read the brief
+2. Adapt it for Reddit format and tone
+3. Choose the best subreddit based on topic
+4. Schedule for optimal posting time
+5. Move brief to processed folder after publishing
+
+### Karma Check
+Monitor karma for u/{{handle}} by checking profile at {{profile_url}}.
+If karma drops significantly, reduce posting frequency and focus on high-value comments.
+
+### API-Free Monitoring
+Since this is 100% browser-based (no API), use these browser checks:
+- Profile page for karma: `{{profile_url}}`
+- Notifications: `https://reddit.com/notifications`
+- Subreddit feeds: browse directly
+
+## Memory Update Logic
+
+### Daily Memory File
+At end of each session, append to `memory/YYYY-MM-DD.md`:
+
+```
+## Session [time]
+- Comments: [count] ([subreddits])
+- Posts: [count] ([titles])
+- Notifications replied: [count]
+- Karma delta: [+/-N]
+- Notes: [any observations]
+```
+
+### Weekly Insights Update
+Every 7 days, update `INSIGHTS.md` with:
+- Top performing comments (by upvotes)
+- Best subreddits for engagement
+- Topics that resonated
+- Adjustments to strategy
+
+### Schedule State
+Update `schedule.json` after each task:
+```json
+{
+  "last_run": "YYYY-MM-DDTHH:MM:SS",
+  "tasks_completed": [],
+  "tasks_remaining": [],
+  "next_scheduled": "YYYY-MM-DDTHH:MM:SS"
+}
+```
+
+Update `limits.json` to track daily limits:
+```json
+{
+  "date": "YYYY-MM-DD",
+  "comments_today": 0,
+  "posts_today": 0,
+  "max_comments": 8,
+  "max_posts": 1
+}
+```

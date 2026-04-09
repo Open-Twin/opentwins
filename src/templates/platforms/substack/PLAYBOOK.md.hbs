@@ -1,0 +1,92 @@
+# PLAYBOOK.md - Substack Agent
+
+**End-of-day / on-demand tasks. NOT for routine heartbeats.**
+
+---
+
+## Memory Update
+
+**When:** Task "update_memory" (~22:00 daily)
+
+🚨 **GRACEFUL DEGRADATION:** Steps 1-2 use browser. If ANY step fails, **skip it and continue**. Step 3 (INSIGHTS.md) is MANDATORY and reads local files only. Never skip step 3 because an earlier step failed.
+
+---
+
+### Step 1: Check newsletter stats (browser - best effort)
+
+Navigate to `https://substack.com/publish/posts` -> note subscriber count, recent post views/likes.
+
+If browser fails -> log "Substack stats: browser unavailable" and **continue to step 2**.
+
+### Step 2: Check subscriber/follower count (browser - best effort)
+
+Navigate to profile page -> note current subscriber count. Compare to last count in INSIGHTS.md.
+
+If browser fails -> log "Subscriber check: browser unavailable" and **continue to step 3**.
+
+### Step 3: Update `INSIGHTS.md` (MANDATORY — no browser needed)
+
+🚨 **This step MUST always run**, even if steps 1-2 failed. It reads LOCAL files only.
+
+**Read inputs:**
+- `memory/{today}.md` — today's activities and outcomes
+- `memory/{yesterday}.md` — recent patterns (if exists)
+- Stats from steps 1-2 (if available)
+
+**Update `INSIGHTS.md`** with confirmed patterns (2+ occurrences):
+- What Works: topics, formats, timing
+- What Doesn't Work: approaches to avoid
+- Key Relationships: reciprocal writers/commenters
+- Content Insights: which posts got traction
+- Strategy Adjustments: data-based changes
+- Subscriber Tracking: current count, milestones
+
+### Step 4: Cleanup tracking files
+
+- Remove entries >7 days old from tracking files
+- Keep file size manageable
+- If file doesn't exist -> skip
+
+Keep INSIGHTS.md under 100 lines. Replace outdated entries vs appending.
+
+---
+
+## Generate Schedule
+
+**When:**
+- Morning Schedule Check (HEARTBEAT.md SS 0) - generates TODAY's schedule
+- Scheduled daily - generates TODAY's schedule
+
+1. **Read inputs for schedule generation:**
+   - **Content brief:** `{{pipeline_workspace}}/content-briefs/{target_date}.md` — provides today's theme, engagement targets, suggested hooks, hashtags. Adapt to Substack style, don't copy verbatim.
+   - **INSIGHTS.md** — provides what's been working: post performance, timing, reciprocal writers, subscriber patterns.
+   - **How they work together:** Content brief sets the THEME (what to talk about). INSIGHTS.md sets the STRATEGY (who to engage, when to post, what resonates). If no content brief exists, use INSIGHTS.md alone.
+2. Extract: post performance, timing, reciprocal writers
+3. Base template (TOOLS.md SS Schedule Templates)
+4. **🚨 Capacity match (validate before writing):**
+   - Σ(max_comments across all tasks) MUST = `daily.comments.limit` from limits.json
+   - Σ(max_likes across all tasks) MUST = `daily.likes.limit` from limits.json
+   - If mismatch → adjust task configs until they match exactly. Do NOT skip.
+   - **Weekly recommendations:** If `weekly.recommendations.current < weekly.recommendations.limit`, add a `recommend` task on Wednesday (per TOOLS.md Schedule Templates). Choose candidate based on recent engagement logs and `queries.json` topics. Check `memory/recommended_publications.txt` to avoid duplicates.
+   - **🚨 Newsletter:** Tuesday and Thursday `publish_newsletter` at 19:00 are MANDATORY — never skip unless `weekly.newsletters.current >= limit`.
+     - 🚨 MUST include `content_source` in `publish_newsletter` config:
+       ```json
+       "config": {
+         "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/substack-newsletter.md",
+         ...
+       }
+       ```
+   - **🚨 Notes:** Mon-Sat MUST have at least one `publish_note` task. Notes are the discovery engine — they surface your profile to new readers. Sunday is rest day (no note required).
+     - 🚨 MUST include `content_source` in `publish_note` config:
+       ```json
+       "config": {
+         "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/substack-note.md",
+         ...
+       }
+       ```
+
+5. Adjustments (only if 2+ pattern occurrences)
+6. Jitter (+-30min), collision (10min spacing), hours (08:00-23:00)
+7. **Write:** `schedule.json` with metadata.for_date = target date (TODAY), all tasks
+
+**Note:** `update_memory` at 22:00 is MANDATORY in every schedule — never skip it.

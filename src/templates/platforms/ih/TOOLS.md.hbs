@@ -1,0 +1,30 @@
+# TOOLS.md - Indie Hackers Agent
+
+## Local Files
+
+| File | Purpose |
+|------|---------|
+| schedule.json | Daily tasks with jitter. Read every heartbeat. |
+| limits.json | Source of truth for counts. Increment `current` after each action. |
+| queries.json | Focus topics. Generated daily by content planner. |
+| memory/{date}.md | Append-only log. WRITE-ONLY during heartbeats. |
+
+## Post Quality Filter
+
+Relevant, has engagement, fresh (<48h), comment box available, not crowded (2-15 comments).
+
+## Comment Rules
+
+Lead with personal experience, 2-4 sentences, NO bullets. Upvote before comment. Self-review (SOUL.md).
+
+## Post Templates
+
+### Weekly (Wed + Sat, mandatory)
+Real data from `memory/` (last 7d). Hook (number/failure) → shipped → worked/didn't → next week → question. <300 words.
+
+### Milestone Hooks
+Viral/users/launch/revenue — use real numbers, honest breakdown.
+
+## Browser
+
+`profile: "{{browser_profile}}"` on ALL calls. Selectors in BROWSER-*.md files.

@@ -1,0 +1,100 @@
+# TOOLS.md - Dev.to Agent
+
+**All limits in `limits.json`. Never hardcode values.**
+
+Reply handling: HEARTBEAT.md | Self-review: SOUL.md § "What Got Us Caught on HN"
+
+---
+
+## Local Files
+
+**schedule.json** — Daily tasks with jitter. Read every heartbeat. Last task generates tomorrow's schedule.
+
+**limits.json** — Daily/weekly action limits with auto-reset.
+
+| Type | Fields |
+|------|--------|
+| daily.comments | limit, current, last_reset, history[] |
+| daily.reactions | limit, current, last_reset, history[] |
+| weekly.articles | limit, current, last_reset, history[] |
+| weekly.tag_follows | limit, current, last_reset, followed_tags[], history[] |
+
+- Reset: daily at midnight (current=0), weekly after 7 days
+- **Source of truth for counts** — increment current after each action
+- Comment=limited daily, Reaction=limited daily, Reply=unlimited, Article=limited weekly (2/week, Wed+Sun mandatory)
+
+**queries.json** — Tags, topics, search queries, series. Fields: tags[](name, slug, category, active, last_used), topics[], series[](name, topics, description), competitor_keywords. Pick 2-3 tags/session. Generated daily by content planner — all queries fresh.
+
+**memory/{date}.md** — Append-only log. Types: Heartbeat, Comment, Reply, Reaction, Article Published, Tag Follow, Error
+
+**memory/replied_comments.txt** — Reply tracking. Format: `username|article_url` (one per line). Check before replying, append after.
+
+---
+
+## Dev.to API
+
+**Use API before browser when available.**
+
+**Commands:** `my-articles`, `publish <file.md>`, `update <id> <file.md>`, `search <tag>`, `fresh [rising|fresh]`, `comments <id>`, `check-replies`, `me`
+
+**Browser-only:** Comments on others' articles, reactions, notifications, following
+
+---
+
+## Article Publishing
+
+Check memory for "Article Published" in last 14 days. If none, write one.
+
+**Topics:** (1) Vibe coding, (2) AI-assisted dev, (3) Building in public, (4) Dev productivity, (5) Project deep-dives, (6) Autonomous AI agents
+
+**Series:** Pick from queries.json series[] based on topic:
+- "Vibe Coding Lessons" — AI-assisted dev topics
+- "Building in Public" — project journey, lessons learned
+- "Developer Productivity" — tools, techniques, workflows
+
+**Tags:** #vibecoding, #ai, #webdev, #productivity, #buildinpublic, #indiehacker, #flutter, #beginners (max 4). Cross-post from Medium with canonical_url.
+
+**Publishing:** `devto-api.sh publish <file.md> --series "Series Name"`
+
+---
+
+## Post Quality Filter
+
+Before commenting:
+1. Fresh: <24 hours
+2. Traction: 5+ reactions OR 3+ comments
+3. Relevant: matches queries.json tags
+4. Not buried: <50 comments
+5. Sweet spot: 3-20 comments
+6. No dupe tags same session
+
+---
+
+## Tag Trending Analysis
+
+Before commenting session:
+1. `devto-api.sh fresh rising`
+2. `devto-api.sh search <tag> 1` for 2-3 tags
+3. 3+ fresh high-engagement articles → comment there
+4. 0-1 fresh → skip, try different tag
+5. Check `rising` first (growing, not crowded)
+
+---
+
+## Article Stats Monitoring
+
+Every heartbeat: `my-articles` + `check-replies`. Compare to recent memory. Alert on spikes: 5+ reactions, 3+ comments, 100+ views. Engage with commenters immediately.
+
+---
+
+## Browser
+
+**CRITICAL: Profile = `promo-devto`.** Pass on ALL calls.
+
+**Comments use Markdown** on Dev.to.
+
+---
+
+## Schedule Generation
+
+See PLAYBOOK.md § Generate Schedule. Articles mandatory Wed + Sun.

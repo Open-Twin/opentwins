@@ -1,0 +1,57 @@
+# PLAYBOOK.md - LinkedIn Agent
+
+End-of-day and on-demand tasks. **Do NOT load on routine heartbeats.** Only read when HEARTBEAT.md directs you.
+
+---
+
+## Update Memory
+
+**When:** Task is `update_memory` (~22:00)
+
+1. Read `memory/{today}.md`, `memory/{yesterday}.md` (skip {yesterday} if doesn't exist - first day)
+2. Extract learnings: what worked, what didn't, patterns, key relationships, content insights, strategy adjustments
+3. Update `INSIGHTS.md` with new learnings. Keep < 100 lines. Remove outdated entries.
+4. Log completion
+
+---
+
+## Generate Schedule
+
+**When:**
+- Morning Schedule Check (HEARTBEAT.md § 0) - generates TODAY's schedule
+- Scheduled daily - generates TODAY's schedule
+
+1. **Read inputs for schedule generation:**
+   - **Content brief:** `{{pipeline_workspace}}/content-briefs/{target_date}.md` — provides today's theme, engagement targets, suggested hooks, hashtags. Adapt to this platform's style, don't copy verbatim.
+   - **INSIGHTS.md** — provides what's been working: engagement patterns, priority targets, timing insights, key relationships.
+   - **How they work together:** Content brief sets the THEME (what to talk about). INSIGHTS.md sets the STRATEGY (who to target, when to post, what format works). If no content brief exists, use INSIGHTS.md alone.
+2. Extract: content performance, timing, leader engagement
+3. Load base template (TOOLS.md § Schedule Base Templates)
+4. **Capacity matching (MANDATORY):**
+   - Sum `max_comments` across all tasks = `daily.comments.limit` (limits.json)
+   - Sum `max_likes` across all tasks = `daily.reactions.limit` (limits.json)
+   - 4 engagement windows: ~10:00, ~13:00, ~15:00, ~19:00
+   - Read `ramp_plan` fields in limits.json and adjust limits weekly
+   - Distribute comments to peak windows (15:00 and 10:00 first)
+   - Midday window can be likes-only when comment budget is tight
+   Adjust to match exactly.
+5. 🚨 **Articles: MANDATORY 2/week.** Tuesday + Friday. Always include `publish_article` task at 10:00 on those days — do NOT skip. If `weekly.articles.current >= limit` → skip the task but keep other tasks.
+   - 🚨 MUST include `content_source` in `publish_post` config:
+     ```json
+     "config": {
+       "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/linkedin-post.md",
+       ...
+     }
+     ```
+   - 🚨 MUST include `content_source` in `publish_article` config:
+     ```json
+     "config": {
+       "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/linkedin-article.md",
+       ...
+     }
+     ```
+6. Apply adjustments (only if pattern seen 2+ times)
+7. Apply jitter (+-30min), anti-collision (10min spacing), active hours (08:00-23:00)
+8. **Write:** `schedule.json` with metadata.for_date = target date (TODAY), all tasks
+
+**Note:** `update_memory` at 22:00 is MANDATORY in every schedule — never skip it.

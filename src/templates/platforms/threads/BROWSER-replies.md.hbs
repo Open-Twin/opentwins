@@ -1,0 +1,118 @@
+# BROWSER-replies.md - Activity Page Reply Patterns
+
+## S 1. Extract Unreplied Posts (Activity Page)
+
+Navigate to `https://www.threads.net/activity/replies`, then extract with 3s embedded wait:
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    const links = Array.from(document.querySelectorAll('a[href*="/post/"]'));
+    const uniqueUrls = [...new Set(links.map(l => l.href))];
+
+    const filtered = uniqueUrls.slice(0, 10).map((url) => {
+      const link = links.find(l => l.href === url);
+      const container = link.parentElement.parentElement.parentElement;
+      const lines = container.innerText.split('\\n').filter(l => l.trim());
+
+      const commentIcon = container.querySelector('svg[aria-label="Reply"]');
+      const iconParent = commentIcon ? commentIcon.parentElement : null;
+      const iconGrandParent = iconParent ? iconParent.parentElement : null;
+      const nearbyText = iconGrandParent ? iconGrandParent.innerText.trim() : '';
+      const hasReplyNumber = /^\\d+$/.test(nearbyText);
+
+      return {
+        url: url,
+        author: lines[0] || 'unknown',
+        preview: lines.slice(2).join(' ').slice(0, 200),
+        alreadyReplied: hasReplyNumber
+      };
+    }).filter(item => item.author !== '{{handle}}' && !item.alreadyReplied);
+
+    return filtered;
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+---
+
+## S 2. Find and Click First Unreplied Post
+
+**Requires `allowedIds`** — array of post IDs from grep pre-check (step 3b). Inline as JSON array in template literal.
+
+```javascript
+// allowedIds = ["DUqc1LaCtOk", "ABC123"] — from grep pre-check output
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    const allowedIds = ${JSON.stringify(allowedIds)};
+    const links = Array.from(document.querySelectorAll('a[href*="/post/"]'));
+
+    for (const link of links) {
+      const postId = link.href.match(/\\/post\\/([^/?]+)/)?.[1];
+      if (!postId || !allowedIds.includes(postId)) continue;
+
+      let container = link.parentElement.parentElement.parentElement;
+      const lines = container.innerText.split('\\n').filter(l => l.trim());
+      const author = lines[0] || '';
+
+      if (author === '{{handle}}') continue;
+
+      const commentIcon = container.querySelector('svg[aria-label="Reply"]');
+      const iconParent = commentIcon ? commentIcon.parentElement : null;
+      const iconGrandParent = iconParent ? iconParent.parentElement : null;
+      const nearbyText = iconGrandParent ? iconGrandParent.innerText.trim() : '';
+      if (/^\\d+$/.test(nearbyText)) continue;
+
+      let searchContainer = link;
+      for (let i = 0; i < 10; i++) {
+        searchContainer = searchContainer.parentElement;
+        if (!searchContainer) break;
+
+        const replyIcon = searchContainer.querySelector('svg[aria-label="Reply"]');
+        if (replyIcon) {
+          const button = replyIcon.closest('div[role="button"]') || replyIcon.parentElement?.parentElement;
+          if (button) {
+            button.click();
+            return { clicked: true, url: link.href, author: author, postId: postId };
+          }
+        }
+      }
+    }
+
+    return { clicked: false, error: 'no_unreplied_posts' };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+---
+
+## S 3. Retry After no_dialog Failure
+
+🚨 **Use ONLY when S 5 (Reply/Comment Flow) returns `no_dialog` after a successful S 2 click.**
+
+The activity page popup can intermittently fail to open even though the click registered. When this happens:
+
+1. **NEVER navigate to the post URL** — on post pages, `icons[0]` is the original post's Reply button, NOT the comment thread reply. Clicking it posts a top-level comment instead of a threaded reply.
+2. Instead, re-navigate to the activity page and retry once:
+
+```javascript
+// Step 1: Navigate back to activity/replies (resets page state)
+browser.act({
+  kind: "navigate",
+  url: "https://www.threads.net/activity/replies",
+  profile: "{{browser_profile}}"
+})
+
+// Step 2: Wait 3s for page load, then run S 2 again with the same allowedIds
+// (use the S 2 code above with the failing postId still in allowedIds)
+
+// Step 3: If S 2 returns clicked=true, run S 5 again
+// Step 4: If S 5 still returns no_dialog → SKIP this post, move to next
+```
+
+**Never retry more than once per post.** If the popup fails twice, skip and move on.

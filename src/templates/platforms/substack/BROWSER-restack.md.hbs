@@ -1,0 +1,47 @@
+# BROWSER-restack.md - Substack Restack Patterns
+
+## SS 10. Restack with a Note
+
+🚨 **Radix UI dropdown:** Substack uses Radix UI for the Restack menu. `.click()` and `MouseEvent('click')` do NOT open it. MUST use `PointerEvent` sequence (`pointerdown` → `pointerup` → `click`) — this is how Radix triggers state changes.
+
+🚨 **Find button by `aria-label="Restack"`**, NOT by `innerText`. The button text is the restack count number (e.g. "7"), not "Restack".
+
+### Step 1 — Click Restack button and select "Restack with a note"
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 1000));
+    var btns = Array.from(document.querySelectorAll('button[aria-label="Restack"]'));
+    var targetBtn = btns[${noteIndex}];
+    if (!targetBtn) return { error: 'restack button not found at index ' + ${noteIndex} };
+    // Radix UI requires pointer events to open dropdown
+    var rect = targetBtn.getBoundingClientRect();
+    var cx = rect.x + rect.width / 2, cy = rect.y + rect.height / 2;
+    targetBtn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: cx, clientY: cy }));
+    await new Promise(r => setTimeout(r, 50));
+    targetBtn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: cx, clientY: cy }));
+    targetBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: cx, clientY: cy }));
+    await new Promise(r => setTimeout(r, 1500));
+    // Menu opens in Radix portal
+    var menuItems = Array.from(document.querySelectorAll('[role="menuitem"]'));
+    var quoteItem = menuItems.find(m => m.innerText.trim() === 'Restack with a note');
+    if (!quoteItem) return { error: 'menu not opened', state: targetBtn.getAttribute('data-state'), items: menuItems.map(m => m.innerText.trim()) };
+    quoteItem.click();
+    await new Promise(r => setTimeout(r, 2000));
+    var dialog = document.querySelector('[role="dialog"]');
+    var editor = dialog ? dialog.querySelector('[contenteditable="true"]') : null;
+    return { opened: !!editor };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 2 — Type quote note and post
+
+Use **BROWSER-note.md SS 9 Step 2** (identical Notes composer — contenteditable + "Post" button).
+
+### When to Restack
+
+Restack AI/PM/orchestration content with genuine PM perspective. Skip off-topic, low-quality, self-restacks. Quote note: 1-3 sentences adding real value, not just "great post".

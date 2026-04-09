@@ -1,0 +1,154 @@
+# BROWSER-notifications.md - Extract & Reply to Notifications
+
+## 1. Extract Notifications
+
+Only returns COMMENT_REPLY and POST_REPLY (the only actionable types). All other types (UPVOTE_COMMENT, LIFECYCLE_POST_SUGGESTIONS, GAMIFICATION_REMINDER, etc.) are filtered out inside evaluate to minimize result size.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    var items = document.querySelectorAll('notification-item');
+    if (items.length === 0) return { count: 0, items: [] };
+    var relevant = Array.from(items).filter(function(i) {
+      var t = i.getAttribute('message-type');
+      return t === 'COMMENT_REPLY' || t === 'POST_REPLY';
+    });
+    return {
+      count: relevant.length,
+      items: relevant.map(function(item) {
+        var row = item.querySelector('rpl-inbox-row');
+        return {
+          notificationId: item.getAttribute('notification-id'),
+          url: row ? row.getAttribute('inaccessiblehref') || '' : ''
+        };
+      })
+    };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+## 5. Reply to a Comment
+
+Use evaluate() with execCommand, NOT snapshot refs (ref collisions with multiple Lexical editors).
+NEVER fall back to clicking generic page-wide Reply button — will reply to WRONG comment.
+
+🚨 **Embedded-wait rule:** All waits MUST be `await new Promise(r => setTimeout(r, N))` INSIDE async evaluate. NEVER use separate `browser.act({ kind: "wait" })` calls.
+
+**Step 1: Dedup + scroll + click Reply + wait + type** (ONE async evaluate):
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 1000));
+    var thingId = '${thingId}';
+    var comment = document.querySelector('shreddit-comment[thingid="' + thingId + '"]');
+    if (!comment) return { error: 'comment not found' };
+
+    // Skip deep threads (no visibility, zero audience)
+    var depth = parseInt(comment.getAttribute('depth') || '0');
+    if (depth >= 4) return { skipped: true, reason: 'too_deep', depth: depth };
+
+    // Skip if parent comment is [deleted] — Reddit removes action buttons for entire thread
+    var parentId = comment.getAttribute('parentid');
+    if (parentId) {
+      var parentComment = document.querySelector('shreddit-comment[thingid="' + parentId + '"]');
+      if (parentComment && parentComment.getAttribute('author') === '[deleted]') {
+        return { skipped: true, reason: 'deleted_parent' };
+      }
+    }
+
+    // Check if already replied
+    var allComments = document.querySelectorAll('shreddit-comment');
+    for (var i = 0; i < allComments.length; i++) {
+      var c = allComments[i];
+      if (c.getAttribute('author') === '{{handle}}' && c.getAttribute('parentid') === thingId) {
+        return { alreadyReplied: true };
+      }
+    }
+
+    // Scroll into view + expand if collapsed
+    comment.scrollIntoView({ block: 'center' });
+    if (comment.hasAttribute('collapsed')) comment.removeAttribute('collapsed');
+    await new Promise(r => setTimeout(r, 500));
+
+    // Click Reply (scoped to target comment)
+    var buttons = comment.querySelectorAll('button');
+    var replyBtn = null;
+    for (var j = 0; j < buttons.length; j++) {
+      if (buttons[j].textContent.trim() === 'Reply') { replyBtn = buttons[j]; break; }
+    }
+    if (!replyBtn) return { error: 'no reply button' };
+    replyBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+    // Wait for editor to appear
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Focus + type
+    var editor = comment.querySelector('[data-lexical-editor="true"]');
+    if (!editor) return { error: 'no editor after 2s wait' };
+    editor.focus();
+    document.execCommand('insertText', false, '${replyText.replace(/'/g, "\\'")}');
+
+    await new Promise(r => setTimeout(r, 500));
+    var submitBtns = comment.querySelectorAll('button');
+    var submitBtn = null;
+    for (var k = 0; k < submitBtns.length; k++) {
+      if (submitBtns[k].textContent.trim() === 'Comment') { submitBtn = submitBtns[k]; break; }
+    }
+    return {
+      typed: true,
+      editorText: editor.textContent.slice(0, 80),
+      submitExists: !!submitBtn
+    };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+If `alreadyReplied: true` → **SKIP this notification**, append UUID to tracking file, move to next.
+If `error` → log and skip.
+
+**Step 2: Verify text + submit + verify reply** (ONE async evaluate):
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    var thingId = '${thingId}';
+    var comment = document.querySelector('shreddit-comment[thingid="' + thingId + '"]');
+    if (!comment) return { error: 'comment not found' };
+
+    // Verify text exists
+    var editor = comment.querySelector('[data-lexical-editor="true"]');
+    if (!editor) return { error: 'no editor' };
+    var text = editor.textContent.trim();
+    if (!text) return { error: 'editor empty' };
+
+    // Find and click Submit
+    var buttons = comment.querySelectorAll('button');
+    var submitBtn = null;
+    for (var i = 0; i < buttons.length; i++) {
+      if (buttons[i].textContent.trim() === 'Comment') { submitBtn = buttons[i]; break; }
+    }
+    if (!submitBtn) return { error: 'no submit button' };
+    submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+    // Wait for reply to appear
+    await new Promise(r => setTimeout(r, 3000));
+
+    // Verify our reply appeared
+    var allComments = document.querySelectorAll('shreddit-comment');
+    var found = false;
+    for (var j = 0; j < allComments.length; j++) {
+      if (allComments[j].getAttribute('author') === '{{handle}}' && allComments[j].getAttribute('parentid') === thingId) {
+        found = true;
+        break;
+      }
+    }
+    return { submitted: true, verified: found, textLen: text.length };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+If `verified: false` → wait 2s, retry ONCE. Still fails → HEARTBEAT_BLOCKED, do NOT update limits.

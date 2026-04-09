@@ -1,0 +1,251 @@
+# HEARTBEAT.md - Medium Agent
+
+**CLI syntax:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
+- **evaluate:** `... evaluate --fn 'async () => { ... }' 2>&1` (JS after `--fn`)
+- **open/close:** `... open "URL" 2>&1` / `... close 2>&1`
+- 🚨 **Keep evaluate JS under 1000 chars.** If longer, split into 2 evaluates. The CLI truncates/breaks JS over ~1500 chars.
+- **Editor:** BROWSER-core.md § 3 (inline Slate, NOT dialog). Split into 2 evaluates: (1) scroll+clear+type, (2) find Respond+click+verify.
+- **500 errors after submit are NORMAL** — response IS saved. Verify via responses panel, not `body.innerText`.
+- **Submit:** `dispatchEvent(new MouseEvent('click'))` — never `.click()`.
+- **URLs:** Both `/@author/` and publication URLs. SSL error → skip.
+- **Search:** MAX 2 queries/heartbeat. Filter dates BEFORE navigating.
+
+**File loading:** BROWSER-core.md is ALWAYS read at start. BROWSER-engage.md and queries.json are read ON-DEMAND only when a `browse_and_engage` or `follow_up_engagement` task is due. Do NOT read them during notification-only heartbeats.
+
+## Decision Tree
+
+```
+Heartbeat
+  -> Morning schedule check (§ 0)
+  -> Read limits.json + schedule.json + BROWSER-core.md (shared patterns/selectors/recovery)
+  -> Browser startup with retry (§ 2)
+  -> Notifications — reply all (§ 3) [FIRST]
+     (🚨 Read BROWSER-notifications.md BEFORE extracting notifications)
+  -> Schedule tasks (§ 5)
+     (Read BROWSER-engage.md for clap/search/follow/stats tasks)
+  -> Log + update limits (§ 6)
+  -> Close browser (§ 7)
+  -> HEARTBEAT_OK (§ 8)
+```
+
+Required order: All replies FIRST, then schedule tasks.
+🚨 **ALL steps mandatory every heartbeat.** Browser + notifications MUST run even if no tasks are due.
+🚨 **NEVER use `sessions_spawn` or sub-sessions.** Execute ALL commands directly — no child sessions.
+
+---
+
+## § 0. Morning Schedule Check
+
+If `schedule.json` missing OR `metadata.for_date != today`:
+1. Generate INSIGHTS.md from yesterday (PLAYBOOK.md § Memory Update)
+2. Generate today's schedule (PLAYBOOK.md § Generate Schedule)
+3. Proceed
+
+🚨 **NEVER generate a schedule for tomorrow.** Only generate for TODAY. Schedule generation happens once per day in the morning. If all today's tasks are done, return HEARTBEAT_OK — do NOT create a new schedule.
+
+---
+
+## § 1. Read Limits & Pre-load Tracking
+
+```
+if limits.daily.*.last_reset != today: current=0, last_reset=today
+available = limit - current
+```
+
+Pre-load tracking (single exec):
+```bash
+exec cat memory/replied_notifications_medium.txt memory/commented_posts.txt 2>/dev/null || echo "(empty)"
+```
+
+---
+
+## § 1b. Read Today Summary
+
+Read `memory/today_summary.json`. Use tallies to inform comment decisions:
+- `disagreements` < 25% of `comments` AND `comments >= 3` → next MUST disagree (e.g., 4 comments need 1, 8 need 2)
+- `last_style` was insight → next must be short/personal/pushback
+- Any style is 60%+ of total → MUST use a different style
+- `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question
+- `avg_words` above platform cap → next comment MUST be under 20 words
+
+If file doesn't exist or `date != today`, initialize:
+```bash
+exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+```
+
+## § 2. Browser Startup (with retry)
+
+1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://medium.com/me/notifications" 2>&1`
+2. If CDP error:
+   - Wait 3s, retry once
+   - Still fails -> skip all browser tasks, log error, return HEARTBEAT_OK
+
+---
+
+## § 3. Notifications (MANDATORY FIRST — process ALL)
+
+**Read BROWSER-notifications.md first.**
+
+1. Navigate `https://medium.com/me/notifications`
+2. Extract notifications — BROWSER-notifications.md § 1 (has 3s embedded wait)
+3. Filter: process type="response" and type="note" only
+4. **MANDATORY batch grep pre-check** — build keys for ALL notifications and check at once:
+   ```bash
+   exec printf '%s\n' "{type1}|{author1}|{url1}" "{type2}|{author2}|{url2}" ... | while read line; do grep -qF "$line" memory/replied_notifications_medium.txt && echo "SKIP: $line" || echo "NEW: $line"; done
+   ```
+   Only process lines prefixed with "NEW:".
+5. 🚨 **Loop through ALL new notifications** — do NOT stop after the first one:
+   For each NEW notification:
+   - Navigate to article URL
+   - ❌ **Do NOT use BROWSER-notifications.md § 2** (alreadyReplied check) — it false-positives on all notification pages because our original comment's `/@{{handle}}` link is always present. Tracking file is the authoritative dedup.
+   - Read context (BROWSER-core.md § 2 or inline evaluate)
+   - Write response (BROWSER-core.md § 3: scroll to inline editor → **clear** → type+submit → verify via responses panel) — 2-3 browser steps total (3 if 500 requires reload+re-verify)
+   - After verified success: append to tracking:
+     ```bash
+     exec printf '%s\n' '{type}|{author}|{articleUrl}|{ISO_TIMESTAMP}' >> memory/replied_notifications_medium.txt
+     ```
+   - Log: Type=Reply, Author, Article URL, Response (100 chars)
+   - 🚨 **Do NOT update `responses.current`** — notification replies are unlimited. Only proactive responses (§ 5 browse_and_engage) count against the limit.
+6. Process ALL notifications regardless of timing or limits.
+
+---
+
+
+---
+
+## § 5. Schedule Tasks
+
+**Read BROWSER-engage.md first** (for clap/search/follow/stats tasks).
+
+Filter: `status="pending" AND time<=now`, sort by time.
+**No spacing rule.** Execute tasks back-to-back when due.
+
+**Task types:**
+
+- **browse_and_engage** -> Optimized workflow:
+  1. **Search (MAX 2 queries total, strictly enforced).** **Start with a tag/recommended page** (`medium.com/tag/{tag}/recommended`) — these reliably return high-engagement recent articles. **Tag diversity rule:** pick query 2 from a DIFFERENT group than query 1. Groups: **Tech** (`software-development`, `artificial-intelligence`, `programming`, `developer-tools`), **Business** (`startup`, `building-in-public`, `entrepreneurship`), **Productivity** (`productivity`, `self-improvement`). Same-group tags overlap heavily. **Only use search** (`medium.com/search?q=...`) as a second query if tag/recommended yields < 2 usable candidates. ❌ NEVER exceed 2 total queries (tag + search combined). ❌ NEVER try niche tags — they waste navigations.
+  2. Batch extract articles — BROWSER-engage.md § 5. **Extraction auto-filters:** `/@author/` URLs AND publication URLs (`medium.com/{pub}/slug-hash`) + articles ≤14 days old. Publication URLs may redirect to custom domains — this is normal. If any URL causes SSL error → skip immediately.
+  3. **🚨 MANDATORY batch grep pre-check BEFORE navigating** — check ALL candidate URLs at once:
+     ```bash
+     exec printf '%s\n' "slug1" "slug2" "slug3" | while read line; do grep -qF "$line" memory/commented_posts.txt && echo "SKIP: $line" || echo "OK: $line"; done
+     ```
+     Only navigate to "OK:" articles. Cheaper than browser navigation.
+  4. Per selected article (grep returned "OK"): Navigate → **Read content + Clap in ONE evaluate** (BROWSER-core.md § 2 — combined, returns title + content + clapped count) → 🚨 **Apply Response Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) → respond if exceptional (BROWSER-core.md § 3) → 🚨 **MANDATORY: Follow author** (BROWSER-engage.md § 6, from article page, no navigation needed). Every engagement = follow.
+  5. 🚨 **ONLY append to `commented_posts.txt` AFTER a verified posted response** (BROWSER-core.md § 3 Step 2 returned `verified: true`). Clap-only articles are NOT tracked — they can be revisited for responses later.
+     🚨 **Verification MUST use the responses panel** (BROWSER-core.md § 3 Step 2) — NEVER `document.body.innerText`. If the page 500'd after submit → reload, wait 5s, verify via responses panel. Only track after `verified: true` from the panel.
+     ```bash
+     # ONLY after Step 2 verified: true from responses panel
+     exec printf '%s\n' '{article_url}' >> memory/commented_posts.txt
+     ```
+     ❌ NEVER track articles where only clap succeeded but response failed/skipped.
+     ❌ NEVER track articles where verification used `document.body.innerText` (false positive risk).
+  6. Log: Type=Clap, Type=Response, Type=Follow
+  7. Completion: increment `responses_done`, `claps_done`. If `responses_done >= config.max_responses` AND `claps_done >= config.max_claps` -> mark "done". Else "pending".
+  8. 🚨 **Zero-action rule:** If `responses_done + claps_done == 0` at end of heartbeat AND no articles were navigated to (search/filter returned 0 candidates), keep task **"pending"** so the next heartbeat can retry with different queries. Only mark "done" if at least 1 article was navigated to.
+  9. NEVER add non-schema fields (like `completed_at_partial`) to schedule.json tasks. Only: `status`, `responses_done`, `claps_done`.
+
+  If SSL error on any URL → skip immediately, try next article.
+- **follow_up_engagement** -> reciprocal writers -> clap + respond -> log. Same completion check.
+  🚨 **Anti-improvisation:** If response fails after 1 retry on a target article → mark task done with clap only. Do NOT search for additional reciprocal targets beyond those identified in notifications. **Max 2 author profiles checked per follow_up_engagement task.**
+- **publish_article** -> Generate article as a file for manual publishing (Medium's editor does NOT support browser automation for articles):
+
+  ### Content-Ready Override (publish tasks only)
+
+  Before executing any `publish_article` task:
+
+  1. Read the file at `config.content_source`
+  2. Use the article content for the markdown file (save to `memory/articles/YYYY-MM-DD-slug.md`)
+  3. The content-ready file already has title, body, tags, and image prompt in the correct format
+  4. After saving -> mark task done
+
+  **Standard publish_article flow:**
+  1. Read INSIGHTS.md + queries.json for topic ideas. Verify key facts via `web_search` if referencing real people/events.
+  2. Write article: 800-1500 words, conversational, story-driven. Match SOUL.md voice.
+  3. Format as markdown with proper structure:
+     - `# Title` as first line
+     - `## Section Heading` for sections
+     - `**bold**` for key phrases
+     - Short paragraphs (2-3 sentences max)
+     - `---` separator before CTA
+  4. At the end of the file, after tags, add an image generation prompt:
+     ```
+     ---
+     **Generate image for medium article:** [1-2 sentence prompt describing a hook image that would make people stop scrolling and click the article. Be specific about style, mood, and visual metaphor relevant to the article topic.]
+     ```
+  5. Save to `memory/articles/YYYY-MM-DD-slug.md`
+  6. Log: Type=Article Draft, title, file path
+  7. Mark task done. 🚨 **Do NOT open Medium editor or attempt to publish via browser.** The file is for manual copy-paste.
+- **update_memory** -> PLAYBOOK.md § Memory Update
+
+Submit verify: Type -> click submit -> wait 2s -> verify reply visible -> log. No verify = retry next.
+
+**MANDATORY: Task stays "pending" until ALL configured limits reached.**
+
+---
+
+## § 6. Log & Update
+
+Append memory:
+```bash
+exec cat >> memory/YYYY-MM-DD.md <<'EOF'
+## YYYY-MM-DD HH:MM - Response
+- Article: URL
+- Writer: @name
+- Style: insight
+- Our response: "text..."
+
+EOF
+```
+🚨 **Style field MANDATORY** for all Response entries — track which style was used (insight|short|personal|disagree). Enables quality audits.
+
+Update limits.json:
+- Proactive Response (§ 5 browse_and_engage) -> `responses.current++`
+- 🚨 Notification Reply (§ 3) -> do NOT increment `responses.current`
+- Clap -> `clap_sessions.current++` (one per article, NOT per click)
+
+🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
+
+**MANDATORY Slack Report** — output as text (gateway routes to Slack):
+```
+Medium Heartbeat
+- Actions: {summary or "No tasks due"}
+- Responses: {current}/{limit}
+- Claps: {current}/{limit}
+- Follows: {count} (auto - every engagement = follow)
+- Next task: {next pending time + action, or "none today"}
+```
+ALWAYS send even when 0 actions. Increment = ADD 1. limits.json = source of truth. No re-counting.
+
+---
+
+## § 7. Close Browser
+
+`browser.close({ profile: "{{browser_profile}}" })`. If fails -> `browser.start({ profile: "{{browser_profile}}" })` (restarts cleanly). NEVER browser.stop() or pkill.
+
+---
+
+## § 8. HEARTBEAT_OK
+
+Before returning verify: Slack sent, browser closed, limits.json updated.
+Return when: no pending notifications AND no due tasks AND Slack sent.
+
+---
+
+## Errors
+
+| Type | Action |
+|------|--------|
+| Browser crash | Log Type=Error, continue file steps |
+| JSON corrupt | Regenerate, log warning |
+| Rate limit | Stop, log Type=Alert, wait |
+| Submit fail | NO log, retry next |
+| Partial done | Log completed only |
+
+---
+
+## Reference
+
+- Profile: {{profile_url}}
+- Notifications: /me/notifications
+- Stats: /me/stats
+- New story: /new-story

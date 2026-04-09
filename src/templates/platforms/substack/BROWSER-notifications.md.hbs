@@ -1,0 +1,134 @@
+# BROWSER-notifications.md - Substack Notification & Reply Detection Patterns
+
+## SS 1. Extract Notifications
+
+Page: `https://substack.com/activity` (embed 3s wait in evaluate)
+
+Substack calls notifications "Activity". Tabs: All, Replies, Restacks. Only process "Replies" tab items.
+
+🚨 **Dedup key = URL + text snippet.** Substack does NOT expose unique per-comment URLs on the activity page. Multiple replies on the same thread share the same note URL. The `snippet` field (first 30 chars of reply body) distinguishes them.
+
+🚨 **"Replied to your note" notifications have NO post URL in the DOM** — only the author profile link. When a notification has `isReply=true` but no `/note/` or `/p/` link, the agent must click the row to discover the URL, then navigate back to `/activity` before continuing extraction. See Step 2 below.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    // Click "Replies" tab to filter to actionable items
+    var tabs = Array.from(document.querySelectorAll('button'));
+    var repliesTab = tabs.find(b => b.innerText.trim() === 'Replies');
+    if (repliesTab) {
+      repliesTab.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
+    // Check for empty state
+    if (document.body.innerText.includes("don't have any activity")) {
+      return { count: 0, items: [], empty: true };
+    }
+
+    // Extract notification rows — linkRow contains nested linkRows, so dedup by URL+snippet
+    var rows = Array.from(document.querySelectorAll("[class*='linkRow']"));
+    var seen = new Set();
+    var items = [];
+    for (var row of rows) {
+      var text = row.innerText || '';
+      var isReply = /replied|commented|response/i.test(text);
+      if (!isReply) continue;
+      var author = text.split('\\n')[0] || '';
+      if (/{{name}}|{{handle}}/i.test(author)) continue;
+      var link = Array.from(row.querySelectorAll('a[href]')).find(a => {
+        var h = a.href || '';
+        return h.includes('/note/') || h.includes('/p/') || h.includes('/comment/');
+      });
+      if (!link) continue;
+      var url = link.href.split('?')[0];
+      // Extract reply body snippet — find first line >20 chars that is NOT the "replied to..." header
+      var lines = text.split('\\n').filter(l => l.trim());
+      var snippet = '';
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (line.length > 20 && !/replied|commented|liked|your comment on/i.test(line) && !/^\\d+[hmd]$/.test(line)) {
+          snippet = line.slice(0, 30);
+          break;
+        }
+      }
+      // Dedup by URL + snippet (same URL can have multiple replies with different snippets)
+      var key = url + '|' + snippet;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      items.push({
+        type: 'reply',
+        author: author.slice(0, 40),
+        postUrl: url,
+        snippet: snippet,
+        rowIndex: Array.from(document.querySelectorAll("[class*='linkRow']")).indexOf(row),
+        needsClick: !url
+      });
+      if (items.length >= 10) break;
+    }
+    return { count: items.length, items };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+---
+
+## SS 1b. Resolve Missing URLs (for "replied to your note" notifications)
+
+🚨 **Only needed for items where `needsClick: true`** (no `/note/` or `/p/` link found in DOM).
+
+For each item with `needsClick: true`:
+1. Click the notification row by index to navigate to the note
+2. Read `window.location.href` — this gives the note URL (e.g. `/@author/note/c-XXXXXXX`)
+3. Navigate back to `https://substack.com/activity` and re-click "Replies" tab
+4. Store the discovered URL in the item's `postUrl`
+
+```javascript
+// Step 1: Click the row to discover URL
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 1000));
+    var rows = Array.from(document.querySelectorAll("[class*='linkRow']"));
+    var targetRow = rows[${rowIndex}];
+    if (!targetRow) return { error: 'row not found at index ${rowIndex}' };
+    var clickable = targetRow.querySelector("[class*='isClickable']") || targetRow;
+    clickable.click();
+    await new Promise(r => setTimeout(r, 3000));
+    return { url: window.location.href };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+After getting the URL, navigate back: `browser.navigate("https://substack.com/activity")`, wait 3s, click "Replies" tab again.
+
+🚨 **Do this BEFORE the grep pre-check** — items need URLs for dedup to work.
+
+---
+
+## SS 2. Check Already Replied
+
+Use tracking file dedup (grep pre-check) as primary method. Browser-based checks are unreliable for reply detection.
+
+🚨 **Dedup key includes snippet** — same URL can have multiple replies from the same author. The snippet (first 30 chars of reply body) makes each entry unique.
+
+**Tracking file format:**
+```
+reply|{author}|{url}|{snippet}|{ISO_TIMESTAMP}
+```
+
+**Grep check** — use `{url}|{first 15 chars of snippet}` for matching (shorter = tolerant of length variations):
+```bash
+exec grep -qF "{url}|{snippet_first_15_chars}" memory/replied_notifications_substack.txt && echo "SKIP" || echo "OK"
+```
+
+**Batch check (preferred):**
+```bash
+exec printf '%s\n' "{url1}|{snippet1_15chars}" "{url2}|{snippet2_15chars}" ... | while read line; do grep -qF "$line" memory/replied_notifications_substack.txt && echo "SKIP: $line" || echo "NEW: $line"; done
+```
+
+🚨 **Tracking file stores full 30-char snippet.** Grep uses first 15 chars as substring match (`-F` fixed string). This handles minor variations in snippet length between extraction runs.

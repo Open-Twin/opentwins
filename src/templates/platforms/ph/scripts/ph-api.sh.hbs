@@ -1,0 +1,130 @@
+#!/bin/bash
+# Product Hunt API helper script (GraphQL, read-only)
+# Usage: ph-api.sh <command> [args]
+
+CLIENT_ID="{{api_keys.ph_client_id}}"
+CLIENT_SECRET="{{api_keys.ph_client_secret}}"
+TOKEN_FILE="/tmp/ph-api-token.json"
+API_URL="https://api.producthunt.com/v2/api/graphql"
+
+# --- Token management ---
+get_token() {
+  # Check if we have a cached token (tokens last ~2 weeks)
+  if [ -f "$TOKEN_FILE" ]; then
+    TOKEN=$(jq -r '.access_token' "$TOKEN_FILE" 2>/dev/null)
+    if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
+      echo "$TOKEN"
+      return
+    fi
+  fi
+  
+  # Get new token
+  RESP=$(curl -s -X POST "https://api.producthunt.com/v2/oauth/token" \
+    -H "Content-Type: application/json" \
+    -d "{\"client_id\": \"$CLIENT_ID\", \"client_secret\": \"$CLIENT_SECRET\", \"grant_type\": \"client_credentials\"}")
+  echo "$RESP" > "$TOKEN_FILE"
+  echo "$RESP" | jq -r '.access_token'
+}
+
+gql() {
+  TOKEN=$(get_token)
+  curl -s -X POST "$API_URL" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$1"
+}
+
+case "$1" in
+  # --- Discovery ---
+  
+  today)
+    # Today's launches sorted by votes
+    # Usage: ph-api.sh today [count]
+    COUNT="${2:-15}"
+    DATE=$(date -u +%Y-%m-%dT00:00:00Z)
+    gql "{\"query\": \"{ posts(order: VOTES, postedAfter: \\\"$DATE\\\", first: $COUNT) { edges { node { id name tagline votesCount commentsCount slug url topics { edges { node { name } } } } } } }\"}" | \
+      jq '[.data.posts.edges[] | .node | {name, tagline, votes: .votesCount, comments: .commentsCount, slug, topics: [.topics.edges[].node.name]}]'
+    ;;
+
+  newest)
+    # Today's newest launches
+    # Usage: ph-api.sh newest [count]
+    COUNT="${2:-15}"
+    DATE=$(date -u +%Y-%m-%dT00:00:00Z)
+    gql "{\"query\": \"{ posts(order: NEWEST, postedAfter: \\\"$DATE\\\", first: $COUNT) { edges { node { id name tagline votesCount commentsCount slug } } } }\"}" | \
+      jq '[.data.posts.edges[] | .node | {name, tagline, votes: .votesCount, comments: .commentsCount, slug}]'
+    ;;
+
+  topic)
+    # Posts in a topic (e.g. vibe-coding, ai, productivity)
+    # Usage: ph-api.sh topic <slug> [count]
+    TOPIC="${2:-vibe-coding}"
+    COUNT="${3:-10}"
+    gql "{\"query\": \"{ posts(topic: \\\"$TOPIC\\\", order: VOTES, first: $COUNT) { edges { node { id name tagline votesCount commentsCount slug } } } }\"}" | \
+      jq '[.data.posts.edges[] | .node | {name, tagline, votes: .votesCount, comments: .commentsCount, slug}]'
+    ;;
+
+  search-topics)
+    # Search for topics
+    # Usage: ph-api.sh search-topics <query>
+    QUERY="${2:-ai}"
+    gql "{\"query\": \"{ topics(query: \\\"$QUERY\\\") { edges { node { name slug postsCount } } } }\"}" | \
+      jq '[.data.topics.edges[] | .node]'
+    ;;
+
+  # --- Post details ---
+
+  post)
+    # Get details about a specific post
+    # Usage: ph-api.sh post <slug>
+    if [ -z "$2" ]; then echo "Usage: ph-api.sh post <slug>"; exit 1; fi
+    gql "{\"query\": \"{ post(slug: \\\"$2\\\") { id name tagline description votesCount commentsCount url createdAt makers { id name username } topics { edges { node { name } } } } }\"}" | \
+      jq '.data.post'
+    ;;
+
+  comments)
+    # Get comments on a post
+    # Usage: ph-api.sh comments <slug> [count]
+    if [ -z "$2" ]; then echo "Usage: ph-api.sh comments <slug>"; exit 1; fi
+    COUNT="${3:-20}"
+    gql "{\"query\": \"{ post(slug: \\\"$2\\\") { name commentsCount comments(first: $COUNT) { edges { node { id body createdAt user { name username } replies(first: 5) { edges { node { body createdAt user { name username } } } } } } } } }\"}" | \
+      jq '{post: .data.post.name, total_comments: .data.post.commentsCount, comments: [.data.post.comments.edges[] | .node | {user: .user.username, body: (.body | gsub("<[^>]*>"; "") | .[0:200]), replies: [.replies.edges[] | .node | {user: .user.username, body: (.body | gsub("<[^>]*>"; "") | .[0:150])}]}]}'
+    ;;
+
+  # --- Our products ---
+
+  # --- Token ---
+  
+  token)
+    # Show current token
+    get_token
+    ;;
+
+  refresh-token)
+    # Force refresh token
+    rm -f "$TOKEN_FILE"
+    get_token
+    echo "Token refreshed"
+    ;;
+
+  *)
+    echo "Product Hunt API Helper (read-only)"
+    echo ""
+    echo "Discovery:"
+    echo "  today [count]              - Today's top launches"
+    echo "  newest [count]             - Today's newest launches"
+    echo "  topic <slug> [count]       - Posts in a topic (vibe-coding, ai, productivity)"
+    echo "  search-topics <query>      - Search for topic slugs"
+    echo ""
+    echo "Post details:"
+    echo "  post <slug>                - Full post details"
+    echo "  comments <slug> [count]    - Comments on a post"
+    echo ""
+    echo "Token:"
+    echo "  token                      - Show current access token"
+    echo "  refresh-token              - Force token refresh"
+    echo ""
+    echo "NOTE: Upvotes/comments CANNOT be done via API (write access needs PH approval)."
+    echo "      Use browser for: upvoting, commenting, forum posts."
+    ;;
+esac

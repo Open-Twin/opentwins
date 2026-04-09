@@ -1,0 +1,58 @@
+# TOOLS.md - LinkedIn Agent
+
+## Local Files
+
+| File | Purpose |
+|------|---------|
+| schedule.json | Daily tasks with jitter. Read every heartbeat. |
+| limits.json | Source of truth for counts. Increment after actions. |
+| queries.json | Search queries by topic. Generated daily by content planner. |
+| memory/{date}.md | Append-only log. Types: Heartbeat, Comment, Reply, Reaction, Post/Article/Poll/Repost/Newsletter, Connection Request, Error |
+
+## Browser
+
+`profile: "promo-linkedin"` on EVERY call. No API — 100% browser.
+
+URLs: Feed `/feed/`, Notifications `/notifications/`, Profile `/in/{{handle}}`, Search `/search/results/content/`
+
+## Post Quality Filter
+
+1. Fresh (24-48h), 10+ reactions, relevant (AI/PM/agents/tools)
+2. Not crowded (<100 comments, 5-30 ideal)
+3. Like first (mandatory)
+4. ALWAYS `datePosted="past-week"` in search (NOT past-24h)
+
+## Content Strategies
+
+### Posts
+See POST-TEMPLATES.md. Pick unused template, self-review (SOUL.md), peak hours (15:00-17:00 Kyiv). 3-5 hashtags (read from `queries.json → hashtags` array — refreshed daily).
+
+### Articles
+1000-2000 words, personal story. "Director of PM by day, AI-native builder by night." Topics: AI agents as team, sprint planning with AI, PM in AI era, AI-native workflows, conference insights. Tuesday + Friday (mandatory). End with question.
+
+### Polls
+4 options (1 funny). No product in poll — only in follow-up comment. See BROWSER-post.md SS 9.
+
+### Newsletter
+"Weekend Builder" — Monday AM. Hook → Updates → Lesson → CTA.
+
+### Repost
+Browse feed (NOT search). 2-4 sentences commentary. Self-review.
+
+## Connection Requests
+
+Auto-send after commenting. Safety checks → BROWSER-notifications.md SS 7 (profile → custom-invite → personalized note → send). Skip if: recruiter headline, already pending/connected, Creator Mode.
+
+## Engagement Windows (Kyiv)
+
+- **15:00-17:00** BEST (8-10am US East)
+- **19:00-20:00** good
+- **10:00-11:00** decent
+
+## Schedule Templates
+
+4 engagement windows daily (~10:00, 13:00, 15:00, 19:00). Mon=Newsletter + 4 engage. Tue/Fri=Article + 3 engage. Wed=4 engage. Thu=Poll/Post + 4 engage. Sat=3 engage. Sun=1 engage.
+
+End-of-day (every day): update_memory ~22:00, generate_tomorrow_schedule ~22:30.
+
+Capacity: Σ comments = daily.comments.limit, Σ reactions = daily.reactions.limit. Ramp weekly per limits.json ramp_plan.

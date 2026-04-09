@@ -1,0 +1,117 @@
+# BROWSER-post.md - IH Post Creation Patterns
+
+All calls require `profile: "{{browser_profile}}"`. Never use `args` in evaluate — inline via template literals.
+
+## Selectors
+
+| Element | Selector | Notes |
+|---------|----------|-------|
+| Title field | `textarea.post-page__title-field` | maxlength=140, Ember textarea |
+| Body field | `textarea.edit-post__body-field` | maxlength=100000, Ember textarea, supports Markdown |
+| Group selector trigger | `.group-selector__trigger` | Click to open dropdown |
+| Group selector collapsed | `.group-selector--collapsed` | Check before clicking |
+| Submit button | `.post-page__submit-button` | Disabled until title+body filled |
+| Save draft button | `.post-page__save-draft` | Always enabled |
+| Preview toggle | `.post-page__preview-toggle` | |
+
+## ❌ Anti-Patterns
+
+- **NEVER use snapshot + click refs on nav links** — clicking "Starting Up" etc. navigates AWAY from /new-post
+- **NEVER look for a category selector** — IH only has group selector (and account may not have groups)
+- **NEVER confuse cookie consent with post categories** — `.category-switch-handler` and `.category-filter-handler` are OneTrust cookie consent checkboxes, NOT IH post categories
+- **NEVER enumerate all buttons** with `querySelectorAll('button')` — the submit selector is `.post-page__submit-button`, use it directly
+- **NEVER explore DOM** with `innerHTML.slice()` — all selectors are documented above
+- **NO TipTap/ProseMirror editor on post page** — body is a plain `<textarea>`, not contenteditable
+- Group selector shows "You haven't joined any groups" — skip it, post to general feed
+
+## S 7. Create and Submit Post
+
+```javascript
+// Step 1: Set title (Ember textarea — use .value + input event)
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var titleArea = document.querySelector('textarea.post-page__title-field');
+    if (!titleArea) return { error: 'title_field_not_found' };
+    titleArea.focus();
+    titleArea.value = '${postTitle}';
+    titleArea.dispatchEvent(new Event('input', { bubbles: true }));
+    titleArea.dispatchEvent(new Event('change', { bubbles: true }));
+    return { success: true, titleLen: titleArea.value.length };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+```javascript
+// Step 2: Set body (Ember textarea — use .value + input event)
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var bodyArea = document.querySelector('textarea.edit-post__body-field');
+    if (!bodyArea) return { error: 'body_field_not_found' };
+    bodyArea.focus();
+    bodyArea.value = '${postBody}';
+    bodyArea.dispatchEvent(new Event('input', { bubbles: true }));
+    bodyArea.dispatchEvent(new Event('change', { bubbles: true }));
+    return { success: true, bodyLen: bodyArea.value.length };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+```javascript
+// Step 3: Wait 500ms for Ember state, then check + click submit
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    return new Promise(function(resolve) {
+      setTimeout(function() {
+        var submitBtn = document.querySelector('.post-page__submit-button');
+        if (!submitBtn) return resolve({ error: 'submit_button_not_found' });
+        if (submitBtn.disabled) return resolve({ error: 'submit_disabled', hint: 'title or body may be empty' });
+        submitBtn.click();
+        resolve({ success: true });
+      }, 500);
+    });
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+```javascript
+// Step 4: Wait 4s, verify URL changed from /new-post to /post/slug
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    return new Promise(function(resolve) {
+      setTimeout(function() {
+        resolve({
+          url: location.href,
+          isPublished: !location.href.includes('/new-post'),
+          title: document.title
+        });
+      }, 4000);
+    });
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If `isPublished: false` after step 4: retry submit once. If still fails, return HEARTBEAT_BLOCKED.
+
+## S 8. Dismiss Cookie Banner (if present)
+
+Run once at browser startup, before any post interaction:
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var acceptBtn = document.querySelector('#onetrust-accept-btn-handler');
+    if (acceptBtn) { acceptBtn.click(); return { dismissed: true }; }
+    return { noBanner: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
