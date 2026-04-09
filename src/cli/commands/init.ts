@@ -289,6 +289,18 @@ program
     }
     console.log('');
     console.log('  2. Start your twins:');
-    console.log('     opentwins start');
+    console.log('     opentwins start --ui');
     console.log('');
+
+    const startDashboard = await confirm({
+      message: 'Open the dashboard now?',
+      default: true,
+    });
+
+    if (startDashboard) {
+      const port = 3847;
+      log.info(`Starting dashboard on http://localhost:${port}`);
+      const { startDashboard: launch } = await import('../../ui/server.js');
+      await launch(port);
+    }
   }));
