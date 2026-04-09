@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApi, today } from '../hooks/useApi.ts';
 
@@ -30,6 +30,8 @@ const PLATFORM_COLORS: Record<string, string> = {
   ph: '#DA552F', ih: '#4F46E5',
 };
 
+type EventKindFilter = 'all' | 'thinking' | 'tool' | 'error';
+
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   const sec = Math.round(ms / 1000);
@@ -48,6 +50,27 @@ function formatTime(iso: string): string {
   }
 }
 
+function statusMeta(status: SessionSummary['status']) {
+  switch (status) {
+    case 'running':
+      return { color: 'var(--c-blue)',  bg: 'rgba(96,165,250,0.15)', border: 'rgba(96,165,250,0.35)', label: 'Running' };
+    case 'completed':
+      return { color: 'var(--c-green)', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.3)',  label: 'Completed' };
+    default:
+      return { color: 'var(--c-amber)', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.3)',  label: 'Incomplete' };
+  }
+}
+
+function eventKindColor(kind: FeedEvent['kind']) {
+  switch (kind) {
+    case 'error':    return 'var(--c-red)';
+    case 'done':     return 'var(--c-green)';
+    case 'thinking': return 'var(--c-blue)';
+    case 'tool':     return 'var(--c-text)';
+    default:         return 'var(--c-text-muted)';
+  }
+}
+
 export function ActivityLog() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: statusData } = useApi<{ platforms: Array<{ platform: string }> }>('/api/status');
@@ -59,12 +82,13 @@ export function ActivityLog() {
 
   const [date, setDate] = useState(initialDate);
   const [platform, setPlatform] = useState(initialPlatform);
+  const [kindFilter, setKindFilter] = useState<EventKindFilter>('all');
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(
     focusSession ? new Set([focusSession]) : new Set()
   );
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
 
-  // Sync URL params when filters change (but don't keep the session param as it was one-shot)
+  // Sync URL params when filters change
   useEffect(() => {
     const params: Record<string, string> = {};
     if (date !== today()) params.date = date;
@@ -90,6 +114,20 @@ export function ActivityLog() {
   const { data, loading } = useApi<{ sessions: SessionSummary[] }>(url, [date, platform]);
   const sessions = data?.sessions || [];
 
+  // Summary stats across visible sessions
+  const stats = useMemo(() => {
+    let events = 0, tools = 0, errors = 0, running = 0, completed = 0, incomplete = 0;
+    for (const s of sessions) {
+      events += s.eventCount;
+      tools += s.toolCount;
+      errors += s.errorCount;
+      if (s.status === 'running') running++;
+      else if (s.status === 'completed') completed++;
+      else incomplete++;
+    }
+    return { events, tools, errors, running, completed, incomplete };
+  }, [sessions]);
+
   const toggleSession = (id: string) => {
     const next = new Set(expandedSessions);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -102,177 +140,320 @@ export function ActivityLog() {
     setExpandedEvents(next);
   };
 
+  const expandAll = () => {
+    setExpandedSessions(new Set(sessions.map((s) => s.sessionId)));
+  };
+  const collapseAll = () => {
+    setExpandedSessions(new Set());
+    setExpandedEvents(new Set());
+  };
+
+  const isToday = date === today();
+
   return (
-    <div className="space-y-5">
-      {/* Header */}
+    <div className="space-y-8">
+      {/* ── Header ─────────────────────────────────────────────── */}
       <div className="animate-fade-up">
-        <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--c-text)' }}>Activity Log</h1>
-        <p className="mono text-sm mt-1" style={{ color: 'var(--c-text-muted)' }}>Agent sessions and their events</p>
+        <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--c-text)' }}>Activity Log</h1>
+        <p className="mono text-sm mt-1.5" style={{ color: 'var(--c-text-muted)' }}>
+          Agent sessions and events
+        </p>
       </div>
 
-      {/* Filters */}
-      <div className="animate-fade-up stagger-1 flex flex-wrap gap-2 items-center">
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="mono px-3 py-1.5 rounded-md text-sm outline-none transition-colors"
-          style={{
-            background: 'var(--c-panel)',
-            border: '1px solid var(--c-border-dim)',
-            color: 'var(--c-text-dim)',
-          }}
+      {/* ── KPI summary row ────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up stagger-1">
+        <StatCard label="Sessions" value={sessions.length} sub={isToday ? 'today' : date} />
+        <StatCard label="Events" value={stats.events} sub={`${stats.tools} tool calls`} accent="teal" />
+        <StatCard
+          label="Status"
+          value={stats.running > 0 ? `${stats.running} live` : stats.completed}
+          sub={stats.running > 0 ? 'running now' : `${stats.completed} completed`}
+          accent={stats.running > 0 ? 'blue' : 'green'}
         />
+        <StatCard
+          label="Errors"
+          value={stats.errors}
+          sub={stats.errors > 0 ? 'tool failures' : 'clean'}
+          accent={stats.errors > 0 ? 'red' : undefined}
+        />
+      </div>
 
-        <div className="flex gap-1 flex-wrap">
-          {platforms.map((p) => (
+      {/* ── Filter bar ─────────────────────────────────────────── */}
+      <div className="animate-fade-up stagger-2 flex flex-wrap items-center gap-3">
+        {/* Date picker */}
+        <div className="flex items-center gap-2">
+          <span className="mono text-[12px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Date</span>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="mono px-3 py-2 rounded-lg text-sm outline-none transition-colors"
+            style={{
+              background: 'var(--c-panel)',
+              border: '1px solid var(--c-border-dim)',
+              color: 'var(--c-text)',
+            }}
+          />
+          {!isToday && (
             <button
-              key={p}
-              onClick={() => setPlatform(p)}
-              className="mono px-2.5 py-1 rounded-md text-[13px] font-medium transition-all duration-200"
-              style={{
-                background: platform === p ? 'var(--c-teal-glow)' : 'transparent',
-                color: platform === p ? 'var(--c-teal)' : 'var(--c-text-muted)',
-                border: platform === p ? '1px solid rgba(45, 212, 191, 0.2)' : '1px solid transparent',
-              }}
+              onClick={() => setDate(today())}
+              className="mono text-[12px] px-2 py-1 rounded transition-colors hover:bg-white/5"
+              style={{ color: 'var(--c-teal-dim)' }}
             >
-              {p === 'all' ? 'All' : p}
+              today
             </button>
-          ))}
+          )}
         </div>
 
-        <span className="mono text-[14px] px-2 py-1 rounded-full" style={{ color: 'var(--c-teal-dim)', background: 'var(--c-teal-glow)' }}>
-          {sessions.length} {sessions.length === 1 ? 'session' : 'sessions'}
-        </span>
+        {/* Divider */}
+        <div className="h-6 w-px" style={{ background: 'var(--c-border-dim)' }} />
+
+        {/* Platform filter */}
+        <div className="flex items-center gap-2">
+          <span className="mono text-[12px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Platform</span>
+          <div className="flex gap-1 flex-wrap">
+            {platforms.map((p) => {
+              const isActive = platform === p;
+              const platformColor = PLATFORM_COLORS[p] || '#888';
+              return (
+                <button
+                  key={p}
+                  onClick={() => setPlatform(p)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 capitalize"
+                  style={{
+                    background: isActive ? 'var(--c-panel)' : 'transparent',
+                    color: isActive ? 'var(--c-text)' : 'var(--c-text-dim)',
+                    border: `1px solid ${isActive ? 'var(--c-teal-dim)' : 'var(--c-border-dim)'}`,
+                  }}
+                >
+                  {p !== 'all' && (
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: platformColor }} />
+                  )}
+                  {p === 'all' ? 'All' : p}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex-1" />
+
+        {/* Expand/collapse */}
+        {sessions.length > 0 && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={expandAll}
+              className="mono text-[12px] px-2.5 py-1 rounded transition-colors hover:bg-white/5"
+              style={{ color: 'var(--c-text-muted)' }}
+            >
+              expand all
+            </button>
+            <span style={{ color: 'var(--c-border)' }}>·</span>
+            <button
+              onClick={collapseAll}
+              className="mono text-[12px] px-2.5 py-1 rounded transition-colors hover:bg-white/5"
+              style={{ color: 'var(--c-text-muted)' }}
+            >
+              collapse all
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Sessions */}
+      {/* ── Sessions ───────────────────────────────────────────── */}
       {loading ? (
-        <div className="p-12 text-center mono text-sm animate-pulse" style={{ color: 'var(--c-teal-dim)' }}>
+        <div className="p-16 text-center mono text-sm animate-pulse" style={{ color: 'var(--c-teal-dim)' }}>
           Reading sessions...
         </div>
       ) : sessions.length === 0 ? (
-        <div className="p-12 text-center panel noise">
-          <div className="mono text-sm" style={{ color: 'var(--c-text-muted)' }}>No sessions found for this date</div>
+        <div className="panel noise py-16 text-center">
+          <div className="text-base" style={{ color: 'var(--c-text-dim)' }}>No sessions found</div>
+          <div className="mono text-[13px] mt-2" style={{ color: 'var(--c-text-muted)' }}>
+            {isToday
+              ? 'Trigger a run from the Agents tab to see activity here'
+              : `Try selecting a different date or platform`}
+          </div>
         </div>
       ) : (
-        <div className="space-y-3 animate-fade-up stagger-2">
+        <div className="space-y-4 animate-fade-up stagger-3">
           {sessions.map((s) => {
             const isExpanded = expandedSessions.has(s.sessionId);
+            const isFocused = focusSession === s.sessionId;
             const color = PLATFORM_COLORS[s.platform] || '#888';
+            const st = statusMeta(s.status);
+
+            // Filter events by kind
+            const filteredEvents = kindFilter === 'all'
+              ? s.events
+              : s.events.filter((e) => e.kind === kindFilter);
 
             return (
               <div
                 key={s.sessionId}
                 id={`session-${s.sessionId}`}
-                className="panel noise"
-                style={focusSession === s.sessionId ? { boxShadow: '0 0 0 1px var(--c-teal-dim), 0 0 24px rgba(45,212,191,0.12)' } : undefined}
+                className="panel noise overflow-hidden transition-all duration-200"
+                style={{
+                  borderColor: isFocused ? 'var(--c-teal-dim)' : undefined,
+                  boxShadow: isFocused ? '0 0 0 1px var(--c-teal-dim), 0 0 32px rgba(45,212,191,0.12)'
+                           : s.status === 'running' ? '0 0 0 1px rgba(96,165,250,0.25)' : undefined,
+                }}
               >
                 {/* Session header — clickable */}
                 <div
-                  className="p-4 cursor-pointer transition-colors hover:bg-white/[0.02] flex items-center justify-between gap-4"
+                  className="relative cursor-pointer transition-colors hover:bg-white/[0.02]"
                   onClick={() => toggleSession(s.sessionId)}
                 >
-                  <div className="flex items-center gap-4 min-w-0 flex-1">
-                    <div
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ background: color, boxShadow: `0 0 8px ${color}40` }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span className="font-semibold capitalize text-[15px]" style={{ color: 'var(--c-text)' }}>
-                          {s.platform}
-                        </span>
-                        <span className="mono text-[13px]" style={{ color: 'var(--c-text-dim)' }}>
-                          {formatTime(s.startedAt)} → {formatTime(s.endedAt)}
-                        </span>
-                        <span className="mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
-                          {formatDuration(s.durationMs)}
-                        </span>
-                        <span className="mono text-[13px] px-2 py-0.5 rounded-full" style={{
-                          color:
-                            s.status === 'running' ? 'var(--c-blue)' :
-                            s.status === 'completed' ? 'var(--c-green)' :
-                            'var(--c-amber)',
-                          background:
-                            s.status === 'running' ? 'rgba(96,165,250,0.12)' :
-                            s.status === 'completed' ? 'rgba(52,211,153,0.1)' :
-                            'rgba(251,191,36,0.1)',
-                        }}>
-                          {s.status}
-                        </span>
-                      </div>
-                      <div className="mono text-[13px] mt-1" style={{ color: 'var(--c-text-muted)' }}>
-                        {s.sessionId.slice(0, 8)}
-                      </div>
-                    </div>
-                  </div>
+                  {/* Left accent bar (status color) */}
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-1"
+                    style={{ background: s.status === 'running' ? 'var(--c-blue)' : s.status === 'completed' ? 'var(--c-green)' : 'var(--c-amber)' }}
+                  />
 
-                  <div className="flex items-center gap-4 shrink-0">
-                    <div className="text-right">
-                      <div className="mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>events</div>
-                      <div className="mono text-[15px] font-medium" style={{ color: 'var(--c-text)' }}>{s.eventCount}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>tools</div>
-                      <div className="mono text-[15px] font-medium" style={{ color: 'var(--c-text)' }}>{s.toolCount}</div>
-                    </div>
-                    {s.errorCount > 0 && (
-                      <div className="text-right">
-                        <div className="mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>errors</div>
-                        <div className="mono text-[15px] font-medium" style={{ color: 'var(--c-red)' }}>{s.errorCount}</div>
+                  <div className="p-5 pl-6 flex items-center justify-between gap-6 flex-wrap">
+                    {/* Identity */}
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                        style={{
+                          background: `${color}15`,
+                          border: `1px solid ${color}30`,
+                        }}
+                      >
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{
+                            background: color,
+                            boxShadow: s.status === 'running' ? `0 0 12px ${color}` : `0 0 8px ${color}40`,
+                          }}
+                        />
                       </div>
-                    )}
-                    <span className="mono text-[15px]" style={{ color: 'var(--c-teal-dim)' }}>
-                      {isExpanded ? '▼' : '▶'}
-                    </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="text-base font-semibold capitalize" style={{ color: 'var(--c-text)' }}>
+                            {s.platform}
+                          </span>
+                          <span
+                            className="mono text-[11px] uppercase tracking-wider font-medium px-2.5 py-1 rounded-full"
+                            style={{ color: st.color, background: st.bg, border: `1px solid ${st.border}` }}
+                          >
+                            {s.status === 'running' && <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 animate-pulse" style={{ background: st.color }} />}
+                            {st.label}
+                          </span>
+                        </div>
+                        <div className="mono text-[13px] mt-1 flex items-center gap-2" style={{ color: 'var(--c-text-muted)' }}>
+                          <span>{formatTime(s.startedAt)} → {formatTime(s.endedAt)}</span>
+                          <span style={{ color: 'var(--c-border)' }}>·</span>
+                          <span>{formatDuration(s.durationMs)}</span>
+                          <span style={{ color: 'var(--c-border)' }}>·</span>
+                          <span style={{ color: 'var(--c-border)' }}>{s.sessionId.slice(0, 8)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Metrics */}
+                    <div className="flex items-center gap-6 shrink-0">
+                      <Metric label="Events" value={s.eventCount} />
+                      <Metric label="Tools"  value={s.toolCount} />
+                      {s.errorCount > 0 && (
+                        <Metric label="Errors" value={s.errorCount} color="var(--c-red)" />
+                      )}
+                      <span className="text-lg transition-transform duration-200" style={{
+                        color: 'var(--c-teal-dim)',
+                        transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                      }}>
+                        ▶
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Events feed */}
+                {/* Events feed (expanded) */}
                 {isExpanded && (
-                  <div className="border-t p-4 max-h-[600px] overflow-y-auto space-y-1.5" style={{ borderColor: 'var(--c-border-dim)' }}>
-                    {s.events.length === 0 ? (
-                      <div className="mono text-sm text-center py-4" style={{ color: 'var(--c-text-muted)' }}>
-                        No events
-                      </div>
-                    ) : (
-                      s.events.map((ev, i) => {
-                        const evId = `${s.sessionId}:${i}`;
-                        const isEvExpanded = expandedEvents.has(evId);
-                        const evColor =
-                          ev.kind === 'error' ? 'var(--c-red)' :
-                          ev.kind === 'done' ? 'var(--c-green)' :
-                          ev.kind === 'thinking' ? 'var(--c-blue)' :
-                          ev.kind === 'tool' ? 'var(--c-text)' :
-                          'var(--c-text-muted)';
-
+                  <div style={{ borderTop: '1px solid var(--c-border-dim)' }}>
+                    {/* Event kind filter chips */}
+                    <div className="flex items-center gap-2 px-5 py-3 flex-wrap" style={{ background: 'rgba(255,255,255,0.015)' }}>
+                      <span className="mono text-[12px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Filter</span>
+                      {(['all', 'thinking', 'tool', 'error'] as EventKindFilter[]).map((k) => {
+                        const isActive = kindFilter === k;
+                        const count = k === 'all' ? s.events.length : s.events.filter((e) => e.kind === k).length;
                         return (
-                          <div
-                            key={i}
-                            className="flex items-start gap-3 py-1.5 px-2 rounded transition-colors hover:bg-white/[0.02] cursor-pointer"
-                            onClick={() => toggleEvent(evId)}
+                          <button
+                            key={k}
+                            onClick={(e) => { e.stopPropagation(); setKindFilter(k); }}
+                            className="mono text-[12px] px-2.5 py-1 rounded-full font-medium transition-all"
+                            style={{
+                              background: isActive ? 'var(--c-teal-glow)' : 'transparent',
+                              color: isActive ? 'var(--c-teal)' : 'var(--c-text-muted)',
+                              border: `1px solid ${isActive ? 'rgba(45,212,191,0.3)' : 'var(--c-border-dim)'}`,
+                            }}
                           >
-                            <span className="mono text-[13px] shrink-0 w-[70px]" style={{ color: 'var(--c-teal-dim)' }}>
-                              {formatTime(ev.ts)}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm break-words" style={{ color: evColor }}>{ev.summary}</div>
-                              {ev.detail && isEvExpanded && (
-                                <pre className="mono text-[13px] mt-1 p-2 rounded whitespace-pre-wrap break-words" style={{
-                                  color: 'var(--c-text-muted)',
-                                  background: 'rgba(255,255,255,0.02)',
-                                  border: '1px solid var(--c-border-dim)',
-                                }}>{ev.detail}</pre>
-                              )}
-                              {ev.detail && !isEvExpanded && (
-                                <div className="mono text-[12px] truncate" style={{ color: 'var(--c-text-muted)' }}>{ev.detail}</div>
-                              )}
-                            </div>
-                          </div>
+                            {k} {count > 0 && <span className="opacity-60">· {count}</span>}
+                          </button>
                         );
-                      })
-                    )}
+                      })}
+                    </div>
+
+                    {/* Events list */}
+                    <div className="p-4 max-h-[600px] overflow-y-auto">
+                      {filteredEvents.length === 0 ? (
+                        <div className="py-8 text-center">
+                          <div className="text-sm" style={{ color: 'var(--c-text-dim)' }}>
+                            {s.events.length === 0 ? 'No events in this session' : `No ${kindFilter} events`}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-0.5">
+                          {filteredEvents.map((ev, i) => {
+                            const evId = `${s.sessionId}:${i}`;
+                            const isEvExpanded = expandedEvents.has(evId);
+                            const evColor = eventKindColor(ev.kind);
+
+                            return (
+                              <div
+                                key={i}
+                                className="flex items-start gap-3 py-2 px-3 rounded-lg transition-colors hover:bg-white/[0.02] cursor-pointer"
+                                onClick={(e) => { e.stopPropagation(); toggleEvent(evId); }}
+                              >
+                                {/* Timestamp */}
+                                <span className="mono text-[12px] shrink-0 w-[68px] pt-0.5" style={{ color: 'var(--c-text-muted)' }}>
+                                  {formatTime(ev.ts)}
+                                </span>
+
+                                {/* Kind dot */}
+                                <div className="w-1.5 h-1.5 rounded-full shrink-0 mt-2" style={{ background: evColor, boxShadow: `0 0 6px ${evColor}60` }} />
+
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm break-words leading-relaxed" style={{ color: evColor }}>
+                                    {ev.summary}
+                                  </div>
+                                  {ev.detail && isEvExpanded && (
+                                    <pre className="mono text-[12px] mt-2 p-3 rounded-md whitespace-pre-wrap break-words" style={{
+                                      color: 'var(--c-text-dim)',
+                                      background: 'var(--c-void)',
+                                      border: '1px solid var(--c-border-dim)',
+                                    }}>{ev.detail}</pre>
+                                  )}
+                                  {ev.detail && !isEvExpanded && (
+                                    <div className="mono text-[12px] truncate mt-0.5" style={{ color: 'var(--c-text-muted)' }}>
+                                      {ev.detail}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Kind label (tiny) */}
+                                <span className="mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 mt-1" style={{
+                                  color: 'var(--c-text-muted)',
+                                  background: 'rgba(255,255,255,0.03)',
+                                }}>
+                                  {ev.kind}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -280,6 +461,32 @@ export function ActivityLog() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Helpers ─────────────────────────────────────────────────
+
+function StatCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: 'teal' | 'green' | 'blue' | 'red' }) {
+  const color = accent === 'teal'  ? 'var(--c-teal)'
+              : accent === 'green' ? 'var(--c-green)'
+              : accent === 'blue'  ? 'var(--c-blue)'
+              : accent === 'red'   ? 'var(--c-red)'
+              : 'var(--c-text)';
+  return (
+    <div className="panel noise p-5">
+      <div className="text-[12px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: 'var(--c-text-muted)' }}>{label}</div>
+      <div className="text-3xl font-semibold tabular-nums leading-none" style={{ color }}>{value}</div>
+      {sub && <div className="mono text-[12px] mt-2" style={{ color: 'var(--c-text-muted)' }}>{sub}</div>}
+    </div>
+  );
+}
+
+function Metric({ label, value, color }: { label: string; value: string | number; color?: string }) {
+  return (
+    <div className="text-right">
+      <div className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--c-text-muted)' }}>{label}</div>
+      <div className="text-lg font-semibold tabular-nums leading-none" style={{ color: color || 'var(--c-text)' }}>{value}</div>
     </div>
   );
 }
