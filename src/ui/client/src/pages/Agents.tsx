@@ -86,14 +86,34 @@ const DEFAULT_LIMITS: Record<string, { daily: Record<string, { limit: number }>;
 };
 
 const STATE_CONFIG: Record<AgentState, { label: string; color: string; bg: string; dot: string }> = {
-  needs_setup:    { label: 'NEEDS SETUP',    color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', dot: '' },
-  needs_api_keys: { label: 'NEEDS API KEYS', color: '#fb923c', bg: 'rgba(251,146,60,0.08)', dot: '' },
-  ready:       { label: 'READY',       color: '#64748b', bg: 'rgba(100,116,139,0.08)', dot: 'pending' },
-  running:     { label: 'RUNNING',     color: '#60a5fa', bg: 'rgba(96,165,250,0.08)', dot: 'online' },
-  completed:   { label: 'COMPLETED',   color: '#34d399', bg: 'rgba(52,211,153,0.08)', dot: 'online' },
-  failed:      { label: 'FAILED',      color: '#f87171', bg: 'rgba(248,113,113,0.08)', dot: 'offline' },
-  disabled:    { label: 'DISABLED',    color: '#475569', bg: 'rgba(71,85,105,0.08)', dot: '' },
+  needs_setup:    { label: 'NEEDS SETUP',    color: 'var(--c-amber)', bg: 'rgba(251,191,36,0.12)', dot: '' },
+  needs_api_keys: { label: 'NEEDS API KEYS', color: '#fb923c',        bg: 'rgba(251,146,60,0.12)', dot: '' },
+  ready:          { label: 'READY',          color: 'var(--c-text-dim)', bg: 'rgba(148,163,184,0.1)', dot: 'pending' },
+  running:        { label: 'RUNNING',        color: 'var(--c-blue)',  bg: 'rgba(96,165,250,0.12)', dot: 'online' },
+  completed:      { label: 'COMPLETED',      color: 'var(--c-green)', bg: 'rgba(52,211,153,0.12)', dot: 'online' },
+  failed:         { label: 'FAILED',         color: 'var(--c-red)',   bg: 'rgba(248,113,113,0.12)', dot: 'offline' },
+  disabled:       { label: 'DISABLED',       color: 'var(--c-text-muted)', bg: 'rgba(100,116,139,0.08)', dot: '' },
 };
+
+// Turn a URL or raw handle into a clean @handle display
+function cleanHandle(handle: string): string {
+  if (!handle) return '';
+  if (handle.startsWith('http')) {
+    try {
+      const url = new URL(handle);
+      const segs = url.pathname.split('/').filter(Boolean);
+      return '@' + (segs[segs.length - 1] || url.hostname);
+    } catch { /* fallthrough */ }
+  }
+  return handle.startsWith('@') ? handle : '@' + handle;
+}
+
+// Build the canonical profile URL for a platform + handle
+function profileUrl(platform: string, handle: string): string {
+  if (handle.startsWith('http')) return handle;
+  const prefix = PLATFORM_URL_PREFIX[platform] || '';
+  return prefix + handle;
+}
 
 export function Agents() {
   const { data: agents, refetch } = useApi<AgentSummary[]>('/api/agents');
@@ -144,18 +164,18 @@ export function Agents() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="animate-fade-up flex items-center justify-between">
+      <div className="animate-fade-up flex items-start justify-between gap-6 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--c-text)' }}>Agent Control</h1>
-          <p className="mono text-sm mt-1" style={{ color: 'var(--c-text-muted)' }}>Manage lifecycle, limits, and schedules for each agent</p>
+          <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--c-text)' }}>Agent Control</h1>
+          <p className="mono text-sm mt-1.5" style={{ color: 'var(--c-text-muted)' }}>Manage lifecycle, limits, and schedules for each agent</p>
         </div>
-        <div className="flex items-center gap-2">
-          {flash && <span className="mono text-[13px] px-3 py-1 rounded-full animate-fade-up" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)' }}>{flash}</span>}
+        <div className="flex items-center gap-3">
+          {flash && <span className="mono text-[13px] px-3 py-1.5 rounded-full animate-fade-up" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)' }}>{flash}</span>}
           {availablePlatforms.length > 0 && !addingPlatform && (
-            <button onClick={() => { setAddingPlatform(true); setNewPlatform(availablePlatforms[0]); setNewHandle(''); }} className="mono text-[13px] px-3 py-1.5 rounded-md font-medium transition-all" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)', border: '1px solid rgba(45,212,191,0.25)' }}>
-              + Add Agent
+            <button onClick={() => { setAddingPlatform(true); setNewPlatform(availablePlatforms[0]); setNewHandle(''); }} className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)', border: '1px solid rgba(45,212,191,0.3)' }}>
+              <span className="text-base leading-none">+</span> Add Agent
             </button>
           )}
         </div>
@@ -196,37 +216,40 @@ export function Agents() {
         </div>
       )}
 
-      {/* Agent cards grid */}
-      <div className="animate-fade-up stagger-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {agents?.map((a) => {
-          const color = PLATFORM_COLORS[a.platform] || '#888';
-          const st = STATE_CONFIG[a.state];
-          const isSelected = a.platform === activePlatform;
-
-          return (
-            <button
-              key={a.platform}
-              onClick={() => setSelected(a.platform)}
-              className="panel noise text-left transition-all duration-200 hover:scale-[1.02]"
-              style={{
-                borderColor: isSelected ? 'var(--c-teal-dim)' : undefined,
-                boxShadow: isSelected ? '0 0 0 1px var(--c-teal-dim)' : undefined,
-              }}
-            >
-              <div className="p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full" style={{ background: color, boxShadow: a.state === 'running' ? `0 0 10px ${color}` : `0 0 6px ${color}40` }} />
-                    <span className="text-sm font-semibold capitalize" style={{ color: 'var(--c-text)' }}>{a.platform}</span>
-                  </div>
-                </div>
-                <div className="mono text-[14px] mb-2" style={{ color: 'var(--c-text-muted)' }}>@{a.handle}</div>
-                <StateBadge state={a.state} />
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      {/* Agent picker — segmented control (only if more than one) */}
+      {agents && agents.length > 1 && (
+        <div className="animate-fade-up stagger-1 flex gap-2 flex-wrap">
+          {agents.map((a) => {
+            const color = PLATFORM_COLORS[a.platform] || '#888';
+            const isSelected = a.platform === activePlatform;
+            return (
+              <button
+                key={a.platform}
+                onClick={() => setSelected(a.platform)}
+                className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg transition-all duration-200"
+                style={{
+                  background: isSelected ? 'var(--c-panel)' : 'transparent',
+                  border: `1px solid ${isSelected ? 'var(--c-teal-dim)' : 'var(--c-border-dim)'}`,
+                  color: isSelected ? 'var(--c-text)' : 'var(--c-text-dim)',
+                  boxShadow: isSelected ? '0 0 0 1px var(--c-teal-dim), 0 0 20px rgba(45,212,191,0.08)' : undefined,
+                }}
+              >
+                <div
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{
+                    background: color,
+                    boxShadow: a.state === 'running' ? `0 0 10px ${color}` : `0 0 6px ${color}40`,
+                  }}
+                />
+                <span className="text-sm font-medium capitalize">{a.platform}</span>
+                {a.state === 'running' && (
+                  <span className="mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--c-blue)' }}>● live</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Detail panel */}
       {activePlatform && activeAgent && (
@@ -343,58 +366,111 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
     }
   }
 
+  // Compute header stats
+  const scheduleTasksTotal = scheduleEntries.length;
+  const scheduleTasksDone = scheduleEntries.filter((t) => t.status === 'completed').length;
+  const dailyLimitsTotal = agent.limits?.daily ? Object.values(agent.limits.daily).reduce((s, v) => s + (v.current || 0), 0) : 0;
+  const dailyLimitsMax = agent.limits?.daily ? Object.values(agent.limits.daily).reduce((s, v) => s + (v.limit || 0), 0) : 0;
+  const fullProfileUrl = profileUrl(platform, agent.handle);
+
   return (
-    <div className="space-y-4 animate-fade-up">
-      {/* Agent header with controls */}
-      <div className="panel noise">
-        <div className="p-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-3 h-3 rounded-full" style={{ background: color, boxShadow: state === 'running' ? `0 0 12px ${color}` : `0 0 8px ${color}40` }} />
-              <div>
-                <div className="flex items-center gap-3">
-                  <span className="text-lg font-bold capitalize" style={{ color: 'var(--c-text)' }}>{platform}</span>
+    <div className="space-y-6 animate-fade-up">
+      {/* Agent hero panel */}
+      <div className="panel noise" style={{
+        background: `linear-gradient(135deg, var(--c-panel) 0%, var(--c-panel) 70%, ${color}08 100%)`,
+      }}>
+        <div className="p-6">
+          <div className="flex items-start justify-between gap-6 flex-wrap">
+            {/* Identity */}
+            <div className="flex items-start gap-4 min-w-0 flex-1">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                style={{
+                  background: `${color}15`,
+                  border: `1px solid ${color}30`,
+                  boxShadow: state === 'running' ? `0 0 24px ${color}40` : undefined,
+                }}
+              >
+                <div className="w-3 h-3 rounded-full" style={{ background: color, boxShadow: `0 0 12px ${color}80` }} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h2 className="text-2xl font-bold capitalize leading-tight" style={{ color: 'var(--c-text)' }}>
+                    {PLATFORM_LABELS[platform] || platform}
+                  </h2>
                   <StateBadge state={state} />
                 </div>
-                <div className="mono text-sm mt-0.5" style={{ color: 'var(--c-text-muted)' }}>@{agent.handle}</div>
+                <a
+                  href={fullProfileUrl}
+                  target="_blank"
+                  rel="noopener"
+                  className="mono text-sm mt-1 inline-flex items-center gap-1.5 transition-colors hover:underline"
+                  style={{ color: 'var(--c-text-muted)' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {cleanHandle(agent.handle)}
+                  <span style={{ fontSize: 10 }}>↗</span>
+                </a>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {flash && <span className="mono text-[13px] px-3 py-1 rounded-full animate-fade-up" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)' }}>{flash}</span>}
+            {/* Actions */}
+            <div className="flex items-center gap-3">
+              {flash && (
+                <span className="mono text-[13px] px-3 py-1.5 rounded-full animate-fade-up" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)' }}>
+                  {flash}
+                </span>
+              )}
 
               {state === 'needs_setup' && (
                 <div className="flex items-center gap-2">
-                  <span className="mono text-[14px]" style={{ color: 'var(--c-amber)' }}>Browser not configured</span>
+                  <span className="text-sm" style={{ color: 'var(--c-amber)' }}>Browser not configured</span>
                   <CmdHint cmd={`opentwins browser setup ${platform}`} />
                 </div>
               )}
 
-              {state === 'needs_api_keys' && (
-                <span className="mono text-[14px]" style={{ color: '#fb923c' }}>API keys required - configure below</span>
-              )}
-
-              {state === 'disabled' && (
-                <span className="mono text-[14px]" style={{ color: 'var(--c-text-muted)' }}>Enable in Config to run</span>
-              )}
-
               {state === 'running' && (
-                <ActionBtn onClick={handleStop} loading={stopping} danger>Stop</ActionBtn>
+                <ActionBtn onClick={handleStop} loading={stopping} danger>Stop Agent</ActionBtn>
               )}
 
               {(state === 'ready' || state === 'completed' || state === 'failed') && (
-                <ActionBtn onClick={handleRun} loading={starting} accent>Run Now</ActionBtn>
+                <ActionBtn onClick={handleRun} loading={starting} accent>▶ Run Now</ActionBtn>
               )}
 
               <button
                 onClick={() => { if (confirm(`Remove ${platform} agent? This won't delete browser profiles or activity history.`)) onRemove(platform); }}
-                className="mono text-[14px] px-2 py-1 rounded-md transition-all opacity-40 hover:opacity-100"
-                style={{ color: 'var(--c-red)', border: '1px solid rgba(248,113,113,0.15)' }}
+                className="mono text-[13px] px-3 py-1.5 rounded-md transition-all opacity-50 hover:opacity-100"
+                style={{ color: 'var(--c-red)', border: '1px solid rgba(248,113,113,0.2)' }}
                 title="Remove agent"
               >
                 Remove
               </button>
             </div>
+          </div>
+
+          {/* Quick stats row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5" style={{ borderTop: '1px solid var(--c-border-dim)' }}>
+            <HeroStat
+              label="Today's actions"
+              value={dailyLimitsTotal}
+              sub={dailyLimitsMax > 0 ? `of ${dailyLimitsMax} cap` : 'no caps set'}
+            />
+            <HeroStat
+              label="Tasks today"
+              value={scheduleTasksTotal > 0 ? `${scheduleTasksDone}/${scheduleTasksTotal}` : '—'}
+              sub={scheduleTasksTotal > 0 ? 'scheduled' : 'no schedule'}
+            />
+            <HeroStat
+              label="Last run"
+              value={agent.lastRun?.startedAt ? new Date(agent.lastRun.startedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
+              sub={agent.lastRun?.exitCode !== undefined ? `exit ${agent.lastRun.exitCode}` : 'no runs yet'}
+            />
+            <HeroStat
+              label="Workspace"
+              value={agent.browserConfigured ? '✓ ready' : '✗ missing'}
+              sub={agent.browserConfigured ? 'browser configured' : 'run browser setup'}
+              warn={!agent.browserConfigured}
+            />
           </div>
         </div>
       </div>
@@ -659,41 +735,69 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
       )}
 
       {/* Schedule + Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="panel noise">
-          <div className="panel-header">// Today's Schedule</div>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* Schedule — takes 3 columns */}
+        <div className="panel noise lg:col-span-3">
+          <div className="panel-header flex items-center justify-between">
+            <span>// Today's Schedule</span>
+            {scheduleTasksTotal > 0 && (
+              <span className="mono text-[13px] normal-case tracking-normal" style={{ color: 'var(--c-text-muted)' }}>
+                {scheduleTasksDone} of {scheduleTasksTotal} done
+              </span>
+            )}
+          </div>
           <div className="p-4">
             {scheduleEntries.length > 0 ? (
-              <div className="space-y-0.5">
-                {scheduleEntries.map((t, i) => (
-                  <div key={i} className="flex items-start gap-3 py-2 rounded px-2 transition-colors hover:bg-white/[0.02]">
-                    <span className="mono text-[13px] shrink-0 w-12" style={{ color: 'var(--c-teal-dim)' }}>{t.time}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="mono text-[13px]" style={{ color: 'var(--c-text)' }}>{t.action}</span>
+              <>
+                {/* Progress bar */}
+                <div className="h-1.5 rounded-full overflow-hidden mb-4" style={{ background: 'var(--c-border-dim)' }}>
+                  <div className="h-full rounded-full transition-all duration-500" style={{
+                    width: `${scheduleTasksTotal > 0 ? (scheduleTasksDone / scheduleTasksTotal) * 100 : 0}%`,
+                    background: color,
+                    opacity: 0.7,
+                  }} />
+                </div>
+                <div className="space-y-1">
+                  {scheduleEntries.map((t, i) => {
+                    const statusColor =
+                      t.status === 'completed' ? 'var(--c-green)' :
+                      t.status === 'failed'    ? 'var(--c-red)' :
+                      t.status === 'running'   ? 'var(--c-blue)' :
+                      'var(--c-text-muted)';
+                    return (
+                      <div key={i} className="flex items-start gap-4 py-2.5 px-3 rounded-lg transition-colors hover:bg-white/[0.02]">
+                        <span className="mono text-[13px] shrink-0 w-14 pt-0.5" style={{ color: 'var(--c-teal-dim)' }}>{t.time}</span>
+                        <div className="w-1.5 h-1.5 rounded-full shrink-0 mt-2" style={{ background: statusColor }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium" style={{ color: 'var(--c-text)' }}>{t.action}</div>
+                          {t.desc && <div className="mono text-[12px] mt-1 truncate" style={{ color: 'var(--c-text-muted)' }}>{t.desc}</div>}
+                        </div>
                         {t.status && (
-                          <span className="mono text-[13px] px-1.5 py-0.5 rounded-full" style={{
-                            color: t.status === 'completed' ? 'var(--c-teal)' : t.status === 'failed' ? 'var(--c-red)' : t.status === 'running' ? 'var(--c-amber)' : 'var(--c-text-muted)',
-                            background: t.status === 'completed' ? 'var(--c-teal-glow)' : t.status === 'failed' ? 'rgba(248,113,113,0.1)' : t.status === 'running' ? 'rgba(251,191,36,0.1)' : 'transparent',
+                          <span className="mono text-[11px] uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0" style={{
+                            color: statusColor,
+                            background: t.status === 'completed' ? 'rgba(52,211,153,0.1)' :
+                                        t.status === 'failed'    ? 'rgba(248,113,113,0.1)' :
+                                        t.status === 'running'   ? 'rgba(96,165,250,0.12)' :
+                                        'rgba(148,163,184,0.08)',
                           }}>{t.status}</span>
                         )}
                       </div>
-                      {t.desc && <div className="text-[14px] mt-0.5 truncate" style={{ color: 'var(--c-text-muted)' }}>{t.desc}</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              </>
             ) : (
               <Empty text="No schedule yet" hint="Generated on first heartbeat run" />
             )}
           </div>
         </div>
 
-        <div className="panel noise">
+        {/* Insights — takes 2 columns */}
+        <div className="panel noise lg:col-span-2">
           <div className="panel-header">// Insights</div>
           <div className="p-4">
             {agent.insights ? (
-              <pre className="mono text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--c-text-muted)' }}>
+              <pre className="mono text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--c-text-dim)' }}>
                 {agent.insights}
               </pre>
             ) : (
@@ -830,8 +934,11 @@ function LimitGroup({ title, limits, editing, color, onChange }: {
 }) {
   return (
     <div>
-      <div className="mono text-[14px] uppercase tracking-wider mb-3" style={{ color: 'var(--c-text-muted)' }}>{title}</div>
-      <div className="space-y-2.5">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="text-[11px] uppercase tracking-[0.12em] font-medium" style={{ color: 'var(--c-text-muted)' }}>{title}</div>
+        <div className="h-px flex-1" style={{ background: 'var(--c-border-dim)' }} />
+      </div>
+      <div className="space-y-4">
         {Object.entries(limits).map(([action, val]) => {
           const limit = editing ? (editing[action] ?? val.limit) : val.limit;
           const pct = limit > 0 ? Math.min((val.current / limit) * 100, 100) : 0;
@@ -839,32 +946,35 @@ function LimitGroup({ title, limits, editing, color, onChange }: {
 
           return (
             <div key={action} className="group">
-              <div className="flex items-center justify-between mb-1">
-                <span className="mono text-[13px]" style={{ color: isDisabled ? 'var(--c-text-muted)' : 'var(--c-text-dim)', textDecoration: isDisabled ? 'line-through' : 'none' }}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium capitalize" style={{
+                  color: isDisabled ? 'var(--c-text-muted)' : 'var(--c-text)',
+                  textDecoration: isDisabled ? 'line-through' : 'none',
+                }}>
                   {action.replace(/_/g, ' ')}
                 </span>
-                <div className="mono text-[13px] flex items-center gap-1" style={{ color: 'var(--c-text-muted)' }}>
-                  <span>{val.current}</span>
-                  <span style={{ color: 'var(--c-border)' }}>/</span>
+                <div className="mono text-sm flex items-baseline gap-1 tabular-nums">
+                  <span style={{ color: pct >= 90 ? 'var(--c-amber)' : 'var(--c-text)' }}>{val.current}</span>
+                  <span style={{ color: 'var(--c-text-muted)' }}>/</span>
                   {editing ? (
                     <input
                       type="number"
                       value={limit}
                       onChange={(e) => onChange(action, Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-10 bg-transparent text-right outline-none mono text-[13px] rounded px-1"
+                      className="w-12 bg-transparent text-right outline-none rounded px-1"
                       style={{ color: 'var(--c-teal)', borderBottom: '1px solid var(--c-teal-dim)' }}
                       min={0}
                     />
                   ) : (
-                    <span>{limit}</span>
+                    <span style={{ color: 'var(--c-text-muted)' }}>{limit}</span>
                   )}
                 </div>
               </div>
-              <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--c-border-dim)' }}>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--c-border-dim)' }}>
                 <div className="h-full rounded-full transition-all duration-700" style={{
                   width: `${pct}%`,
                   background: pct >= 90 ? 'var(--c-amber)' : color,
-                  opacity: isDisabled ? 0.2 : 0.6,
+                  opacity: isDisabled ? 0.2 : 0.8,
                 }} />
               </div>
             </div>
@@ -984,9 +1094,19 @@ function BehaviorField({ label, value, suffix, editing, min, max, onChange }: {
 
 function Empty({ text, hint }: { text: string; hint: string }) {
   return (
-    <div className="py-8 text-center">
-      <div className="mono text-sm" style={{ color: 'var(--c-text-muted)' }}>{text}</div>
-      <div className="mono text-[14px] mt-1" style={{ color: 'var(--c-border)' }}>{hint}</div>
+    <div className="py-10 text-center">
+      <div className="text-sm" style={{ color: 'var(--c-text-dim)' }}>{text}</div>
+      <div className="mono text-[12px] mt-1.5" style={{ color: 'var(--c-text-muted)' }}>{hint}</div>
+    </div>
+  );
+}
+
+function HeroStat({ label, value, sub, warn }: { label: string; value: string | number; sub?: string; warn?: boolean }) {
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-1.5" style={{ color: 'var(--c-text-muted)' }}>{label}</div>
+      <div className="text-xl font-semibold tabular-nums leading-none" style={{ color: warn ? 'var(--c-amber)' : 'var(--c-text)' }}>{value}</div>
+      {sub && <div className="mono text-[12px] mt-1.5" style={{ color: 'var(--c-text-muted)' }}>{sub}</div>}
     </div>
   );
 }
