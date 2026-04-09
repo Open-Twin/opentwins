@@ -14,7 +14,6 @@ export default defineConfig({
   clean: true,
   dts: false,
   sourcemap: true,
-  banner: {
-    js: '',
-  },
+  // Keep node_modules external, bundle everything in src/
+  packages: 'external',
 });
