@@ -31,12 +31,12 @@ export function App() {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'var(--c-teal-glow)', border: '1px solid var(--c-teal-dim)' }}>
-              <span className="mono text-xs font-bold" style={{ color: 'var(--c-teal)' }}>OT</span>
+              <span className="mono text-sm font-bold" style={{ color: 'var(--c-teal)' }}>OT</span>
             </div>
             <span className="text-sm font-semibold tracking-wide" style={{ color: 'var(--c-text)' }}>
               OPENTWINS
             </span>
-            <span className="mono text-[10px] px-2 py-0.5 rounded" style={{ color: 'var(--c-teal-dim)', background: 'var(--c-teal-glow)' }}>
+            <span className="mono text-[13px] px-2 py-0.5 rounded" style={{ color: 'var(--c-teal-dim)', background: 'var(--c-teal-glow)' }}>
               v0.1.0
             </span>
           </div>
@@ -49,14 +49,14 @@ export function App() {
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200"
                   style={{
                     color: active ? 'var(--c-teal)' : 'var(--c-text-dim)',
                     background: active ? 'var(--c-teal-glow)' : 'transparent',
                     border: active ? '1px solid rgba(45, 212, 191, 0.15)' : '1px solid transparent',
                   }}
                 >
-                  <span className="mono text-[10px] opacity-50">{item.icon}</span>
+                  <span className="mono text-[13px] opacity-50">{item.icon}</span>
                   {item.label}
                 </NavLink>
               );
@@ -64,7 +64,7 @@ export function App() {
           </nav>
 
           {/* Clock */}
-          <div className="mono text-[11px]" style={{ color: 'var(--c-text-muted)' }}>
+          <div className="mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
             {time.toLocaleTimeString('en-US', { hour12: false })}
           </div>
         </div>

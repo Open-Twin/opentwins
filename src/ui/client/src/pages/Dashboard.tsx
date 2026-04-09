@@ -85,7 +85,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   const s = styles[status] || { bg: 'rgba(100,100,100,0.08)', color: 'var(--c-text-muted)', dot: 'pending' };
   return (
-    <span className="mono inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ background: s.bg, color: s.color }}>
+    <span className="mono inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[14px] font-medium" style={{ background: s.bg, color: s.color }}>
       <span className={`status-dot ${s.dot}`} />
       {status}
     </span>
@@ -130,7 +130,7 @@ export function Dashboard() {
           <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--c-text)' }}>
             Mission Control
           </h1>
-          <div className="mono text-xs mt-1 flex items-center gap-3" style={{ color: 'var(--c-text-muted)' }}>
+          <div className="mono text-sm mt-1 flex items-center gap-3" style={{ color: 'var(--c-text-muted)' }}>
             <span>{today()}</span>
             <span style={{ color: 'var(--c-border)' }}>|</span>
             <span>{status?.timezone}</span>
@@ -157,7 +157,7 @@ export function Dashboard() {
             </button>
             {schedulerFlash && <span style={{ color: 'var(--c-teal)' }}>{schedulerFlash}</span>}
             {!status?.daemon && !schedulerFlash && (
-              <span className="text-[10px]" style={{ color: 'var(--c-text-muted)' }}>Agents and pipeline paused</span>
+              <span className="text-[14px]" style={{ color: 'var(--c-text-muted)' }}>Agents and pipeline paused</span>
             )}
           </div>
         </div>
@@ -198,12 +198,12 @@ export function Dashboard() {
                     {run && <StatusBadge status={run.status} />}
                   </div>
 
-                  <div className="mono text-[11px] mb-3 flex items-center justify-between" style={{ color: 'var(--c-text-muted)' }}>
+                  <div className="mono text-[13px] mb-3 flex items-center justify-between" style={{ color: 'var(--c-text-muted)' }}>
                     <span>@{p.handle}</span>
                     {status?.daemon && (() => {
                       const sched = status.platformSchedules?.find((s) => s.platform === p.platform);
                       return sched ? (
-                        <span className="mono text-[9px]" style={{ color: 'var(--c-teal-dim)' }}>
+                        <span className="mono text-[13px]" style={{ color: 'var(--c-teal-dim)' }}>
                           next {new Date(sched.nextRun).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
                         </span>
                       ) : null;
@@ -212,18 +212,18 @@ export function Dashboard() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <div className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--c-text-muted)' }}>Actions</div>
+                      <div className="text-[14px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--c-text-muted)' }}>Actions</div>
                       <div className="mono text-lg font-medium" style={{ color: acts > 0 ? 'var(--c-text)' : 'var(--c-text-muted)' }}>{acts}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--c-text-muted)' }}>Comments</div>
+                      <div className="text-[14px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--c-text-muted)' }}>Comments</div>
                       <div className="mono text-lg font-medium" style={{ color: (q?.comments || 0) > 0 ? 'var(--c-text)' : 'var(--c-text-muted)' }}>{q?.comments || 0}</div>
                     </div>
                   </div>
 
                   {run?.duration_ms && (
                     <div className="mt-3 pt-2" style={{ borderTop: '1px solid var(--c-border-dim)' }}>
-                      <span className="mono text-[10px]" style={{ color: 'var(--c-text-muted)' }}>
+                      <span className="mono text-[14px]" style={{ color: 'var(--c-text-muted)' }}>
                         {(run.duration_ms / 1000).toFixed(0)}s
                       </span>
                     </div>
@@ -243,7 +243,7 @@ export function Dashboard() {
             <div className="panel-header flex items-center justify-between">
               <span>// Content Pipeline</span>
               {status?.daemon && status?.nextPipelineRun && (
-                <span className="mono text-[10px] normal-case tracking-normal" style={{ color: 'var(--c-text-muted)' }}>
+                <span className="mono text-[14px] normal-case tracking-normal" style={{ color: 'var(--c-text-muted)' }}>
                   next: {new Date(status.nextPipelineRun).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
                 </span>
               )}
@@ -254,9 +254,9 @@ export function Dashboard() {
                   <div key={group.label}>
                     {/* Group header */}
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="mono text-[10px] w-4 text-center" style={{ color: 'var(--c-text-muted)' }}>{gi + 1}</span>
-                      <span className="text-[11px] font-semibold" style={{ color: 'var(--c-text-dim)' }}>{group.label}</span>
-                      <span className="mono text-[9px] px-1.5 py-0.5 rounded" style={{
+                      <span className="mono text-[14px] w-4 text-center" style={{ color: 'var(--c-text-muted)' }}>{gi + 1}</span>
+                      <span className="text-[13px] font-semibold" style={{ color: 'var(--c-text-dim)' }}>{group.label}</span>
+                      <span className="mono text-[13px] px-1.5 py-0.5 rounded" style={{
                         color: group.parallel ? 'var(--c-teal-dim)' : 'var(--c-text-muted)',
                         background: group.parallel ? 'var(--c-teal-glow)' : 'rgba(100,100,100,0.06)',
                       }}>
@@ -270,12 +270,12 @@ export function Dashboard() {
                         return (
                           <div key={stage.id} className="flex items-center justify-between py-1.5 px-2.5 rounded-md transition-colors hover:bg-white/[0.02]" style={{ background: 'rgba(255,255,255,0.01)' }}>
                             <div className="min-w-0">
-                              <div className="text-[11px] font-medium truncate" style={{ color: 'var(--c-text-dim)' }}>{stage.name}</div>
-                              <div className="mono text-[9px] truncate" style={{ color: 'var(--c-text-muted)' }}>{stage.desc}</div>
+                              <div className="text-[13px] font-medium truncate" style={{ color: 'var(--c-text-dim)' }}>{stage.name}</div>
+                              <div className="mono text-[13px] truncate" style={{ color: 'var(--c-text-muted)' }}>{stage.desc}</div>
                             </div>
                             <div className="shrink-0 ml-2">
                               {run ? <StatusBadge status={run.status} /> : (
-                                <span className="mono text-[9px]" style={{ color: 'var(--c-text-muted)' }}>
+                                <span className="mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
                                   {status?.daemon ? 'scheduled' : 'idle'}
                                 </span>
                               )}
@@ -307,19 +307,19 @@ export function Dashboard() {
               <table className="w-full">
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
-                    <th className="text-left px-4 py-2 mono text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Agent</th>
-                    <th className="text-left px-4 py-2 mono text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Status</th>
-                    <th className="text-left px-4 py-2 mono text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Time</th>
-                    <th className="text-right px-4 py-2 mono text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Dur</th>
+                    <th className="text-left px-4 py-2 mono text-[14px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Agent</th>
+                    <th className="text-left px-4 py-2 mono text-[14px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Status</th>
+                    <th className="text-left px-4 py-2 mono text-[14px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Time</th>
+                    <th className="text-right px-4 py-2 mono text-[14px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Dur</th>
                   </tr>
                 </thead>
                 <tbody>
                   {status.recentRuns.slice(0, 12).map((run) => (
                     <tr key={run.id} className="transition-colors hover:bg-white/[0.015]" style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
-                      <td className="px-4 py-2.5 mono text-xs" style={{ color: 'var(--c-text-dim)' }}>{run.agent_name}</td>
+                      <td className="px-4 py-2.5 mono text-sm" style={{ color: 'var(--c-text-dim)' }}>{run.agent_name}</td>
                       <td className="px-4 py-2.5"><StatusBadge status={run.status} /></td>
-                      <td className="px-4 py-2.5 mono text-[11px]" style={{ color: 'var(--c-text-muted)' }}>{run.started_at?.split('T')[1]?.slice(0, 5) || '-'}</td>
-                      <td className="px-4 py-2.5 text-right mono text-[11px]" style={{ color: 'var(--c-text-muted)' }}>
+                      <td className="px-4 py-2.5 mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>{run.started_at?.split('T')[1]?.slice(0, 5) || '-'}</td>
+                      <td className="px-4 py-2.5 text-right mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
                         {run.duration_ms ? `${(run.duration_ms / 1000).toFixed(0)}s` : '-'}
                       </td>
                     </tr>
@@ -328,8 +328,8 @@ export function Dashboard() {
               </table>
             ) : (
               <div className="p-8 text-center">
-                <div className="mono text-xs" style={{ color: 'var(--c-text-muted)' }}>No runs today</div>
-                <div className="mono text-[10px] mt-1" style={{ color: 'var(--c-border)' }}>Run: opentwins start</div>
+                <div className="mono text-sm" style={{ color: 'var(--c-text-muted)' }}>No runs today</div>
+                <div className="mono text-[14px] mt-1" style={{ color: 'var(--c-border)' }}>Run: opentwins start</div>
               </div>
             )}
           </div>
@@ -351,7 +351,7 @@ export function Dashboard() {
                 <div key={q.platform} className="panel noise p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
-                    <span className="text-xs font-semibold capitalize" style={{ color: 'var(--c-text-dim)' }}>{q.platform}</span>
+                    <span className="text-sm font-semibold capitalize" style={{ color: 'var(--c-text-dim)' }}>{q.platform}</span>
                   </div>
                   <div className="space-y-2">
                     <QualityRow label="Avg words" value={q.avg_words} warn={q.avg_words > 100} />
@@ -372,7 +372,7 @@ export function Dashboard() {
 function MiniStat({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
   return (
     <div className="text-right">
-      <div className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>{label}</div>
+      <div className="text-[14px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>{label}</div>
       <div className="mono text-sm font-medium" style={{ color: accent ? 'var(--c-teal)' : 'var(--c-text)' }}>{value}</div>
     </div>
   );
@@ -381,8 +381,8 @@ function MiniStat({ label, value, accent }: { label: string; value: string | num
 function QualityRow({ label, value, warn, dim }: { label: string; value: string | number; warn?: boolean; dim?: boolean }) {
   return (
     <div className="flex justify-between items-center">
-      <span className="mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>{label}</span>
-      <span className="mono text-xs font-medium" style={{
+      <span className="mono text-[14px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>{label}</span>
+      <span className="mono text-sm font-medium" style={{
         color: warn ? 'var(--c-amber)' : dim ? 'var(--c-text-muted)' : 'var(--c-text-dim)',
       }}>{value}</span>
     </div>

@@ -149,12 +149,12 @@ export function Agents() {
       <div className="animate-fade-up flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--c-text)' }}>Agent Control</h1>
-          <p className="mono text-xs mt-1" style={{ color: 'var(--c-text-muted)' }}>Manage lifecycle, limits, and schedules for each agent</p>
+          <p className="mono text-sm mt-1" style={{ color: 'var(--c-text-muted)' }}>Manage lifecycle, limits, and schedules for each agent</p>
         </div>
         <div className="flex items-center gap-2">
-          {flash && <span className="mono text-[11px] px-3 py-1 rounded-full animate-fade-up" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)' }}>{flash}</span>}
+          {flash && <span className="mono text-[13px] px-3 py-1 rounded-full animate-fade-up" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)' }}>{flash}</span>}
           {availablePlatforms.length > 0 && !addingPlatform && (
-            <button onClick={() => { setAddingPlatform(true); setNewPlatform(availablePlatforms[0]); setNewHandle(''); }} className="mono text-[11px] px-3 py-1.5 rounded-md font-medium transition-all" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)', border: '1px solid rgba(45,212,191,0.25)' }}>
+            <button onClick={() => { setAddingPlatform(true); setNewPlatform(availablePlatforms[0]); setNewHandle(''); }} className="mono text-[13px] px-3 py-1.5 rounded-md font-medium transition-all" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)', border: '1px solid rgba(45,212,191,0.25)' }}>
               + Add Agent
             </button>
           )}
@@ -167,24 +167,24 @@ export function Agents() {
           <div className="panel-header">// Add Agent</div>
           <div className="p-5 space-y-4">
             <div className="flex items-center gap-3">
-              <span className="mono text-[10px] uppercase tracking-wider w-20 shrink-0" style={{ color: 'var(--c-text-muted)' }}>Platform</span>
-              <select value={newPlatform} onChange={(e) => { setNewPlatform(e.target.value); setNewHandle(''); }} className="mono text-xs bg-transparent outline-none px-2 py-1.5 rounded flex-1" style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }}>
+              <span className="mono text-[14px] uppercase tracking-wider w-20 shrink-0" style={{ color: 'var(--c-text-muted)' }}>Platform</span>
+              <select value={newPlatform} onChange={(e) => { setNewPlatform(e.target.value); setNewHandle(''); }} className="mono text-sm bg-transparent outline-none px-2 py-1.5 rounded flex-1" style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }}>
                 {availablePlatforms.map((p) => (<option key={p} value={p}>{PLATFORM_LABELS[p] || p}</option>))}
               </select>
             </div>
             <div className="flex items-center gap-3">
-              <span className="mono text-[10px] uppercase tracking-wider w-20 shrink-0" style={{ color: 'var(--c-text-muted)' }}>Handle</span>
+              <span className="mono text-[14px] uppercase tracking-wider w-20 shrink-0" style={{ color: 'var(--c-text-muted)' }}>Handle</span>
               <div className="flex-1">
-                <input value={newHandle} onChange={(e) => setNewHandle(e.target.value)} placeholder={PLATFORM_HANDLE_HINT[newPlatform] || 'username'} className="mono text-xs w-full bg-transparent outline-none px-2 py-1.5 rounded transition-colors" style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }} onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'} onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'} />
-                {newHandle && <div className="mono text-[10px] mt-1.5" style={{ color: 'var(--c-text-muted)' }}>{PLATFORM_URL_PREFIX[newPlatform]}{newHandle}</div>}
+                <input value={newHandle} onChange={(e) => setNewHandle(e.target.value)} placeholder={PLATFORM_HANDLE_HINT[newPlatform] || 'username'} className="mono text-sm w-full bg-transparent outline-none px-2 py-1.5 rounded transition-colors" style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }} onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'} onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'} />
+                {newHandle && <div className="mono text-[14px] mt-1.5" style={{ color: 'var(--c-text-muted)' }}>{PLATFORM_URL_PREFIX[newPlatform]}{newHandle}</div>}
               </div>
             </div>
             {newPlatform && DEFAULT_LIMITS[newPlatform] && (
               <div>
-                <span className="mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Default limits</span>
+                <span className="mono text-[14px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Default limits</span>
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
-                  {Object.entries(DEFAULT_LIMITS[newPlatform].daily).map(([k, v]) => (<span key={k} className="mono text-[9px] px-2 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--c-text-muted)', border: '1px solid var(--c-border-dim)' }}>{k}: {v.limit}/d</span>))}
-                  {DEFAULT_LIMITS[newPlatform].weekly && Object.entries(DEFAULT_LIMITS[newPlatform].weekly!).map(([k, v]) => (<span key={k} className="mono text-[9px] px-2 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.02)', color: 'var(--c-border)', border: '1px solid var(--c-border-dim)' }}>{k}: {v.limit}/w</span>))}
+                  {Object.entries(DEFAULT_LIMITS[newPlatform].daily).map(([k, v]) => (<span key={k} className="mono text-[13px] px-2 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--c-text-muted)', border: '1px solid var(--c-border-dim)' }}>{k}: {v.limit}/d</span>))}
+                  {DEFAULT_LIMITS[newPlatform].weekly && Object.entries(DEFAULT_LIMITS[newPlatform].weekly!).map(([k, v]) => (<span key={k} className="mono text-[13px] px-2 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.02)', color: 'var(--c-border)', border: '1px solid var(--c-border-dim)' }}>{k}: {v.limit}/w</span>))}
                 </div>
               </div>
             )}
@@ -217,10 +217,10 @@ export function Agents() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full" style={{ background: color, boxShadow: a.state === 'running' ? `0 0 10px ${color}` : `0 0 6px ${color}40` }} />
-                    <span className="text-xs font-semibold capitalize" style={{ color: 'var(--c-text)' }}>{a.platform}</span>
+                    <span className="text-sm font-semibold capitalize" style={{ color: 'var(--c-text)' }}>{a.platform}</span>
                   </div>
                 </div>
-                <div className="mono text-[10px] mb-2" style={{ color: 'var(--c-text-muted)' }}>@{a.handle}</div>
+                <div className="mono text-[14px] mb-2" style={{ color: 'var(--c-text-muted)' }}>@{a.handle}</div>
                 <StateBadge state={a.state} />
               </div>
             </button>
@@ -296,7 +296,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
     }
   };
 
-  if (loading) return <div className="mono text-xs animate-pulse py-8 text-center" style={{ color: 'var(--c-teal-dim)' }}>Loading agent...</div>;
+  if (loading) return <div className="mono text-sm animate-pulse py-8 text-center" style={{ color: 'var(--c-teal-dim)' }}>Loading agent...</div>;
   if (!agent) return null;
 
   // Parse schedule
@@ -356,26 +356,26 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
                   <span className="text-lg font-bold capitalize" style={{ color: 'var(--c-text)' }}>{platform}</span>
                   <StateBadge state={state} />
                 </div>
-                <div className="mono text-xs mt-0.5" style={{ color: 'var(--c-text-muted)' }}>@{agent.handle}</div>
+                <div className="mono text-sm mt-0.5" style={{ color: 'var(--c-text-muted)' }}>@{agent.handle}</div>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              {flash && <span className="mono text-[11px] px-3 py-1 rounded-full animate-fade-up" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)' }}>{flash}</span>}
+              {flash && <span className="mono text-[13px] px-3 py-1 rounded-full animate-fade-up" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)' }}>{flash}</span>}
 
               {state === 'needs_setup' && (
                 <div className="flex items-center gap-2">
-                  <span className="mono text-[10px]" style={{ color: 'var(--c-amber)' }}>Browser not configured</span>
+                  <span className="mono text-[14px]" style={{ color: 'var(--c-amber)' }}>Browser not configured</span>
                   <CmdHint cmd={`opentwins browser setup ${platform}`} />
                 </div>
               )}
 
               {state === 'needs_api_keys' && (
-                <span className="mono text-[10px]" style={{ color: '#fb923c' }}>API keys required - configure below</span>
+                <span className="mono text-[14px]" style={{ color: '#fb923c' }}>API keys required - configure below</span>
               )}
 
               {state === 'disabled' && (
-                <span className="mono text-[10px]" style={{ color: 'var(--c-text-muted)' }}>Enable in Config to run</span>
+                <span className="mono text-[14px]" style={{ color: 'var(--c-text-muted)' }}>Enable in Config to run</span>
               )}
 
               {state === 'running' && (
@@ -388,7 +388,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
 
               <button
                 onClick={() => { if (confirm(`Remove ${platform} agent? This won't delete browser profiles or activity history.`)) onRemove(platform); }}
-                className="mono text-[10px] px-2 py-1 rounded-md transition-all opacity-40 hover:opacity-100"
+                className="mono text-[14px] px-2 py-1 rounded-md transition-all opacity-40 hover:opacity-100"
                 style={{ color: 'var(--c-red)', border: '1px solid rgba(248,113,113,0.15)' }}
                 title="Remove agent"
               >
@@ -442,9 +442,9 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
               return (
                 <div key={rk.key}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="mono text-[11px]" style={{ color: 'var(--c-text-dim)' }}>{rk.label}</span>
+                    <span className="mono text-[13px]" style={{ color: 'var(--c-text-dim)' }}>{rk.label}</span>
                     {!editApiKeys && (
-                      <span className="mono text-[9px]" style={{ color: isSet ? 'var(--c-green)' : '#fb923c' }}>
+                      <span className="mono text-[13px]" style={{ color: isSet ? 'var(--c-green)' : '#fb923c' }}>
                         {isSet ? 'configured' : 'missing'}
                       </span>
                     )}
@@ -455,13 +455,13 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
                       value={editApiKeys[rk.key] || ''}
                       onChange={(e) => setEditApiKeys({ ...editApiKeys, [rk.key]: e.target.value })}
                       placeholder={rk.hint}
-                      className="mono text-[11px] w-full bg-transparent outline-none px-2 py-1.5 rounded transition-colors"
+                      className="mono text-[13px] w-full bg-transparent outline-none px-2 py-1.5 rounded transition-colors"
                       style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }}
                       onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'}
                       onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'}
                     />
                   ) : (
-                    <div className="mono text-[10px]" style={{ color: 'var(--c-text-muted)' }}>
+                    <div className="mono text-[14px]" style={{ color: 'var(--c-text-muted)' }}>
                       {isSet ? '****' + value.slice(-4) : rk.hint}
                     </div>
                   )}
@@ -537,7 +537,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Style Ratios */}
               <div>
-                <div className="mono text-[10px] uppercase tracking-wider mb-3" style={{ color: 'var(--c-text-muted)' }}>Reply Style Mix</div>
+                <div className="mono text-[14px] uppercase tracking-wider mb-3" style={{ color: 'var(--c-text-muted)' }}>Reply Style Mix</div>
                 <div className="space-y-3">
                   {(['questions', 'statements', 'reactions', 'trailing'] as const).map((key) => {
                     const labels: Record<string, string> = { questions: 'Questions', statements: 'Statements', reactions: 'Short reactions', trailing: 'Trailing thoughts' };
@@ -548,7 +548,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
                     return (
                       <div key={key}>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="mono text-[11px]" style={{ color: 'var(--c-text-dim)' }}>{labels[key]}</span>
+                          <span className="mono text-[13px]" style={{ color: 'var(--c-text-dim)' }}>{labels[key]}</span>
                           <div className="flex items-center gap-1">
                             {editBehavior ? (
                               <input
@@ -558,14 +558,14 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
                                   const v = Math.max(0, Math.min(100, parseInt(e.target.value) || 0));
                                   setEditBehavior({ ...editBehavior, style_ratios: { ...editBehavior.style_ratios, [key]: v } });
                                 }}
-                                className="w-10 bg-transparent text-right outline-none mono text-[11px] rounded px-1"
+                                className="w-10 bg-transparent text-right outline-none mono text-[13px] rounded px-1"
                                 style={{ color: 'var(--c-teal)', borderBottom: '1px solid var(--c-teal-dim)' }}
                                 min={0} max={100}
                               />
                             ) : (
-                              <span className="mono text-[11px]" style={{ color: 'var(--c-text-dim)' }}>{val}</span>
+                              <span className="mono text-[13px]" style={{ color: 'var(--c-text-dim)' }}>{val}</span>
                             )}
-                            <span className="mono text-[10px]" style={{ color: 'var(--c-text-muted)' }}>%</span>
+                            <span className="mono text-[14px]" style={{ color: 'var(--c-text-muted)' }}>%</span>
                           </div>
                         </div>
                         <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--c-border-dim)' }}>
@@ -577,11 +577,11 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
                   {editBehavior && (() => {
                     const total = Object.values(editBehavior.style_ratios).reduce((a, b) => a + b, 0);
                     return total !== 100 ? (
-                      <div className="mono text-[10px] mt-1" style={{ color: total > 100 ? 'var(--c-red)' : 'var(--c-amber)' }}>
+                      <div className="mono text-[14px] mt-1" style={{ color: total > 100 ? 'var(--c-red)' : 'var(--c-amber)' }}>
                         Total: {total}% (should be 100%)
                       </div>
                     ) : (
-                      <div className="mono text-[10px] mt-1" style={{ color: 'var(--c-green)' }}>Total: 100%</div>
+                      <div className="mono text-[14px] mt-1" style={{ color: 'var(--c-green)' }}>Total: 100%</div>
                     );
                   })()}
                 </div>
@@ -589,7 +589,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
 
               {/* Other behavior params */}
               <div>
-                <div className="mono text-[10px] uppercase tracking-wider mb-3" style={{ color: 'var(--c-text-muted)' }}>Parameters</div>
+                <div className="mono text-[14px] uppercase tracking-wider mb-3" style={{ color: 'var(--c-text-muted)' }}>Parameters</div>
                 <div className="space-y-3">
                   <BehaviorField
                     label="Disagree target"
@@ -622,7 +622,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
             {/* Platform-specific lists */}
             {(agent.behavior.subreddits !== undefined || agent.behavior.target_accounts !== undefined || agent.behavior.target_companies !== undefined || agent.behavior.hashtags !== undefined) && (
               <div className="pt-4 mt-4" style={{ borderTop: '1px solid var(--c-border-dim)' }}>
-                <div className="mono text-[10px] uppercase tracking-wider mb-3" style={{ color: 'var(--c-text-muted)' }}>Platform Content</div>
+                <div className="mono text-[14px] uppercase tracking-wider mb-3" style={{ color: 'var(--c-text-muted)' }}>Platform Content</div>
                 <div className="space-y-3">
                   {agent.behavior.subreddits !== undefined && (
                     <ListField
@@ -667,18 +667,18 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
               <div className="space-y-0.5">
                 {scheduleEntries.map((t, i) => (
                   <div key={i} className="flex items-start gap-3 py-2 rounded px-2 transition-colors hover:bg-white/[0.02]">
-                    <span className="mono text-[11px] shrink-0 w-12" style={{ color: 'var(--c-teal-dim)' }}>{t.time}</span>
+                    <span className="mono text-[13px] shrink-0 w-12" style={{ color: 'var(--c-teal-dim)' }}>{t.time}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="mono text-[11px]" style={{ color: 'var(--c-text)' }}>{t.action}</span>
+                        <span className="mono text-[13px]" style={{ color: 'var(--c-text)' }}>{t.action}</span>
                         {t.status && (
-                          <span className="mono text-[9px] px-1.5 py-0.5 rounded-full" style={{
+                          <span className="mono text-[13px] px-1.5 py-0.5 rounded-full" style={{
                             color: t.status === 'completed' ? 'var(--c-teal)' : t.status === 'failed' ? 'var(--c-red)' : t.status === 'running' ? 'var(--c-amber)' : 'var(--c-text-muted)',
                             background: t.status === 'completed' ? 'var(--c-teal-glow)' : t.status === 'failed' ? 'rgba(248,113,113,0.1)' : t.status === 'running' ? 'rgba(251,191,36,0.1)' : 'transparent',
                           }}>{t.status}</span>
                         )}
                       </div>
-                      {t.desc && <div className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--c-text-muted)' }}>{t.desc}</div>}
+                      {t.desc && <div className="text-[14px] mt-0.5 truncate" style={{ color: 'var(--c-text-muted)' }}>{t.desc}</div>}
                     </div>
                   </div>
                 ))}
@@ -693,7 +693,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
           <div className="panel-header">// Insights</div>
           <div className="p-4">
             {agent.insights ? (
-              <pre className="mono text-[11px] leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--c-text-muted)' }}>
+              <pre className="mono text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--c-text-muted)' }}>
                 {agent.insights}
               </pre>
             ) : (
@@ -710,20 +710,20 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
             <span>// Last Run</span>
             <div className="flex items-center gap-3">
               {agent.lastRun.exitCode !== undefined && (
-                <span className="mono text-[10px] normal-case tracking-normal" style={{
+                <span className="mono text-[14px] normal-case tracking-normal" style={{
                   color: agent.lastRun.exitCode === 0 ? 'var(--c-green)' : 'var(--c-red)',
                 }}>
                   exit: {agent.lastRun.exitCode}
                 </span>
               )}
-              <span className="mono text-[10px] normal-case tracking-normal" style={{ color: 'var(--c-text-muted)' }}>
+              <span className="mono text-[14px] normal-case tracking-normal" style={{ color: 'var(--c-text-muted)' }}>
                 {agent.lastRun.startedAt?.split('T')[1]?.slice(0, 5) || ''}
                 {agent.lastRun.completedAt && ` - ${agent.lastRun.completedAt.split('T')[1]?.slice(0, 5)}`}
               </span>
             </div>
           </div>
           <div className="p-4 max-h-64 overflow-y-auto">
-            <pre className="mono text-[11px] leading-relaxed whitespace-pre-wrap" style={{
+            <pre className="mono text-[13px] leading-relaxed whitespace-pre-wrap" style={{
               color: agent.lastRun.exitCode === 0 ? 'var(--c-text-muted)' : 'var(--c-red)',
             }}>
               {agent.lastRun.output || '(no output captured)'}
@@ -740,7 +740,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
 function StateBadge({ state }: { state: AgentState }) {
   const c = STATE_CONFIG[state];
   return (
-    <span className="mono inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ background: c.bg, color: c.color }}>
+    <span className="mono inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[14px] font-medium" style={{ background: c.bg, color: c.color }}>
       {c.dot && <span className={`status-dot ${c.dot}`} />}
       {(state === 'needs_setup' || state === 'needs_api_keys') && <span style={{ fontSize: 8 }}>!</span>}
       {c.label}
@@ -757,7 +757,7 @@ function LimitGroup({ title, limits, editing, color, onChange }: {
 }) {
   return (
     <div>
-      <div className="mono text-[10px] uppercase tracking-wider mb-3" style={{ color: 'var(--c-text-muted)' }}>{title}</div>
+      <div className="mono text-[14px] uppercase tracking-wider mb-3" style={{ color: 'var(--c-text-muted)' }}>{title}</div>
       <div className="space-y-2.5">
         {Object.entries(limits).map(([action, val]) => {
           const limit = editing ? (editing[action] ?? val.limit) : val.limit;
@@ -767,10 +767,10 @@ function LimitGroup({ title, limits, editing, color, onChange }: {
           return (
             <div key={action} className="group">
               <div className="flex items-center justify-between mb-1">
-                <span className="mono text-[11px]" style={{ color: isDisabled ? 'var(--c-text-muted)' : 'var(--c-text-dim)', textDecoration: isDisabled ? 'line-through' : 'none' }}>
+                <span className="mono text-[13px]" style={{ color: isDisabled ? 'var(--c-text-muted)' : 'var(--c-text-dim)', textDecoration: isDisabled ? 'line-through' : 'none' }}>
                   {action.replace(/_/g, ' ')}
                 </span>
-                <div className="mono text-[11px] flex items-center gap-1" style={{ color: 'var(--c-text-muted)' }}>
+                <div className="mono text-[13px] flex items-center gap-1" style={{ color: 'var(--c-text-muted)' }}>
                   <span>{val.current}</span>
                   <span style={{ color: 'var(--c-border)' }}>/</span>
                   {editing ? (
@@ -778,7 +778,7 @@ function LimitGroup({ title, limits, editing, color, onChange }: {
                       type="number"
                       value={limit}
                       onChange={(e) => onChange(action, Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-10 bg-transparent text-right outline-none mono text-[11px] rounded px-1"
+                      className="w-10 bg-transparent text-right outline-none mono text-[13px] rounded px-1"
                       style={{ color: 'var(--c-teal)', borderBottom: '1px solid var(--c-teal-dim)' }}
                       min={0}
                     />
@@ -807,7 +807,7 @@ function CmdHint({ cmd }: { cmd: string }) {
   return (
     <button
       onClick={() => { navigator.clipboard.writeText(cmd); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-      className="mono text-[10px] px-2.5 py-1 rounded-md transition-colors"
+      className="mono text-[14px] px-2.5 py-1 rounded-md transition-colors"
       style={{ background: 'rgba(251,191,36,0.06)', color: 'var(--c-amber)', border: '1px solid rgba(251,191,36,0.15)' }}
       title="Click to copy"
     >
@@ -826,7 +826,7 @@ function ActionBtn({ children, onClick, loading: isLoading, accent, danger, disa
     <button
       onClick={onClick}
       disabled={isLoading || disabled}
-      className="mono text-[11px] px-4 py-1.5 rounded-md font-medium transition-all duration-200 disabled:opacity-50"
+      className="mono text-[13px] px-4 py-1.5 rounded-md font-medium transition-all duration-200 disabled:opacity-50"
       style={{ background: bg, color, border: `1px solid ${border}` }}
     >
       {isLoading ? (danger ? 'Stopping...' : 'Starting...') : children}
@@ -838,7 +838,7 @@ function MiniBtn({ children, onClick, dim, accent, loading: isLoading }: {
   children: React.ReactNode; onClick: () => void; dim?: boolean; accent?: boolean; loading?: boolean;
 }) {
   return (
-    <button onClick={onClick} disabled={isLoading} className="mono text-[10px] px-2 py-0.5 rounded font-medium normal-case tracking-normal transition-all duration-200 disabled:opacity-50" style={{
+    <button onClick={onClick} disabled={isLoading} className="mono text-[14px] px-2 py-0.5 rounded font-medium normal-case tracking-normal transition-all duration-200 disabled:opacity-50" style={{
       background: accent ? 'var(--c-teal-glow)' : 'transparent',
       color: dim ? 'var(--c-text-muted)' : accent ? 'var(--c-teal)' : 'var(--c-text-dim)',
       border: '1px solid ' + (accent ? 'rgba(45,212,191,0.25)' : 'var(--c-border-dim)'),
@@ -855,15 +855,15 @@ function ListField({ label, values, editing, placeholder, onChange }: {
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <span className="mono text-[11px]" style={{ color: 'var(--c-text-dim)' }}>{label}</span>
-        <span className="mono text-[10px]" style={{ color: 'var(--c-text-muted)' }}>{values.length} items</span>
+        <span className="mono text-[13px]" style={{ color: 'var(--c-text-dim)' }}>{label}</span>
+        <span className="mono text-[14px]" style={{ color: 'var(--c-text-muted)' }}>{values.length} items</span>
       </div>
       {editing ? (
         <input
           value={values.join(', ')}
           onChange={(e) => onChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
           placeholder={placeholder}
-          className="mono text-[11px] w-full bg-transparent outline-none px-2 py-1.5 rounded transition-colors"
+          className="mono text-[13px] w-full bg-transparent outline-none px-2 py-1.5 rounded transition-colors"
           style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }}
           onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'}
           onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'}
@@ -871,11 +871,11 @@ function ListField({ label, values, editing, placeholder, onChange }: {
       ) : (
         <div className="flex flex-wrap gap-1">
           {values.length > 0 ? values.map((v, i) => (
-            <span key={i} className="mono text-[10px] px-2 py-0.5 rounded" style={{ background: 'rgba(45,212,191,0.04)', color: 'var(--c-text-muted)', border: '1px solid var(--c-border-dim)' }}>
+            <span key={i} className="mono text-[14px] px-2 py-0.5 rounded" style={{ background: 'rgba(45,212,191,0.04)', color: 'var(--c-text-muted)', border: '1px solid var(--c-border-dim)' }}>
               {v}
             </span>
           )) : (
-            <span className="mono text-[10px]" style={{ color: 'var(--c-border)' }}>none configured</span>
+            <span className="mono text-[14px]" style={{ color: 'var(--c-border)' }}>none configured</span>
           )}
         </div>
       )}
@@ -889,21 +889,21 @@ function BehaviorField({ label, value, suffix, editing, min, max, onChange }: {
 }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="mono text-[11px]" style={{ color: 'var(--c-text-dim)' }}>{label}</span>
+      <span className="mono text-[13px]" style={{ color: 'var(--c-text-dim)' }}>{label}</span>
       <div className="flex items-center gap-1">
         {editing ? (
           <input
             type="number"
             value={value}
             onChange={(e) => onChange(Math.max(min, Math.min(max, parseInt(e.target.value) || min)))}
-            className="w-12 bg-transparent text-right outline-none mono text-[11px] rounded px-1"
+            className="w-12 bg-transparent text-right outline-none mono text-[13px] rounded px-1"
             style={{ color: 'var(--c-teal)', borderBottom: '1px solid var(--c-teal-dim)' }}
             min={min} max={max}
           />
         ) : (
-          <span className="mono text-[11px]" style={{ color: 'var(--c-text-dim)' }}>{value}</span>
+          <span className="mono text-[13px]" style={{ color: 'var(--c-text-dim)' }}>{value}</span>
         )}
-        <span className="mono text-[10px]" style={{ color: 'var(--c-text-muted)' }}>{suffix}</span>
+        <span className="mono text-[14px]" style={{ color: 'var(--c-text-muted)' }}>{suffix}</span>
       </div>
     </div>
   );
@@ -912,8 +912,8 @@ function BehaviorField({ label, value, suffix, editing, min, max, onChange }: {
 function Empty({ text, hint }: { text: string; hint: string }) {
   return (
     <div className="py-8 text-center">
-      <div className="mono text-xs" style={{ color: 'var(--c-text-muted)' }}>{text}</div>
-      <div className="mono text-[10px] mt-1" style={{ color: 'var(--c-border)' }}>{hint}</div>
+      <div className="mono text-sm" style={{ color: 'var(--c-text-muted)' }}>{text}</div>
+      <div className="mono text-[14px] mt-1" style={{ color: 'var(--c-border)' }}>{hint}</div>
     </div>
   );
 }

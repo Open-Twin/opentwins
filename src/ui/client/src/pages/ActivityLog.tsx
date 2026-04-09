@@ -48,7 +48,7 @@ export function ActivityLog() {
       {/* Header */}
       <div className="animate-fade-up">
         <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--c-text)' }}>Activity Log</h1>
-        <p className="mono text-xs mt-1" style={{ color: 'var(--c-text-muted)' }}>Transmission records from all agents</p>
+        <p className="mono text-sm mt-1" style={{ color: 'var(--c-text-muted)' }}>Transmission records from all agents</p>
       </div>
 
       {/* Filters */}
@@ -57,7 +57,7 @@ export function ActivityLog() {
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="mono px-3 py-1.5 rounded-md text-xs outline-none transition-colors"
+          className="mono px-3 py-1.5 rounded-md text-sm outline-none transition-colors"
           style={{
             background: 'var(--c-panel)',
             border: '1px solid var(--c-border-dim)',
@@ -70,7 +70,7 @@ export function ActivityLog() {
             <button
               key={p}
               onClick={() => setPlatform(p)}
-              className="mono px-2.5 py-1 rounded-md text-[11px] font-medium transition-all duration-200"
+              className="mono px-2.5 py-1 rounded-md text-[13px] font-medium transition-all duration-200"
               style={{
                 background: platform === p ? 'var(--c-teal-glow)' : 'transparent',
                 color: platform === p ? 'var(--c-teal)' : 'var(--c-text-muted)',
@@ -88,7 +88,7 @@ export function ActivityLog() {
             placeholder="Search content..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="mono w-full px-3 py-1.5 rounded-md text-xs outline-none transition-colors"
+            className="mono w-full px-3 py-1.5 rounded-md text-sm outline-none transition-colors"
             style={{
               background: 'var(--c-panel)',
               border: '1px solid var(--c-border-dim)',
@@ -97,7 +97,7 @@ export function ActivityLog() {
           />
         </div>
 
-        <span className="mono text-[10px] px-2 py-1 rounded-full" style={{ color: 'var(--c-teal-dim)', background: 'var(--c-teal-glow)' }}>
+        <span className="mono text-[14px] px-2 py-1 rounded-full" style={{ color: 'var(--c-teal-dim)', background: 'var(--c-teal-glow)' }}>
           {filtered.length}
         </span>
       </div>
@@ -106,12 +106,12 @@ export function ActivityLog() {
       <div className="animate-fade-up stagger-2 panel noise">
         <div className="panel-header">// Transmissions</div>
         {loading ? (
-          <div className="p-12 text-center mono text-xs animate-pulse" style={{ color: 'var(--c-teal-dim)' }}>
+          <div className="p-12 text-center mono text-sm animate-pulse" style={{ color: 'var(--c-teal-dim)' }}>
             Scanning records...
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center">
-            <div className="mono text-xs" style={{ color: 'var(--c-text-muted)' }}>No transmissions found</div>
+            <div className="mono text-sm" style={{ color: 'var(--c-text-muted)' }}>No transmissions found</div>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -119,7 +119,7 @@ export function ActivityLog() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
                   {['Time', 'Platform', 'Action', 'Style', 'Content', 'Words'].map((h, i) => (
-                    <th key={h} className={`${i === 5 ? 'text-right' : 'text-left'} px-4 py-2.5 mono text-[10px] font-medium uppercase tracking-wider`} style={{ color: 'var(--c-text-muted)' }}>{h}</th>
+                    <th key={h} className={`${i === 5 ? 'text-right' : 'text-left'} px-4 py-2.5 mono text-[14px] font-medium uppercase tracking-wider`} style={{ color: 'var(--c-text-muted)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -136,31 +136,31 @@ export function ActivityLog() {
                       onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.background = 'rgba(255,255,255,0.01)'; }}
                       onMouseLeave={(e) => { if (!isExpanded) e.currentTarget.style.background = ''; }}
                     >
-                      <td className="px-4 py-3 mono text-[11px]" style={{ color: 'var(--c-text-muted)' }}>
+                      <td className="px-4 py-3 mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
                         {row.created_at?.split('T')[1]?.slice(0, 5) || '-'}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5 mono text-[11px] font-medium capitalize" style={{ color: 'var(--c-text-dim)' }}>
+                        <span className="inline-flex items-center gap-1.5 mono text-[13px] font-medium capitalize" style={{ color: 'var(--c-text-dim)' }}>
                           <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
                           {row.platform}
                         </span>
                       </td>
-                      <td className="px-4 py-3 mono text-[11px]" style={{ color: 'var(--c-text-muted)' }}>{row.action_type}</td>
+                      <td className="px-4 py-3 mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>{row.action_type}</td>
                       <td className="px-4 py-3">
                         {row.style && (
-                          <span className="mono text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'var(--c-teal-glow)', color: 'var(--c-teal-dim)' }}>
+                          <span className="mono text-[14px] px-2 py-0.5 rounded-full" style={{ background: 'var(--c-teal-glow)', color: 'var(--c-teal-dim)' }}>
                             {row.style}
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-xs max-w-lg" style={{ color: 'var(--c-text-dim)' }}>
+                      <td className="px-4 py-3 text-sm max-w-lg" style={{ color: 'var(--c-text-dim)' }}>
                         {isExpanded ? (
                           <div className="whitespace-pre-wrap leading-relaxed">{row.content || '-'}</div>
                         ) : (
                           <div className="truncate">{row.content?.slice(0, 100) || '-'}</div>
                         )}
                         {row.target_author && (
-                          <div className="mono text-[10px] mt-1.5" style={{ color: 'var(--c-text-muted)' }}>
+                          <div className="mono text-[14px] mt-1.5" style={{ color: 'var(--c-text-muted)' }}>
                             to: {row.target_author}
                             {row.target_url && (
                               <>
@@ -173,7 +173,7 @@ export function ActivityLog() {
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right mono text-[11px]" style={{ color: 'var(--c-text-muted)' }}>{row.word_count || '-'}</td>
+                      <td className="px-4 py-3 text-right mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>{row.word_count || '-'}</td>
                     </tr>
                   );
                 })}

@@ -72,7 +72,7 @@ export function Quality() {
       <div className="animate-fade-up flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--c-text)' }}>Signal Quality</h1>
-          <p className="mono text-xs mt-1" style={{ color: 'var(--c-text-muted)' }}>Voice consistency and detection avoidance metrics</p>
+          <p className="mono text-sm mt-1" style={{ color: 'var(--c-text-muted)' }}>Voice consistency and detection avoidance metrics</p>
         </div>
         <div className="flex gap-2">
           <div className="flex gap-1">
@@ -80,7 +80,7 @@ export function Quality() {
               <button
                 key={p}
                 onClick={() => setPlatform(p)}
-                className="mono px-2 py-1 rounded-md text-[10px] font-medium transition-all duration-200"
+                className="mono px-2 py-1 rounded-md text-[14px] font-medium transition-all duration-200"
                 style={{
                   background: activePlatform === p ? 'var(--c-teal-glow)' : 'transparent',
                   color: activePlatform === p ? 'var(--c-teal)' : 'var(--c-text-muted)',
@@ -94,7 +94,7 @@ export function Quality() {
           <select
             value={days}
             onChange={(e) => setDays(e.target.value)}
-            className="mono px-2 py-1 rounded-md text-[11px] outline-none"
+            className="mono px-2 py-1 rounded-md text-[13px] outline-none"
             style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border-dim)', color: 'var(--c-text-dim)' }}
           >
             <option value="7">7d</option>
@@ -105,7 +105,7 @@ export function Quality() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 mono text-xs animate-pulse" style={{ color: 'var(--c-teal-dim)' }}>
+        <div className="flex items-center justify-center h-48 mono text-sm animate-pulse" style={{ color: 'var(--c-teal-dim)' }}>
           Analyzing signal...
         </div>
       ) : (
@@ -246,11 +246,11 @@ function MetricCard({ label, value, warn, sub, accent }: {
 }) {
   return (
     <div className="panel noise p-4">
-      <div className="mono text-[10px] uppercase tracking-wider mb-2" style={{ color: 'var(--c-text-muted)' }}>{label}</div>
+      <div className="mono text-[14px] uppercase tracking-wider mb-2" style={{ color: 'var(--c-text-muted)' }}>{label}</div>
       <div className="mono text-2xl font-medium" style={{
         color: warn ? 'var(--c-amber)' : accent ? 'var(--c-teal)' : 'var(--c-text)',
       }}>{value}</div>
-      {sub && <div className="mono text-[10px] mt-1" style={{ color: 'var(--c-border)' }}>{sub}</div>}
+      {sub && <div className="mono text-[14px] mt-1" style={{ color: 'var(--c-border)' }}>{sub}</div>}
     </div>
   );
 }
@@ -258,7 +258,7 @@ function MetricCard({ label, value, warn, sub, accent }: {
 function EmptyChart({ label }: { label: string }) {
   return (
     <div className="h-[220px] flex items-center justify-center">
-      <div className="mono text-xs" style={{ color: 'var(--c-text-muted)' }}>{label}</div>
+      <div className="mono text-sm" style={{ color: 'var(--c-text-muted)' }}>{label}</div>
     </div>
   );
 }

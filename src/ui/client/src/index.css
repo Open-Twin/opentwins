@@ -5,11 +5,11 @@
 @tailwind utilities;
 
 :root {
-  --c-void: #06080d;
-  --c-surface: #0c1018;
-  --c-panel: #111827;
-  --c-border: #1e293b;
-  --c-border-dim: #151d2e;
+  --c-void: #080b12;
+  --c-surface: #0e1320;
+  --c-panel: #151d2e;
+  --c-border: #283548;
+  --c-border-dim: #1e293b;
   --c-teal: #2dd4bf;
   --c-teal-dim: #0d9488;
   --c-teal-glow: rgba(45, 212, 191, 0.12);
@@ -18,9 +18,9 @@
   --c-green: #34d399;
   --c-blue: #60a5fa;
   --c-purple: #a78bfa;
-  --c-text: #e2e8f0;
-  --c-text-dim: #64748b;
-  --c-text-muted: #475569;
+  --c-text: #f1f5f9;
+  --c-text-dim: #b0bec9;
+  --c-text-muted: #94a3b8;
 }
 
 * {
@@ -35,7 +35,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Scanline overlay */
+/* Scanline overlay — subtle to avoid hurting readability */
 body::after {
   content: '';
   position: fixed;
@@ -46,8 +46,8 @@ body::after {
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 0, 0, 0.03) 2px,
-    rgba(0, 0, 0, 0.03) 4px
+    rgba(0, 0, 0, 0.015) 2px,
+    rgba(0, 0, 0, 0.015) 4px
   );
 }
 
@@ -111,7 +111,7 @@ body::after {
   padding: 14px 18px;
   border-bottom: 1px solid var(--c-border-dim);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -127,7 +127,7 @@ body::after {
 .section-title {
   font-family: 'Outfit', sans-serif;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 15px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--c-text-dim);

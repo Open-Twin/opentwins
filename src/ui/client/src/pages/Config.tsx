@@ -62,11 +62,11 @@ export function Config() {
       <div className="animate-fade-up flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--c-text)' }}>Configuration</h1>
-          <p className="mono text-xs mt-1" style={{ color: 'var(--c-text-muted)' }}>Agent identity and operational parameters</p>
+          <p className="mono text-sm mt-1" style={{ color: 'var(--c-text-muted)' }}>Agent identity and operational parameters</p>
         </div>
         <div className="flex items-center gap-2">
-          {flash && <span className="mono text-[11px] px-3 py-1 rounded-full animate-fade-up" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)' }}>{flash}</span>}
-          {saveError && <span className="mono text-[11px] px-3 py-1 rounded-full" style={{ color: 'var(--c-red)', background: 'rgba(248,113,113,0.08)' }}>{saveError}</span>}
+          {flash && <span className="mono text-[13px] px-3 py-1 rounded-full animate-fade-up" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)' }}>{flash}</span>}
+          {saveError && <span className="mono text-[13px] px-3 py-1 rounded-full" style={{ color: 'var(--c-red)', background: 'rgba(248,113,113,0.08)' }}>{saveError}</span>}
           {editing ? (
             <>
               <Btn onClick={cancel} dim>Cancel</Btn>
@@ -103,10 +103,10 @@ export function Config() {
 
           {/* Pillars */}
           <div className="px-5 pb-5">
-            <div className="mono text-[10px] uppercase tracking-wider mb-3 pt-3 flex items-center justify-between" style={{ color: 'var(--c-text-muted)', borderTop: '1px solid var(--c-border-dim)' }}>
+            <div className="mono text-[14px] uppercase tracking-wider mb-3 pt-3 flex items-center justify-between" style={{ color: 'var(--c-text-muted)', borderTop: '1px solid var(--c-border-dim)' }}>
               <span>Content Pillars</span>
               {editing && (
-                <button onClick={() => update((x) => { x.pillars.push({ name: '', topics: [], mention_templates: [], target_percentage: 0 }); })} className="mono text-[10px] px-2 py-0.5 rounded transition-colors" style={{ color: 'var(--c-teal-dim)', border: '1px solid var(--c-border-dim)' }}>
+                <button onClick={() => update((x) => { x.pillars.push({ name: '', topics: [], mention_templates: [], target_percentage: 0 }); })} className="mono text-[14px] px-2 py-0.5 rounded transition-colors" style={{ color: 'var(--c-teal-dim)', border: '1px solid var(--c-border-dim)' }}>
                   + add
                 </button>
               )}
@@ -116,16 +116,16 @@ export function Config() {
                 <div key={i} className="rounded-lg p-3 relative" style={{ background: 'rgba(45, 212, 191, 0.03)', border: '1px solid var(--c-border-dim)' }}>
                   {editing ? (
                     <div className="space-y-2">
-                      <input value={p.name} onChange={(e) => update((x) => { x.pillars[i].name = e.target.value; })} placeholder="Pillar name" className="mono text-xs w-full bg-transparent outline-none" style={{ color: 'var(--c-text-dim)', borderBottom: '1px solid var(--c-border-dim)' }} />
-                      <input value={p.topics.join(', ')} onChange={(e) => update((x) => { x.pillars[i].topics = e.target.value.split(',').map(s => s.trim()).filter(Boolean); })} placeholder="Topics (comma-separated)" className="mono text-[10px] w-full bg-transparent outline-none" style={{ color: 'var(--c-text-muted)', borderBottom: '1px solid var(--c-border-dim)' }} />
+                      <input value={p.name} onChange={(e) => update((x) => { x.pillars[i].name = e.target.value; })} placeholder="Pillar name" className="mono text-sm w-full bg-transparent outline-none" style={{ color: 'var(--c-text-dim)', borderBottom: '1px solid var(--c-border-dim)' }} />
+                      <input value={p.topics.join(', ')} onChange={(e) => update((x) => { x.pillars[i].topics = e.target.value.split(',').map(s => s.trim()).filter(Boolean); })} placeholder="Topics (comma-separated)" className="mono text-[14px] w-full bg-transparent outline-none" style={{ color: 'var(--c-text-muted)', borderBottom: '1px solid var(--c-border-dim)' }} />
                       {d.pillars.length > 1 && (
-                        <button onClick={() => update((x) => { x.pillars.splice(i, 1); })} className="mono text-[9px] absolute top-2 right-2" style={{ color: 'var(--c-red)' }}>remove</button>
+                        <button onClick={() => update((x) => { x.pillars.splice(i, 1); })} className="mono text-[13px] absolute top-2 right-2" style={{ color: 'var(--c-red)' }}>remove</button>
                       )}
                     </div>
                   ) : (
                     <>
-                      <div className="text-xs font-semibold" style={{ color: 'var(--c-text-dim)' }}>{p.name}</div>
-                      <div className="mono text-[10px] mt-1" style={{ color: 'var(--c-text-muted)' }}>{p.topics.join(', ')}</div>
+                      <div className="text-sm font-semibold" style={{ color: 'var(--c-text-dim)' }}>{p.name}</div>
+                      <div className="mono text-[14px] mt-1" style={{ color: 'var(--c-text-muted)' }}>{p.topics.join(', ')}</div>
                     </>
                   )}
                 </div>
@@ -146,7 +146,7 @@ export function Config() {
             <EditField label="Pipeline" value={d.pipeline_enabled ? 'ON' : 'OFF'} editing={false} accent={d.pipeline_enabled} />
             {editing && (
               <div className="flex justify-between items-center py-2.5" style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
-                <span className="mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Pipeline</span>
+                <span className="mono text-[14px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Pipeline</span>
                 <Toggle checked={d.pipeline_enabled} onChange={(v) => update((x) => { x.pipeline_enabled = v; })} />
               </div>
             )}
@@ -157,8 +157,8 @@ export function Config() {
           <div className="p-5 space-y-0">
             {editing ? (
               <div className="flex justify-between items-center py-2.5" style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
-                <span className="mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Tone</span>
-                <select value={d.voice.formality} onChange={(e) => update((x) => { x.voice.formality = e.target.value; })} className="mono text-xs bg-transparent outline-none px-2 py-1 rounded" style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }}>
+                <span className="mono text-[14px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Tone</span>
+                <select value={d.voice.formality} onChange={(e) => update((x) => { x.voice.formality = e.target.value; })} className="mono text-sm bg-transparent outline-none px-2 py-1 rounded" style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }}>
                   <option value="casual">casual</option>
                   <option value="balanced">balanced</option>
                   <option value="professional">professional</option>
@@ -181,12 +181,12 @@ function EditField({ label, value, editing, onChange, multiline, accent, type = 
 }) {
   return (
     <div className="flex justify-between items-start py-2.5" style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
-      <span className="mono text-[10px] uppercase tracking-wider shrink-0 pt-1" style={{ color: 'var(--c-text-muted)' }}>{label}</span>
+      <span className="mono text-[14px] uppercase tracking-wider shrink-0 pt-1" style={{ color: 'var(--c-text-muted)' }}>{label}</span>
       {editing && onChange ? (
         multiline ? (
-          <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={2} className="mono text-xs text-right bg-transparent outline-none resize-none w-[65%] rounded px-2 py-1 transition-colors" style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }} onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'} onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'} />
+          <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={2} className="mono text-sm text-right bg-transparent outline-none resize-none w-[65%] rounded px-2 py-1 transition-colors" style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }} onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'} onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'} />
         ) : (
-          <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="mono text-xs text-right bg-transparent outline-none w-[55%] rounded px-2 py-1 transition-colors" style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }} onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'} onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'} />
+          <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="mono text-sm text-right bg-transparent outline-none w-[55%] rounded px-2 py-1 transition-colors" style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }} onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'} onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'} />
         )
       ) : (
         <span className={`text-right ${multiline ? 'max-w-[65%]' : ''}`} style={{ color: accent ? 'var(--c-teal)' : 'var(--c-text-dim)', fontFamily: multiline ? 'Outfit, sans-serif' : 'JetBrains Mono, monospace', fontSize: multiline ? 13 : 12 }}>
@@ -207,7 +207,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 
 function Btn({ children, onClick, dim, accent, loading: isLoading, disabled }: { children: React.ReactNode; onClick: () => void; dim?: boolean; accent?: boolean; loading?: boolean; disabled?: boolean }) {
   return (
-    <button onClick={onClick} disabled={isLoading || disabled} className="mono text-[11px] px-3 py-1.5 rounded-md font-medium transition-all duration-200 disabled:opacity-50" style={{
+    <button onClick={onClick} disabled={isLoading || disabled} className="mono text-[13px] px-3 py-1.5 rounded-md font-medium transition-all duration-200 disabled:opacity-50" style={{
       background: accent ? 'var(--c-teal-glow)' : 'transparent',
       color: dim ? 'var(--c-text-muted)' : accent ? 'var(--c-teal)' : 'var(--c-text-dim)',
       border: dim ? '1px solid var(--c-border-dim)' : accent ? '1px solid rgba(45,212,191,0.25)' : '1px solid var(--c-border-dim)',
@@ -218,5 +218,5 @@ function Btn({ children, onClick, dim, accent, loading: isLoading, disabled }: {
 }
 
 function Loading({ text }: { text: string }) {
-  return <div className="flex items-center justify-center h-48 mono text-xs animate-pulse" style={{ color: 'var(--c-teal-dim)' }}>{text}</div>;
+  return <div className="flex items-center justify-center h-48 mono text-sm animate-pulse" style={{ color: 'var(--c-teal-dim)' }}>{text}</div>;
 }
