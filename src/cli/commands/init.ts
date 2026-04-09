@@ -47,7 +47,7 @@ program
 
     const openclawOk = await isOpenClawInstalled();
     if (!openclawOk) {
-      log.warn('OpenClaw CLI not found.');
+      log.error('OpenClaw CLI not found.');
       console.log('');
       console.log('  OpenClaw provides browser automation for platform agents.');
       console.log('  Without it, agents cannot interact with social platforms.');
@@ -55,16 +55,10 @@ program
       console.log('  Install OpenClaw:');
       console.log(chalk.cyan('    npm install -g openclaw'));
       console.log('');
-      const continueAnyway = await confirm({
-        message: 'Continue without OpenClaw? (you can install it later)',
-        default: true,
-      });
-      if (!continueAnyway) {
-        process.exit(0);
-      }
-    } else {
-      log.success('OpenClaw CLI found');
+      console.log('  Then run `opentwins init` again.');
+      process.exit(1);
     }
+    log.success('OpenClaw CLI found');
 
     // ── Step 2: Authentication ────────────────────────────────────
     console.log('');
