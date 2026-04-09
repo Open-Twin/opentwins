@@ -1,39 +1,57 @@
 import express from 'express';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { getLockFile } from '../util/paths.js';
 import { getDb } from '../db/index.js';
 import { loadConfig } from '../config/loader.js';
 import { isDaemonRunning, startDaemon, stopDaemon } from '../scheduler/daemon.js';
 import { getQualityMetrics, getDisagreementRatio } from './api/quality.js';
 import { handleUpdateConfig } from './api/config.js';
-import { handleListAgents, handleGetAgent, handleRunAgent, handleStopAgent, handleUpdateLimits, handleUpdateAgent } from './api/agents.js';
+import { handleListAgents, handleGetAgent, handleRunAgent, handleStopAgent, handleUpdateLimits, handleUpdateAgent, handleGetAgentFeed } from './api/agents.js';
+import { getSessions } from '../util/session-parser.js';
 import * as log from '../util/logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function getRunningPlatforms(platforms: string[]): Set<string> {
+  const running = new Set<string>();
+  for (const platform of platforms) {
+    const lockFile = getLockFile(platform);
+    if (!existsSync(lockFile)) continue;
+    try {
+      const pid = parseInt(readFileSync(lockFile, 'utf-8').trim());
+      process.kill(pid, 0);
+      running.add(platform);
+    } catch {
+      // stale lock, not running
+    }
+  }
+  return running;
+}
 
 export async function startDashboard(port: number): Promise<void> {
   const app = express();
   app.use(express.json());
 
-  // API routes
+  // API routes — read agent sessions directly from Claude session JSONLs
   app.get('/api/activity', (req, res) => {
     const { platform, date } = req.query;
     const targetDate = (date as string) || new Date().toISOString().split('T')[0];
 
-    let rows;
-    if (platform) {
-      rows = getDb()
-        .prepare(
-          "SELECT * FROM activity_logs WHERE platform = ? AND date(created_at) = ? ORDER BY created_at DESC"
-        )
-        .all(platform, targetDate);
-    } else {
-      rows = getDb()
-        .prepare("SELECT * FROM activity_logs WHERE date(created_at) = ? ORDER BY created_at DESC")
-        .all(targetDate);
+    try {
+      const config = loadConfig();
+      const platforms = platform
+        ? config.platforms.filter((p) => p.platform === platform).map((p) => p.platform)
+        : config.platforms.map((p) => p.platform);
+
+      const runningPlatforms = getRunningPlatforms(platforms);
+      const sessions = getSessions(platforms, targetDate, runningPlatforms);
+      res.json({ sessions });
+    } catch (err) {
+      log.warn(`Activity read failed: ${err instanceof Error ? err.message : err}`);
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Activity read failed' });
     }
-    res.json(rows);
   });
 
   app.get('/api/status', async (_req, res) => {
@@ -41,9 +59,19 @@ export async function startDashboard(port: number): Promise<void> {
     const running = await isDaemonRunning();
     const today = new Date().toISOString().split('T')[0];
 
-    const recentRuns = getDb()
-      .prepare("SELECT * FROM agent_runs WHERE date(started_at) = ? ORDER BY started_at DESC LIMIT 50")
-      .all(today);
+    // Derive recent runs from Claude sessions (one session = one run)
+    const allPlatforms = config.platforms.map((p) => p.platform);
+    const runningPlatforms = getRunningPlatforms(allPlatforms);
+    const todaySessions = getSessions(allPlatforms, today, runningPlatforms);
+    const recentRuns = todaySessions.slice(0, 50).map((s) => ({
+      id: s.sessionId,
+      agent_name: s.platform,
+      status: s.status,
+      started_at: s.startedAt,
+      completed_at: s.status === 'completed' ? s.endedAt : null,
+      duration_ms: s.durationMs,
+      error: null,
+    }));
 
     // Compute next pipeline run time
     const pipelineHour = Math.max(0, config.pipeline_start_hour - 2);
@@ -129,6 +157,7 @@ export async function startDashboard(port: number): Promise<void> {
   // Agent lifecycle endpoints
   app.get('/api/agents', (req, res) => handleListAgents(req, res));
   app.get('/api/agents/:platform', (req, res) => handleGetAgent(req, res));
+  app.get('/api/agents/:platform/feed', (req, res) => handleGetAgentFeed(req, res));
   app.post('/api/agents/:platform/run', (req, res) => { handleRunAgent(req, res); });
   app.post('/api/agents/:platform/stop', (req, res) => handleStopAgent(req, res));
   app.put('/api/agents/:platform/limits', (req, res) => handleUpdateLimits(req, res));

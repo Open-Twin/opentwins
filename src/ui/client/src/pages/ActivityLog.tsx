@@ -1,19 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApi, today } from '../hooks/useApi.ts';
 
-interface ActivityRow {
-  id: number;
-  platform: string;
-  action_type: string;
-  target_url: string | null;
-  target_author: string | null;
-  style: string | null;
-  content: string | null;
-  word_count: number | null;
-  created_at: string;
+interface FeedEvent {
+  ts: string;
+  kind: 'thinking' | 'tool' | 'result' | 'error' | 'done';
+  summary: string;
+  detail?: string;
 }
 
-// Platforms fetched from config, not hardcoded
+interface SessionSummary {
+  sessionId: string;
+  sessionFile: string;
+  platform: string;
+  startedAt: string;
+  endedAt: string;
+  durationMs: number;
+  eventCount: number;
+  toolCount: number;
+  errorCount: number;
+  completed: boolean;
+  status: 'running' | 'completed' | 'incomplete';
+  events: FeedEvent[];
+}
 
 const PLATFORM_COLORS: Record<string, string> = {
   reddit: '#FF4500', twitter: '#1DA1F2', linkedin: '#0A66C2', bluesky: '#0085FF',
@@ -21,34 +30,84 @@ const PLATFORM_COLORS: Record<string, string> = {
   ph: '#DA552F', ih: '#4F46E5',
 };
 
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const sec = Math.round(ms / 1000);
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  const remSec = sec % 60;
+  return `${min}m ${remSec}s`;
+}
+
+function formatTime(iso: string): string {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  } catch {
+    return iso;
+  }
+}
+
 export function ActivityLog() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: statusData } = useApi<{ platforms: Array<{ platform: string }> }>('/api/status');
   const platforms = ['all', ...(statusData?.platforms.map((p) => p.platform) || [])];
-  const [date, setDate] = useState(today());
-  const [platform, setPlatform] = useState('all');
-  const [search, setSearch] = useState('');
-  const [expanded, setExpanded] = useState<number | null>(null);
+
+  const initialDate = searchParams.get('date') || today();
+  const initialPlatform = searchParams.get('platform') || 'all';
+  const focusSession = searchParams.get('session');
+
+  const [date, setDate] = useState(initialDate);
+  const [platform, setPlatform] = useState(initialPlatform);
+  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(
+    focusSession ? new Set([focusSession]) : new Set()
+  );
+  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
+
+  // Sync URL params when filters change (but don't keep the session param as it was one-shot)
+  useEffect(() => {
+    const params: Record<string, string> = {};
+    if (date !== today()) params.date = date;
+    if (platform !== 'all') params.platform = platform;
+    setSearchParams(params, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, platform]);
+
+  // Scroll the focused session into view after load
+  useEffect(() => {
+    if (!focusSession) return;
+    const id = setTimeout(() => {
+      const el = document.getElementById(`session-${focusSession}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 300);
+    return () => clearTimeout(id);
+  }, [focusSession]);
 
   const url = platform === 'all'
     ? `/api/activity?date=${date}`
     : `/api/activity?date=${date}&platform=${platform}`;
 
-  const { data: rows, loading } = useApi<ActivityRow[]>(url, [date, platform]);
+  const { data, loading } = useApi<{ sessions: SessionSummary[] }>(url, [date, platform]);
+  const sessions = data?.sessions || [];
 
-  const filtered = rows?.filter((r) =>
-    search
-      ? (r.content?.toLowerCase().includes(search.toLowerCase()) ||
-         r.target_author?.toLowerCase().includes(search.toLowerCase()) ||
-         r.action_type.toLowerCase().includes(search.toLowerCase()))
-      : true
-  ) || [];
+  const toggleSession = (id: string) => {
+    const next = new Set(expandedSessions);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setExpandedSessions(next);
+  };
+
+  const toggleEvent = (id: string) => {
+    const next = new Set(expandedEvents);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setExpandedEvents(next);
+  };
 
   return (
     <div className="space-y-5">
       {/* Header */}
       <div className="animate-fade-up">
         <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--c-text)' }}>Activity Log</h1>
-        <p className="mono text-sm mt-1" style={{ color: 'var(--c-text-muted)' }}>Transmission records from all agents</p>
+        <p className="mono text-sm mt-1" style={{ color: 'var(--c-text-muted)' }}>Agent sessions and their events</p>
       </div>
 
       {/* Filters */}
@@ -82,106 +141,145 @@ export function ActivityLog() {
           ))}
         </div>
 
-        <div className="flex-1 min-w-[200px] relative">
-          <input
-            type="text"
-            placeholder="Search content..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="mono w-full px-3 py-1.5 rounded-md text-sm outline-none transition-colors"
-            style={{
-              background: 'var(--c-panel)',
-              border: '1px solid var(--c-border-dim)',
-              color: 'var(--c-text-dim)',
-            }}
-          />
-        </div>
-
         <span className="mono text-[14px] px-2 py-1 rounded-full" style={{ color: 'var(--c-teal-dim)', background: 'var(--c-teal-glow)' }}>
-          {filtered.length}
+          {sessions.length} {sessions.length === 1 ? 'session' : 'sessions'}
         </span>
       </div>
 
-      {/* Table */}
-      <div className="animate-fade-up stagger-2 panel noise">
-        <div className="panel-header">// Transmissions</div>
-        {loading ? (
-          <div className="p-12 text-center mono text-sm animate-pulse" style={{ color: 'var(--c-teal-dim)' }}>
-            Scanning records...
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="mono text-sm" style={{ color: 'var(--c-text-muted)' }}>No transmissions found</div>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
-                  {['Time', 'Platform', 'Action', 'Style', 'Content', 'Words'].map((h, i) => (
-                    <th key={h} className={`${i === 5 ? 'text-right' : 'text-left'} px-4 py-2.5 mono text-[14px] font-medium uppercase tracking-wider`} style={{ color: 'var(--c-text-muted)' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((row) => {
-                  const isExpanded = expanded === row.id;
-                  const color = PLATFORM_COLORS[row.platform] || '#888';
-                  return (
-                    <tr
-                      key={row.id}
-                      className="cursor-pointer transition-colors"
-                      onClick={() => setExpanded(isExpanded ? null : row.id)}
-                      style={{ borderBottom: '1px solid var(--c-border-dim)', background: isExpanded ? 'rgba(45, 212, 191, 0.02)' : undefined }}
-                      onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.background = 'rgba(255,255,255,0.01)'; }}
-                      onMouseLeave={(e) => { if (!isExpanded) e.currentTarget.style.background = ''; }}
-                    >
-                      <td className="px-4 py-3 mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
-                        {row.created_at?.split('T')[1]?.slice(0, 5) || '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5 mono text-[13px] font-medium capitalize" style={{ color: 'var(--c-text-dim)' }}>
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
-                          {row.platform}
+      {/* Sessions */}
+      {loading ? (
+        <div className="p-12 text-center mono text-sm animate-pulse" style={{ color: 'var(--c-teal-dim)' }}>
+          Reading sessions...
+        </div>
+      ) : sessions.length === 0 ? (
+        <div className="p-12 text-center panel noise">
+          <div className="mono text-sm" style={{ color: 'var(--c-text-muted)' }}>No sessions found for this date</div>
+        </div>
+      ) : (
+        <div className="space-y-3 animate-fade-up stagger-2">
+          {sessions.map((s) => {
+            const isExpanded = expandedSessions.has(s.sessionId);
+            const color = PLATFORM_COLORS[s.platform] || '#888';
+
+            return (
+              <div
+                key={s.sessionId}
+                id={`session-${s.sessionId}`}
+                className="panel noise"
+                style={focusSession === s.sessionId ? { boxShadow: '0 0 0 1px var(--c-teal-dim), 0 0 24px rgba(45,212,191,0.12)' } : undefined}
+              >
+                {/* Session header — clickable */}
+                <div
+                  className="p-4 cursor-pointer transition-colors hover:bg-white/[0.02] flex items-center justify-between gap-4"
+                  onClick={() => toggleSession(s.sessionId)}
+                >
+                  <div className="flex items-center gap-4 min-w-0 flex-1">
+                    <div
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ background: color, boxShadow: `0 0 8px ${color}40` }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="font-semibold capitalize text-[15px]" style={{ color: 'var(--c-text)' }}>
+                          {s.platform}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>{row.action_type}</td>
-                      <td className="px-4 py-3">
-                        {row.style && (
-                          <span className="mono text-[14px] px-2 py-0.5 rounded-full" style={{ background: 'var(--c-teal-glow)', color: 'var(--c-teal-dim)' }}>
-                            {row.style}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm max-w-lg" style={{ color: 'var(--c-text-dim)' }}>
-                        {isExpanded ? (
-                          <div className="whitespace-pre-wrap leading-relaxed">{row.content || '-'}</div>
-                        ) : (
-                          <div className="truncate">{row.content?.slice(0, 100) || '-'}</div>
-                        )}
-                        {row.target_author && (
-                          <div className="mono text-[14px] mt-1.5" style={{ color: 'var(--c-text-muted)' }}>
-                            to: {row.target_author}
-                            {row.target_url && (
-                              <>
-                                {' '}&middot;{' '}
-                                <a href={row.target_url} target="_blank" rel="noopener" className="transition-colors" style={{ color: 'var(--c-teal-dim)' }} onMouseEnter={(e) => e.currentTarget.style.color = 'var(--c-teal)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--c-teal-dim)'}>
-                                  link
-                                </a>
-                              </>
-                            )}
+                        <span className="mono text-[13px]" style={{ color: 'var(--c-text-dim)' }}>
+                          {formatTime(s.startedAt)} → {formatTime(s.endedAt)}
+                        </span>
+                        <span className="mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
+                          {formatDuration(s.durationMs)}
+                        </span>
+                        <span className="mono text-[13px] px-2 py-0.5 rounded-full" style={{
+                          color:
+                            s.status === 'running' ? 'var(--c-blue)' :
+                            s.status === 'completed' ? 'var(--c-green)' :
+                            'var(--c-amber)',
+                          background:
+                            s.status === 'running' ? 'rgba(96,165,250,0.12)' :
+                            s.status === 'completed' ? 'rgba(52,211,153,0.1)' :
+                            'rgba(251,191,36,0.1)',
+                        }}>
+                          {s.status}
+                        </span>
+                      </div>
+                      <div className="mono text-[13px] mt-1" style={{ color: 'var(--c-text-muted)' }}>
+                        {s.sessionId.slice(0, 8)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 shrink-0">
+                    <div className="text-right">
+                      <div className="mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>events</div>
+                      <div className="mono text-[15px] font-medium" style={{ color: 'var(--c-text)' }}>{s.eventCount}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>tools</div>
+                      <div className="mono text-[15px] font-medium" style={{ color: 'var(--c-text)' }}>{s.toolCount}</div>
+                    </div>
+                    {s.errorCount > 0 && (
+                      <div className="text-right">
+                        <div className="mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>errors</div>
+                        <div className="mono text-[15px] font-medium" style={{ color: 'var(--c-red)' }}>{s.errorCount}</div>
+                      </div>
+                    )}
+                    <span className="mono text-[15px]" style={{ color: 'var(--c-teal-dim)' }}>
+                      {isExpanded ? '▼' : '▶'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Events feed */}
+                {isExpanded && (
+                  <div className="border-t p-4 max-h-[600px] overflow-y-auto space-y-1.5" style={{ borderColor: 'var(--c-border-dim)' }}>
+                    {s.events.length === 0 ? (
+                      <div className="mono text-sm text-center py-4" style={{ color: 'var(--c-text-muted)' }}>
+                        No events
+                      </div>
+                    ) : (
+                      s.events.map((ev, i) => {
+                        const evId = `${s.sessionId}:${i}`;
+                        const isEvExpanded = expandedEvents.has(evId);
+                        const evColor =
+                          ev.kind === 'error' ? 'var(--c-red)' :
+                          ev.kind === 'done' ? 'var(--c-green)' :
+                          ev.kind === 'thinking' ? 'var(--c-blue)' :
+                          ev.kind === 'tool' ? 'var(--c-text)' :
+                          'var(--c-text-muted)';
+
+                        return (
+                          <div
+                            key={i}
+                            className="flex items-start gap-3 py-1.5 px-2 rounded transition-colors hover:bg-white/[0.02] cursor-pointer"
+                            onClick={() => toggleEvent(evId)}
+                          >
+                            <span className="mono text-[13px] shrink-0 w-[70px]" style={{ color: 'var(--c-teal-dim)' }}>
+                              {formatTime(ev.ts)}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm break-words" style={{ color: evColor }}>{ev.summary}</div>
+                              {ev.detail && isEvExpanded && (
+                                <pre className="mono text-[13px] mt-1 p-2 rounded whitespace-pre-wrap break-words" style={{
+                                  color: 'var(--c-text-muted)',
+                                  background: 'rgba(255,255,255,0.02)',
+                                  border: '1px solid var(--c-border-dim)',
+                                }}>{ev.detail}</pre>
+                              )}
+                              {ev.detail && !isEvExpanded && (
+                                <div className="mono text-[12px] truncate" style={{ color: 'var(--c-text-muted)' }}>{ev.detail}</div>
+                              )}
+                            </div>
                           </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>{row.word_count || '-'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

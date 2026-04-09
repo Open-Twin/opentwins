@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { getPlatformWorkspaceDir, getLockFile, getBrowserProfilesConfigPath, getConfigPath } from '../../util/paths.js';
 import { PLATFORM_TYPES, PLATFORM_API_KEYS } from '../../util/platform-types.js';
 import { loadConfig } from '../../config/loader.js';
+import { findLatestSessionFile, extractEventsFromSession } from '../../util/session-parser.js';
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -342,4 +343,28 @@ export async function handleUpdateAgent(req: Request, res: Response): Promise<vo
   }
 
   res.status(400).json({ error: 'Nothing to update. Send limits, queries, or behavior.' });
+}
+
+// ── GET /api/agents/:platform/feed ────────────────────────────
+// Return parsed events from the most recent Claude session JSONL for an agent
+
+export function handleGetAgentFeed(req: Request, res: Response): void {
+  const platform = req.params.platform as string;
+  if (!PLATFORM_TYPES.includes(platform as any)) {
+    res.status(400).json({ error: `Unknown platform: ${platform}` });
+    return;
+  }
+
+  const sessionFile = findLatestSessionFile(platform);
+  if (!sessionFile) {
+    res.json({ events: [], sessionFile: null });
+    return;
+  }
+
+  try {
+    const events = extractEventsFromSession(sessionFile);
+    res.json({ events, sessionFile, totalEvents: events.length });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to read session' });
+  }
 }

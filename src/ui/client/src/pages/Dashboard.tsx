@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApi, useMutation, today } from '../hooks/useApi.ts';
 
 interface StatusData {
@@ -11,7 +12,7 @@ interface StatusData {
   platforms: Array<{ platform: string; enabled: boolean; handle: string }>;
   platformSchedules: Array<{ platform: string; nextRun: string }>;
   recentRuns: Array<{
-    id: number;
+    id: string;
     agent_name: string;
     status: string;
     started_at: string;
@@ -19,15 +20,6 @@ interface StatusData {
     duration_ms: number | null;
     error: string | null;
   }>;
-}
-
-interface ActivityRow {
-  id: number;
-  platform: string;
-  action_type: string;
-  content: string | null;
-  word_count: number | null;
-  created_at: string;
 }
 
 interface QualitySummary {
@@ -41,60 +33,66 @@ interface QualitySummary {
 
 const PLATFORM_COLORS: Record<string, string> = {
   reddit: '#FF4500', twitter: '#1DA1F2', linkedin: '#0A66C2', bluesky: '#0085FF',
-  threads: '#000000', medium: '#00AB6C', substack: '#FF6719', devto: '#3B49DF',
+  threads: '#888', medium: '#00AB6C', substack: '#FF6719', devto: '#3B49DF',
   ph: '#DA552F', ih: '#4F46E5',
 };
 
-// Pipeline stages with human-readable names and execution groups
-const PIPELINE_GROUPS = [
-  {
-    label: 'Research',
-    description: 'Runs in parallel',
-    parallel: true,
-    stages: [
-      { id: 'trend-scout', name: 'Trend Scout', desc: 'Predicts trending topics' },
-      { id: 'competitive-intel', name: 'Competitive Intel', desc: 'Monitors competitors' },
-      { id: 'engagement-tracker', name: 'Engagement Tracker', desc: 'Tracks post performance' },
-      { id: 'network-mapper', name: 'Network Mapper', desc: 'Maps engagement targets' },
-    ],
-  },
-  {
-    label: 'Analysis',
-    description: 'Runs after research',
-    parallel: false,
-    stages: [
-      { id: 'amplification', name: 'Amplification', desc: 'Identifies best content to amplify' },
-    ],
-  },
-  {
-    label: 'Content',
-    description: 'Runs sequentially',
-    parallel: false,
-    stages: [
-      { id: 'content-planner', name: 'Content Planner', desc: 'Generates daily brief' },
-      { id: 'content-writer', name: 'Content Writer', desc: 'Creates platform-specific content' },
-    ],
-  },
+// Pipeline stages — shown as a compact vertical timeline
+const PIPELINE_STAGES = [
+  { id: 'trend-scout',         label: 'Trend Scout',        group: 'Research',  parallel: true  },
+  { id: 'competitive-intel',   label: 'Competitive Intel',  group: 'Research',  parallel: true  },
+  { id: 'engagement-tracker',  label: 'Engagement Tracker', group: 'Research',  parallel: true  },
+  { id: 'network-mapper',      label: 'Network Mapper',     group: 'Research',  parallel: true  },
+  { id: 'amplification',       label: 'Amplification',      group: 'Analysis',  parallel: false },
+  { id: 'content-planner',     label: 'Content Planner',    group: 'Content',   parallel: false },
+  { id: 'content-writer',      label: 'Content Writer',     group: 'Content',   parallel: false },
 ];
+
+// Shorten a handle/URL to a clean display form
+function cleanHandle(handle: string): string {
+  if (!handle) return '';
+  // If it's a URL, extract the last path segment
+  if (handle.startsWith('http')) {
+    try {
+      const url = new URL(handle);
+      const segs = url.pathname.split('/').filter(Boolean);
+      return '@' + (segs[segs.length - 1] || url.hostname);
+    } catch { /* fallthrough */ }
+  }
+  return handle.startsWith('@') ? handle : '@' + handle;
+}
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, { bg: string; color: string; dot: string }> = {
-    completed: { bg: 'rgba(52, 211, 153, 0.08)', color: 'var(--c-green)', dot: 'online' },
-    running: { bg: 'rgba(96, 165, 250, 0.08)', color: 'var(--c-blue)', dot: 'online' },
-    failed: { bg: 'rgba(248, 113, 113, 0.08)', color: 'var(--c-red)', dot: 'offline' },
+    completed:  { bg: 'rgba(52, 211, 153, 0.12)', color: 'var(--c-green)', dot: 'online'  },
+    running:    { bg: 'rgba(96, 165, 250, 0.12)', color: 'var(--c-blue)',  dot: 'online'  },
+    incomplete: { bg: 'rgba(251, 191, 36, 0.12)', color: 'var(--c-amber)', dot: 'pending' },
+    failed:     { bg: 'rgba(248, 113, 113, 0.12)', color: 'var(--c-red)',  dot: 'offline' },
   };
-  const s = styles[status] || { bg: 'rgba(100,100,100,0.08)', color: 'var(--c-text-muted)', dot: 'pending' };
+  const s = styles[status] || { bg: 'rgba(148,163,184,0.1)', color: 'var(--c-text-muted)', dot: 'pending' };
   return (
-    <span className="mono inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[14px] font-medium" style={{ background: s.bg, color: s.color }}>
+    <span className="mono inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium uppercase tracking-wider" style={{ background: s.bg, color: s.color }}>
       <span className={`status-dot ${s.dot}`} />
       {status}
     </span>
   );
 }
 
+function KpiCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: 'teal' | 'green' | 'amber' }) {
+  const accentColor = accent === 'teal' ? 'var(--c-teal)' : accent === 'green' ? 'var(--c-green)' : accent === 'amber' ? 'var(--c-amber)' : 'var(--c-text)';
+  return (
+    <div className="panel noise p-5">
+      <div className="text-[12px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: 'var(--c-text-muted)' }}>{label}</div>
+      <div className="text-3xl font-semibold tabular-nums leading-none" style={{ color: accentColor }}>{value}</div>
+      {sub && <div className="mono text-[12px] mt-2" style={{ color: 'var(--c-text-muted)' }}>{sub}</div>}
+    </div>
+  );
+}
+
 export function Dashboard() {
+  const navigate = useNavigate();
   const { data: status, loading, refetch } = useApi<StatusData>('/api/status');
-  const { data: activity } = useApi<ActivityRow[]>(`/api/activity?date=${today()}`);
+  const { data: activityResp } = useApi<{ sessions: Array<{ platform: string; toolCount: number; eventCount: number }> }>(`/api/activity?date=${today()}`);
   const { data: quality } = useApi<QualitySummary[]>(`/api/quality?date=${today()}`);
   const { mutate: startScheduler, loading: startingScheduler } = useMutation('/api/scheduler/start', 'POST');
   const { mutate: stopScheduler, loading: stoppingScheduler } = useMutation('/api/scheduler/stop', 'POST');
@@ -111,7 +109,9 @@ export function Dashboard() {
   }
 
   const activityByPlatform: Record<string, number> = {};
-  activity?.forEach((a) => { activityByPlatform[a.platform] = (activityByPlatform[a.platform] || 0) + 1; });
+  activityResp?.sessions?.forEach((s) => {
+    activityByPlatform[s.platform] = (activityByPlatform[s.platform] || 0) + s.toolCount;
+  });
 
   const qualityByPlatform: Record<string, QualitySummary> = {};
   quality?.forEach((q) => { qualityByPlatform[q.platform] = q; });
@@ -120,114 +120,164 @@ export function Dashboard() {
   status?.recentRuns?.forEach((r) => { if (!lastRun[r.agent_name]) lastRun[r.agent_name] = r; });
 
   const totalActions = Object.values(activityByPlatform).reduce((a, b) => a + b, 0);
-  const activeAgents = status?.platforms.filter((p) => p.enabled && lastRun[p.platform]?.status === 'completed').length || 0;
+  const totalAgents = status?.platforms.length || 0;
+  const enabledAgents = status?.platforms.filter((p) => p.enabled).length || 0;
+  const runsToday = status?.recentRuns?.length || 0;
+  const completedToday = status?.recentRuns?.filter((r) => r.status === 'completed').length || 0;
+
+  const toggleScheduler = async () => {
+    if (status?.daemon) {
+      const r = await stopScheduler({});
+      if (r) { setSchedulerFlash('Automation stopped'); refetch(); setTimeout(() => setSchedulerFlash(null), 3000); }
+    } else {
+      const r = await startScheduler({});
+      if (r) { setSchedulerFlash('Automation started'); refetch(); setTimeout(() => setSchedulerFlash(null), 3000); }
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Hero status bar */}
-      <div className="animate-fade-up flex items-center justify-between">
+    <div className="space-y-8">
+      {/* ── Header ──────────────────────────────────────────────── */}
+      <div className="animate-fade-up flex items-start justify-between gap-6 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--c-text)' }}>
+          <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--c-text)' }}>
             Mission Control
           </h1>
-          <div className="mono text-sm mt-1 flex items-center gap-3" style={{ color: 'var(--c-text-muted)' }}>
+          <div className="mono text-sm mt-1.5 flex items-center gap-2" style={{ color: 'var(--c-text-muted)' }}>
             <span>{today()}</span>
-            <span style={{ color: 'var(--c-border)' }}>|</span>
+            <span style={{ color: 'var(--c-border)' }}>·</span>
             <span>{status?.timezone}</span>
-            <span style={{ color: 'var(--c-border)' }}>|</span>
-            <button
-              onClick={async () => {
-                if (status?.daemon) {
-                  const r = await stopScheduler({});
-                  if (r) { setSchedulerFlash('All automation stopped'); refetch(); setTimeout(() => setSchedulerFlash(null), 3000); }
-                } else {
-                  const r = await startScheduler({});
-                  if (r) { setSchedulerFlash('Automation started - agents will run on schedule'); refetch(); setTimeout(() => setSchedulerFlash(null), 4000); }
-                }
-              }}
-              disabled={startingScheduler || stoppingScheduler}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all hover:bg-white/[0.03]"
-              style={{ border: `1px solid ${status?.daemon ? 'rgba(52,211,153,0.2)' : 'var(--c-border-dim)'}` }}
-              title={status?.daemon
-                ? 'Click to stop - pauses all agent heartbeats and pipeline runs'
-                : 'Click to start - enables hourly agent heartbeats and daily content pipeline'}
-            >
-              <span className={`status-dot ${status?.daemon ? 'online' : 'offline'}`} />
-              <span>{startingScheduler ? 'Starting...' : stoppingScheduler ? 'Stopping...' : status?.daemon ? 'Automation on' : 'Automation off'}</span>
-            </button>
-            {schedulerFlash && <span style={{ color: 'var(--c-teal)' }}>{schedulerFlash}</span>}
-            {!status?.daemon && !schedulerFlash && (
-              <span className="text-[14px]" style={{ color: 'var(--c-text-muted)' }}>Agents and pipeline paused</span>
-            )}
+            <span style={{ color: 'var(--c-border)' }}>·</span>
+            <span>active window {status?.activeHours.start}:00–{status?.activeHours.end}:00</span>
           </div>
         </div>
-        <div className="flex gap-4">
-          <MiniStat label="Agents" value={`${activeAgents}/${status?.platforms.length || 0}`} />
-          <MiniStat label="Actions" value={totalActions} accent />
-          <MiniStat label="Window" value={`${status?.activeHours.start}:00-${status?.activeHours.end}:00`} />
+
+        {/* Primary action: Automation toggle */}
+        <div className="flex items-center gap-3">
+          {schedulerFlash && (
+            <span className="mono text-[13px] px-3 py-1.5 rounded-full animate-fade-up" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)' }}>
+              {schedulerFlash}
+            </span>
+          )}
+          <button
+            onClick={toggleScheduler}
+            disabled={startingScheduler || stoppingScheduler}
+            className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg font-medium text-sm transition-all disabled:opacity-60"
+            style={{
+              background: status?.daemon ? 'rgba(52,211,153,0.12)' : 'var(--c-panel)',
+              border: `1px solid ${status?.daemon ? 'rgba(52,211,153,0.3)' : 'var(--c-border-dim)'}`,
+              color: status?.daemon ? 'var(--c-green)' : 'var(--c-text-dim)',
+              boxShadow: status?.daemon ? '0 0 20px rgba(52,211,153,0.08)' : undefined,
+            }}
+            title={status?.daemon ? 'Pause all agent heartbeats and pipeline' : 'Start hourly agent heartbeats and daily pipeline'}
+          >
+            <span className={`status-dot ${status?.daemon ? 'online' : 'offline'}`} />
+            {startingScheduler ? 'Starting…' : stoppingScheduler ? 'Stopping…' : status?.daemon ? 'Automation On' : 'Automation Off'}
+          </button>
         </div>
       </div>
 
-      {/* Platform grid */}
-      <div>
-        <div className="section-title mb-4">Platform Agents</div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      {/* ── KPI row ─────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up stagger-1">
+        <KpiCard
+          label="Agents"
+          value={`${enabledAgents}/${totalAgents}`}
+          sub={enabledAgents === totalAgents ? 'all enabled' : `${totalAgents - enabledAgents} paused`}
+          accent="teal"
+        />
+        <KpiCard
+          label="Runs Today"
+          value={runsToday}
+          sub={runsToday > 0 ? `${completedToday} completed` : 'no runs yet'}
+          accent={runsToday > 0 ? 'green' : undefined}
+        />
+        <KpiCard
+          label="Tool Calls"
+          value={totalActions}
+          sub="across all sessions"
+        />
+        <KpiCard
+          label="Automation"
+          value={status?.daemon ? 'On' : 'Off'}
+          sub={status?.daemon ? 'agents auto-run hourly' : 'manual runs only'}
+          accent={status?.daemon ? 'green' : 'amber'}
+        />
+      </div>
+
+      {/* ── Platform Agents ─────────────────────────────────────── */}
+      <div className="animate-fade-up stagger-2">
+        <div className="flex items-center justify-between mb-4">
+          <div className="section-title">Platform Agents</div>
+          <button
+            onClick={() => navigate('/agents')}
+            className="mono text-[13px] px-2.5 py-1 rounded-md transition-colors hover:bg-white/[0.03]"
+            style={{ color: 'var(--c-teal-dim)' }}
+          >
+            manage →
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {status?.platforms.map((p, i) => {
             const run = lastRun[p.platform];
             const acts = activityByPlatform[p.platform] || 0;
             const q = qualityByPlatform[p.platform];
             const color = PLATFORM_COLORS[p.platform] || '#888';
+            const sched = status.platformSchedules?.find((s) => s.platform === p.platform);
 
             return (
               <div
                 key={p.platform}
-                className={`panel noise animate-fade-up stagger-${Math.min(i + 1, 5)} group transition-all duration-300 hover:scale-[1.02]`}
-                style={{ opacity: p.enabled ? 1 : 0.35 }}
+                className={`panel noise animate-fade-up stagger-${Math.min(i + 1, 5)} cursor-pointer transition-all duration-200 hover:border-white/10`}
+                style={{ opacity: p.enabled ? 1 : 0.5 }}
+                onClick={() => navigate('/agents')}
               >
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
+                <div className="p-5">
+                  {/* Card header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <div
-                        className="w-2 h-2 rounded-full"
-                        style={{ background: color, boxShadow: `0 0 8px ${color}40` }}
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ background: color, boxShadow: `0 0 12px ${color}50` }}
                       />
-                      <span className="text-sm font-semibold capitalize" style={{ color: 'var(--c-text)' }}>
-                        {p.platform}
-                      </span>
+                      <div className="min-w-0">
+                        <div className="text-base font-semibold capitalize leading-tight" style={{ color: 'var(--c-text)' }}>
+                          {p.platform}
+                        </div>
+                        <div className="mono text-[12px] truncate" style={{ color: 'var(--c-text-muted)' }}>
+                          {cleanHandle(p.handle)}
+                        </div>
+                      </div>
                     </div>
                     {run && <StatusBadge status={run.status} />}
                   </div>
 
-                  <div className="mono text-[13px] mb-3 flex items-center justify-between" style={{ color: 'var(--c-text-muted)' }}>
-                    <span>@{p.handle}</span>
-                    {status?.daemon && (() => {
-                      const sched = status.platformSchedules?.find((s) => s.platform === p.platform);
-                      return sched ? (
-                        <span className="mono text-[13px]" style={{ color: 'var(--c-teal-dim)' }}>
-                          next {new Date(sched.nextRun).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
-                        </span>
-                      ) : null;
-                    })()}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 gap-3 mb-3 pt-3" style={{ borderTop: '1px solid var(--c-border-dim)' }}>
                     <div>
-                      <div className="text-[14px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--c-text-muted)' }}>Actions</div>
-                      <div className="mono text-lg font-medium" style={{ color: acts > 0 ? 'var(--c-text)' : 'var(--c-text-muted)' }}>{acts}</div>
+                      <div className="text-[11px] uppercase tracking-wider mb-1" style={{ color: 'var(--c-text-muted)' }}>Actions</div>
+                      <div className="text-2xl font-semibold tabular-nums leading-none" style={{ color: acts > 0 ? 'var(--c-text)' : 'var(--c-text-muted)' }}>
+                        {acts}
+                      </div>
                     </div>
                     <div>
-                      <div className="text-[14px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--c-text-muted)' }}>Comments</div>
-                      <div className="mono text-lg font-medium" style={{ color: (q?.comments || 0) > 0 ? 'var(--c-text)' : 'var(--c-text-muted)' }}>{q?.comments || 0}</div>
+                      <div className="text-[11px] uppercase tracking-wider mb-1" style={{ color: 'var(--c-text-muted)' }}>Comments</div>
+                      <div className="text-2xl font-semibold tabular-nums leading-none" style={{ color: (q?.comments || 0) > 0 ? 'var(--c-text)' : 'var(--c-text-muted)' }}>
+                        {q?.comments || 0}
+                      </div>
                     </div>
                   </div>
 
-                  {run?.duration_ms && (
-                    <div className="mt-3 pt-2" style={{ borderTop: '1px solid var(--c-border-dim)' }}>
-                      <span className="mono text-[14px]" style={{ color: 'var(--c-text-muted)' }}>
-                        {(run.duration_ms / 1000).toFixed(0)}s
-                      </span>
-                    </div>
-                  )}
+                  {/* Footer: schedule or last run */}
+                  <div className="flex items-center justify-between mono text-[12px] pt-2" style={{ borderTop: '1px solid var(--c-border-dim)', color: 'var(--c-text-muted)' }}>
+                    {status?.daemon && sched ? (
+                      <span>next run {new Date(sched.nextRun).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                    ) : (
+                      <span>scheduler off</span>
+                    )}
+                    {run?.duration_ms && (
+                      <span>{(run.duration_ms / 1000).toFixed(0)}s</span>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -235,112 +285,142 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Pipeline + Recent runs in two columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Pipeline */}
-        {status?.pipelineEnabled && (
-          <div className="panel noise animate-fade-up stagger-2">
-            <div className="panel-header flex items-center justify-between">
-              <span>// Content Pipeline</span>
-              {status?.daemon && status?.nextPipelineRun && (
-                <span className="mono text-[14px] normal-case tracking-normal" style={{ color: 'var(--c-text-muted)' }}>
-                  next: {new Date(status.nextPipelineRun).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
-                </span>
-              )}
-            </div>
-            <div className="p-4">
-              <div className="space-y-4">
-                {PIPELINE_GROUPS.map((group, gi) => (
-                  <div key={group.label}>
-                    {/* Group header */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="mono text-[14px] w-4 text-center" style={{ color: 'var(--c-text-muted)' }}>{gi + 1}</span>
-                      <span className="text-[13px] font-semibold" style={{ color: 'var(--c-text-dim)' }}>{group.label}</span>
-                      <span className="mono text-[13px] px-1.5 py-0.5 rounded" style={{
-                        color: group.parallel ? 'var(--c-teal-dim)' : 'var(--c-text-muted)',
-                        background: group.parallel ? 'var(--c-teal-glow)' : 'rgba(100,100,100,0.06)',
-                      }}>
-                        {group.parallel ? `${group.stages.length} run together` : group.stages.length > 1 ? 'one after another' : 'after previous'}
-                      </span>
-                    </div>
-                    {/* Stages */}
-                    <div className={group.parallel ? 'grid grid-cols-2 gap-1.5' : 'space-y-1.5'}>
-                      {group.stages.map((stage) => {
-                        const run = lastRun[stage.id] || lastRun['pipeline'];
-                        return (
-                          <div key={stage.id} className="flex items-center justify-between py-1.5 px-2.5 rounded-md transition-colors hover:bg-white/[0.02]" style={{ background: 'rgba(255,255,255,0.01)' }}>
-                            <div className="min-w-0">
-                              <div className="text-[13px] font-medium truncate" style={{ color: 'var(--c-text-dim)' }}>{stage.name}</div>
-                              <div className="mono text-[13px] truncate" style={{ color: 'var(--c-text-muted)' }}>{stage.desc}</div>
-                            </div>
-                            <div className="shrink-0 ml-2">
-                              {run ? <StatusBadge status={run.status} /> : (
-                                <span className="mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
-                                  {status?.daemon ? 'scheduled' : 'idle'}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {/* Arrow between groups */}
-                    {gi < PIPELINE_GROUPS.length - 1 && (
-                      <div className="flex justify-center py-1.5">
-                        <svg width="12" height="16" viewBox="0 0 12 16" fill="none">
-                          <path d="M6 0v12M2 9l4 4 4-4" stroke="var(--c-border)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+      {/* ── Recent Runs (full width) ────────────────────────────── */}
+      <div className="panel noise animate-fade-up stagger-3">
+        <div className="panel-header flex items-center justify-between">
+          <span>// Recent Runs</span>
+          <span className="mono text-[13px] normal-case tracking-normal" style={{ color: 'var(--c-text-muted)' }}>
+            {runsToday} today
+          </span>
+        </div>
+        {status?.recentRuns && status.recentRuns.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
+                  <th className="text-left px-5 py-3 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Agent</th>
+                  <th className="text-left px-5 py-3 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Status</th>
+                  <th className="text-left px-5 py-3 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Started</th>
+                  <th className="text-left px-5 py-3 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Ended</th>
+                  <th className="text-right px-5 py-3 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Duration</th>
+                </tr>
+              </thead>
+              <tbody>
+                {status.recentRuns.slice(0, 12).map((run) => {
+                  const day = run.started_at?.split('T')[0] || today();
+                  return (
+                    <tr
+                      key={run.id}
+                      className="transition-colors hover:bg-white/[0.03] cursor-pointer"
+                      style={{ borderBottom: '1px solid var(--c-border-dim)' }}
+                      onClick={() => navigate(`/activity?date=${day}&platform=${run.agent_name}&session=${run.id}`)}
+                      title="Open in Activity Log"
+                    >
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: PLATFORM_COLORS[run.agent_name] || '#888' }} />
+                          <span className="capitalize text-sm font-medium" style={{ color: 'var(--c-text)' }}>{run.agent_name}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5"><StatusBadge status={run.status} /></td>
+                      <td className="px-5 py-3.5 mono text-[13px]" style={{ color: 'var(--c-text-dim)' }}>
+                        {run.started_at ? new Date(run.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
+                      </td>
+                      <td className="px-5 py-3.5 mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
+                        {run.completed_at ? new Date(run.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
+                      </td>
+                      <td className="px-5 py-3.5 text-right mono text-[13px] tabular-nums" style={{ color: 'var(--c-text-muted)' }}>
+                        {run.duration_ms ? `${(run.duration_ms / 1000).toFixed(0)}s` : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-12 text-center">
+            <div className="text-base mb-2" style={{ color: 'var(--c-text-dim)' }}>No runs today</div>
+            <div className="mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
+              {status?.daemon ? 'Waiting for next scheduled run' : 'Start automation or trigger a manual run from the Agents tab'}
             </div>
           </div>
         )}
-
-        {/* Recent runs */}
-        <div className="panel noise animate-fade-up stagger-3">
-          <div className="panel-header">// Recent Runs</div>
-          <div className="p-0">
-            {status?.recentRuns && status.recentRuns.length > 0 ? (
-              <table className="w-full">
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
-                    <th className="text-left px-4 py-2 mono text-[14px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Agent</th>
-                    <th className="text-left px-4 py-2 mono text-[14px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Status</th>
-                    <th className="text-left px-4 py-2 mono text-[14px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Time</th>
-                    <th className="text-right px-4 py-2 mono text-[14px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Dur</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {status.recentRuns.slice(0, 12).map((run) => (
-                    <tr key={run.id} className="transition-colors hover:bg-white/[0.015]" style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
-                      <td className="px-4 py-2.5 mono text-sm" style={{ color: 'var(--c-text-dim)' }}>{run.agent_name}</td>
-                      <td className="px-4 py-2.5"><StatusBadge status={run.status} /></td>
-                      <td className="px-4 py-2.5 mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>{run.started_at?.split('T')[1]?.slice(0, 5) || '-'}</td>
-                      <td className="px-4 py-2.5 text-right mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
-                        {run.duration_ms ? `${(run.duration_ms / 1000).toFixed(0)}s` : '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="p-8 text-center">
-                <div className="mono text-sm" style={{ color: 'var(--c-text-muted)' }}>No runs today</div>
-                <div className="mono text-[14px] mt-1" style={{ color: 'var(--c-border)' }}>Run: opentwins start</div>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
-      {/* Quality overview */}
+      {/* ── Content Pipeline (collapsed, compact timeline) ─────── */}
+      {status?.pipelineEnabled && (
+        <div className="panel noise animate-fade-up stagger-4">
+          <div className="panel-header flex items-center justify-between">
+            <span>// Content Pipeline</span>
+            {status?.daemon && status?.nextPipelineRun && (
+              <span className="mono text-[13px] normal-case tracking-normal" style={{ color: 'var(--c-text-muted)' }}>
+                next at {new Date(status.nextPipelineRun).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+              </span>
+            )}
+          </div>
+          <div className="p-5">
+            <div className="flex items-center gap-2 flex-wrap">
+              {PIPELINE_STAGES.flatMap((stage, i) => {
+                const run = lastRun[stage.id] || lastRun['pipeline'];
+                const groupChange = i > 0 && PIPELINE_STAGES[i - 1].group !== stage.group;
+                const nodes = [];
+
+                if (groupChange) {
+                  nodes.push(
+                    <div key={`sep-${stage.id}`} className="flex items-center mx-1">
+                      <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+                        <path d="M1 6h12M9 2l4 4-4 4" stroke="var(--c-border)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  );
+                }
+
+                nodes.push(
+                  <div
+                    key={stage.id}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                    style={{
+                      background: 'rgba(255,255,255,0.02)',
+                      border: '1px solid var(--c-border-dim)',
+                    }}
+                  >
+                    <div className="w-1.5 h-1.5 rounded-full" style={{
+                      background: run?.status === 'completed' ? 'var(--c-green)' :
+                                  run?.status === 'running'   ? 'var(--c-blue)' :
+                                  run?.status === 'failed'    ? 'var(--c-red)' :
+                                  'var(--c-text-muted)',
+                    }} />
+                    <span className="text-[13px] font-medium" style={{ color: 'var(--c-text-dim)' }}>{stage.label}</span>
+                  </div>
+                );
+
+                return nodes;
+              })}
+            </div>
+            <div className="mono text-[12px] mt-4 flex items-center gap-4" style={{ color: 'var(--c-text-muted)' }}>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-green)' }} />
+                <span>completed</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-blue)' }} />
+                <span>running</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-text-muted)' }} />
+                <span>idle</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Quality (kept compact) ──────────────────────────────── */}
       {quality && quality.length > 0 && (
-        <div className="animate-fade-up stagger-4">
+        <div className="animate-fade-up stagger-5">
           <div className="section-title mb-4">Signal Quality</div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {quality.map((q) => {
               const styles = JSON.parse(q.styles || '{}');
               const styleCount = Object.keys(styles).length;
@@ -351,7 +431,7 @@ export function Dashboard() {
                 <div key={q.platform} className="panel noise p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
-                    <span className="text-sm font-semibold capitalize" style={{ color: 'var(--c-text-dim)' }}>{q.platform}</span>
+                    <span className="text-sm font-semibold capitalize" style={{ color: 'var(--c-text)' }}>{q.platform}</span>
                   </div>
                   <div className="space-y-2">
                     <QualityRow label="Avg words" value={q.avg_words} warn={q.avg_words > 100} />
@@ -369,19 +449,10 @@ export function Dashboard() {
   );
 }
 
-function MiniStat({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
-  return (
-    <div className="text-right">
-      <div className="text-[14px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>{label}</div>
-      <div className="mono text-sm font-medium" style={{ color: accent ? 'var(--c-teal)' : 'var(--c-text)' }}>{value}</div>
-    </div>
-  );
-}
-
 function QualityRow({ label, value, warn, dim }: { label: string; value: string | number; warn?: boolean; dim?: boolean }) {
   return (
     <div className="flex justify-between items-center">
-      <span className="mono text-[14px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>{label}</span>
+      <span className="mono text-[12px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>{label}</span>
       <span className="mono text-sm font-medium" style={{
         color: warn ? 'var(--c-amber)' : dim ? 'var(--c-text-muted)' : 'var(--c-text-dim)',
       }}>{value}</span>

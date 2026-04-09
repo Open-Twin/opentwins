@@ -128,3 +128,4 @@ export function getQualityMetrics(platform: string, date: string): unknown {
     .prepare("SELECT * FROM today_summaries WHERE platform = ? AND date = ?")
     .get(platform, date);
 }
+

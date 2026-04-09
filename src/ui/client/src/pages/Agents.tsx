@@ -703,34 +703,107 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
         </div>
       </div>
 
-      {/* Last Run Output */}
-      {agent.lastRun && (
-        <div className="panel noise">
-          <div className="panel-header flex items-center justify-between">
-            <span>// Last Run</span>
-            <div className="flex items-center gap-3">
-              {agent.lastRun.exitCode !== undefined && (
-                <span className="mono text-[14px] normal-case tracking-normal" style={{
-                  color: agent.lastRun.exitCode === 0 ? 'var(--c-green)' : 'var(--c-red)',
-                }}>
-                  exit: {agent.lastRun.exitCode}
-                </span>
-              )}
-              <span className="mono text-[14px] normal-case tracking-normal" style={{ color: 'var(--c-text-muted)' }}>
-                {agent.lastRun.startedAt?.split('T')[1]?.slice(0, 5) || ''}
-                {agent.lastRun.completedAt && ` - ${agent.lastRun.completedAt.split('T')[1]?.slice(0, 5)}`}
-              </span>
-            </div>
-          </div>
-          <div className="p-4 max-h-64 overflow-y-auto">
-            <pre className="mono text-[13px] leading-relaxed whitespace-pre-wrap" style={{
-              color: agent.lastRun.exitCode === 0 ? 'var(--c-text-muted)' : 'var(--c-red)',
-            }}>
-              {agent.lastRun.output || '(no output captured)'}
-            </pre>
-          </div>
+      {/* Live Activity Feed */}
+      <AgentFeed platform={platform} running={state === 'running'} />
+    </div>
+  );
+}
+
+// ── Live Agent Feed ───────────────────────────────────────────
+
+interface FeedEvent {
+  ts: string;
+  kind: 'thinking' | 'tool' | 'result' | 'error' | 'done';
+  summary: string;
+  detail?: string;
+}
+
+interface FeedData {
+  events: FeedEvent[];
+  sessionFile: string | null;
+  totalEvents: number;
+}
+
+function AgentFeed({ platform, running }: { platform: string; running: boolean }) {
+  const { data, loading, refetch } = useApi<FeedData>(`/api/agents/${platform}/feed`, [platform]);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+  // Poll while running
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => refetch(), 3000);
+    return () => clearInterval(id);
+  }, [running, refetch]);
+
+  const events = data?.events || [];
+  const hasSession = !!data?.sessionFile;
+
+  return (
+    <div className="panel noise">
+      <div className="panel-header flex items-center justify-between">
+        <span>// Activity Feed {running && <span style={{ color: 'var(--c-amber)' }}>● live</span>}</span>
+        <div className="flex items-center gap-3">
+          <span className="mono text-[13px] normal-case tracking-normal" style={{ color: 'var(--c-text-muted)' }}>
+            {events.length} events
+          </span>
+          <button
+            onClick={() => refetch()}
+            className="mono text-[13px] normal-case tracking-normal px-2 py-0.5 rounded transition-colors hover:bg-white/5"
+            style={{ color: 'var(--c-teal-dim)' }}
+          >
+            refresh
+          </button>
         </div>
-      )}
+      </div>
+      <div className="p-4 max-h-[500px] overflow-y-auto">
+        {loading && events.length === 0 ? (
+          <div className="mono text-sm py-8 text-center animate-pulse" style={{ color: 'var(--c-teal-dim)' }}>Loading activity...</div>
+        ) : !hasSession ? (
+          <Empty text="No activity yet" hint="Run the agent to see live progress" />
+        ) : events.length === 0 ? (
+          <Empty text="Session started" hint="Waiting for first event..." />
+        ) : (
+          <div className="space-y-1.5">
+            {events.slice().reverse().map((ev, i) => {
+              const time = ev.ts ? new Date(ev.ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '';
+              const isExpanded = expanded.has(i);
+              const color =
+                ev.kind === 'error' ? 'var(--c-red)' :
+                ev.kind === 'done' ? 'var(--c-green)' :
+                ev.kind === 'thinking' ? 'var(--c-blue)' :
+                ev.kind === 'tool' ? 'var(--c-text)' :
+                'var(--c-text-muted)';
+
+              return (
+                <div
+                  key={i}
+                  className="flex items-start gap-3 py-1.5 px-2 rounded transition-colors hover:bg-white/[0.02] cursor-pointer"
+                  onClick={() => {
+                    const next = new Set(expanded);
+                    if (isExpanded) next.delete(i); else next.add(i);
+                    setExpanded(next);
+                  }}
+                >
+                  <span className="mono text-[13px] shrink-0 w-[70px]" style={{ color: 'var(--c-teal-dim)' }}>{time}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm break-words" style={{ color }}>{ev.summary}</div>
+                    {ev.detail && isExpanded && (
+                      <pre className="mono text-[13px] mt-1 p-2 rounded whitespace-pre-wrap break-words" style={{
+                        color: 'var(--c-text-muted)',
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid var(--c-border-dim)',
+                      }}>{ev.detail}</pre>
+                    )}
+                    {ev.detail && !isExpanded && (
+                      <div className="mono text-[12px] truncate" style={{ color: 'var(--c-text-muted)' }}>{ev.detail}</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
