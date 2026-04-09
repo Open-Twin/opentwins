@@ -3,8 +3,9 @@ dist/
 .opentwins/
 src/ui/client/node_modules/
 src/ui/client/dist/
-browser/
-browser-profiles/
+# Old openclaw browser profiles (not src/browser/)
+/browser/
+/browser-profiles/
 logs/
 credentials/
 identity/
