@@ -94,11 +94,17 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { enabled: agentsEnabled, reason: agentsDisabledReason } = useAgentsEnabled();
   const { data: status, loading, refetch } = useApi<StatusData>('/api/status');
-  const { data: activityResp } = useApi<{ sessions: Array<{ platform: string; toolCount: number; eventCount: number }> }>(`/api/activity?date=${today()}`);
+  const { data: activityResp, refetch: refetchActivity } = useApi<{ sessions: Array<{ platform: string; toolCount: number; eventCount: number }> }>(`/api/activity?date=${today()}`);
   const { data: quality } = useApi<QualitySummary[]>(`/api/quality?date=${today()}`);
   const { mutate: startScheduler, loading: startingScheduler } = useMutation('/api/scheduler/start', 'POST');
   const { mutate: stopScheduler, loading: stoppingScheduler } = useMutation('/api/scheduler/stop', 'POST');
   const [schedulerFlash, setSchedulerFlash] = useState<string | null>(null);
+
+  // Auto-refresh dashboard every 10 seconds
+  useEffect(() => {
+    const id = setInterval(() => { refetch(); refetchActivity(); }, 10000);
+    return () => clearInterval(id);
+  }, [refetch, refetchActivity]);
 
   if (loading) {
     return (
