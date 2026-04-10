@@ -288,7 +288,7 @@ snapshot('[role="dialog"] [data-testid="tweetTextarea_0"]') → type hook text �
 **Step 2 — Get hook tweet URL from profile:**
 ```javascript
 // Navigate to profile, extract latest tweet URL
-browser.navigate("https://x.com/{{handle}}", { profile: "{{browser_profile}}" })
+browser.navigate("https://x.com/{{handle_slug}}", { profile: "{{browser_profile}}" })
 browser.act({
   kind: "evaluate",
   fn: `() => {
@@ -312,7 +312,7 @@ snapshot([data-testid="tweetTextarea_0"]) → ref=eN
 type(eN, tweetText)
 snapshot([data-testid="tweetButtonInline"]) → ref=eM
 click(eM)
-verify: evaluate → check articles contain @{{handle}} reply
+verify: evaluate → check articles contain @{{handle_slug}} reply
 ```
 
 For tweet 3+: navigate to the PREVIOUS reply URL (not the hook), so the chain stays linear.
@@ -325,7 +325,7 @@ browser.act({
       const articles = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
       const ours = articles.filter(a => {
         const h = a.querySelector('[data-testid="User-Name"]')?.innerText?.split('\\n').find(l => l.startsWith('@'));
-        return h === '@{{handle}}';
+        return h === '@{{handle_slug}}';
       });
       const latest = ours[ours.length - 1];
       const link = latest?.querySelector('a[href*="/status/"]');

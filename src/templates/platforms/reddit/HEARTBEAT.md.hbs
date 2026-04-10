@@ -34,7 +34,7 @@ Read `limits.json`:
 ## 1b. Read Today Summary
 
 Read `memory/today_summary.json`. Use tallies to inform comment decisions:
-- `disagreements` < 25% of `comments` AND `comments >= 4` → next MUST disagree (e.g., 4 comments need 1, 8 need 2)
+- `disagreements` < 50% of `comments` AND `comments >= 4` → next MUST disagree (Reddit rewards contrarian takes — be aggressive)
 
 - `last_style` was insight → next must be short/personal/pushback
 - Any style is 60%+ of total → MUST use a different style
@@ -61,7 +61,7 @@ On **https://www.reddit.com/notifications**:
    - MUST extract `notification-id` attribute (UUID format like `2f2f5b45-0827-11f1-...`)
    - ❌ NEVER use `a[href*="/r/"]` or any other link-based extraction — produces comment IDs that DON'T match tracking file
    - 🚨 **Return `items` array with `{notificationId, url}` — NEVER return just IDs.** Returning only IDs forces a second evaluate to fetch URLs. Use the EXACT return shape from BROWSER-notifications.md § 1. Do NOT add `.slice()` limits — process ALL relevant notifications.
-3. Filter: ONLY `messageType="COMMENT_REPLY"` or `"POST_REPLY"`. Skip `{{handle}}`.
+3. Filter: ONLY `messageType="COMMENT_REPLY"` or `"POST_REPLY"`. Skip `{{handle_slug}}`.
 4. Batch grep to filter handled IDs (ONE command for ALL notifications):
    ```bash
    exec printf '%s\n' "UUID1" "UUID2" "UUID3" | grep -vxF -f memory/replied_notifications.txt || true
@@ -101,16 +101,17 @@ Per due task:
    ```
    If "SKIP" → pick next post (already commented, cheaper than browser navigation)
 5. Navigate to post
-6. Upvote + expand composer (BROWSER-engage.md § 3 — single evaluate, combines upvote + composer open)
-7. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/E/F) — check if defaulting to agree+expand, enforce length cap (50 words / 80 for ExperiencedDevs), check personal mention limit, use short style on high-engagement posts, run anti-AI self-check
-8. Focus + type (BROWSER-engage.md § 4 step 4 — async evaluate with embedded 2s wait)
-   - 🚨 **Page-loss guard:** If typing evaluate returns `no editor`, check URL immediately. If `about:blank` or wrong domain → re-navigate ONCE and retry from step 6. Do NOT probe with multiple evaluates — one URL check is enough.
-9. Verify text (§ 4 step 5) → submit (§ 4 step 6) → verify comment (§ 4 step 7 — async evaluate with embedded 3s wait)
-10. **After successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
-11. MANDATORY update limits.json: `comments.current += 1`, `last_comment_at`, `upvotes.current += upvoted_count` (0 or 1). NEVER write unchanged values.
-12. MANDATORY update schedule.json: increment `comments_done`. If `>= config.max_comments` -> `status: "done"`
-13. Log Type = "Comment", upvoted: Yes/No
-14. Self-review: "does this sound AI?" (TOOLS.md). Rewrite if yes.
+6. 🚨 **MANDATORY: Read post before commenting** (BROWSER-engage.md § 2b). Confirm the topic matches the title from extraction. Your comment MUST directly address the returned `title` and `body`.
+7. Upvote + expand composer (BROWSER-engage.md § 3 — single evaluate, combines upvote + composer open)
+8. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/E/F) — check if defaulting to agree+expand, enforce length cap (50 words / 80 for ExperiencedDevs), check personal mention limit, use short style on high-engagement posts, run anti-AI self-check
+9. Focus + type (BROWSER-engage.md § 4 step 4 — async evaluate with embedded 2s wait)
+   - 🚨 **Page-loss guard:** If typing evaluate returns `no editor`, check URL immediately. If `about:blank` or wrong domain → re-navigate ONCE and retry from step 7. Do NOT probe with multiple evaluates — one URL check is enough.
+10. Verify text (§ 4 step 5) → submit (§ 4 step 6) → verify comment (§ 4 step 7 — async evaluate with embedded 3s wait)
+11. **After successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
+12. MANDATORY update limits.json: `comments.current += 1`, `last_comment_at`, `upvotes.current += upvoted_count` (0 or 1). NEVER write unchanged values.
+13. MANDATORY update schedule.json: increment `comments_done`. If `>= config.max_comments` -> `status: "done"`
+14. Log Type = "Comment", upvoted: Yes/No
+15. Self-review: "does this sound AI?" (TOOLS.md). Rewrite if yes.
 
 ### karma_building
 
@@ -125,15 +126,16 @@ Per due task:
    ```
    If "SKIP" → pick next post
 6. Navigate to post
-7. Upvote + expand composer (BROWSER-engage.md § 3 — single evaluate)
-8. Focus + type (BROWSER-engage.md § 4 step 4 — async evaluate with embedded 2s wait). NO product mentions.
+7. 🚨 **MANDATORY: Read post before commenting** (BROWSER-engage.md § 2b). Your comment MUST directly address the returned `title` and `body`. If the title is different from what you expected, re-evaluate your comment angle before proceeding.
+8. Upvote + expand composer (BROWSER-engage.md § 3 — single evaluate)
+9. Focus + type (BROWSER-engage.md § 4 step 4 — async evaluate with embedded 2s wait). NO product mentions. Comment MUST reference or respond to the specific post topic confirmed in step 7.
    - 🚨 **Factual accuracy:** On r/todayilearned and similar factual subs, NEVER add details about real people/events you're not certain about. React to the story instead ("wild story", "that's insane"). Wrong facts = mass downvotes + collapsed comment + karma destruction.
-   - 🚨 **Page-loss guard:** If `no editor`, check URL. If `about:blank` → re-navigate ONCE, retry from step 7. One check, not multiple probes.
-9. Verify text → submit → wait 3s → verify comment (§ 4 steps 5-7)
-10. **After successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
-11. MANDATORY update limits.json: `comments.current += 1`, `last_comment_at`, `upvotes.current += upvoted_count`
-12. MANDATORY update schedule.json: increment `comments_done`. If `>= config.max_comments` -> `status: "done"`
-13. Log Type = "Karma Comment", upvoted: Yes/No
+   - 🚨 **Page-loss guard:** If `no editor`, check URL. If `about:blank` → re-navigate ONCE, retry from step 8. One check, not multiple probes.
+10. Verify text → submit → wait 3s → verify comment (§ 4 steps 5-7)
+11. **After successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
+12. MANDATORY update limits.json: `comments.current += 1`, `last_comment_at`, `upvotes.current += upvoted_count`
+13. MANDATORY update schedule.json: increment `comments_done`. If `>= config.max_comments` -> `status: "done"`
+14. Log Type = "Karma Comment", upvoted: Yes/No
 
 ### Content-Ready Override (publish tasks only)
 

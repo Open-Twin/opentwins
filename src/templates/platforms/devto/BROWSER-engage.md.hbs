@@ -72,6 +72,27 @@ Re-read your text before submitting. Check these 4 things:
 
 ---
 
+## SS 2b. Extract Article Content (after navigating to article page)
+
+Returns the article title and body text. Run this BEFORE reacting or typing a comment. Use the returned `title` and `body` to inform your comment — your comment MUST directly address this specific article's topic.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    var h1 = document.querySelector('h1');
+    var title = h1 ? h1.innerText.trim() : '';
+    var article = document.querySelector('#article-body') || document.querySelector('article');
+    var body = article ? article.innerText.trim().slice(0, 500) : '';
+    return { title, body };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+---
+
 ## SS 3: Comment on Article (3 steps total)
 
 🚨 **ALL waits MUST be embedded in evaluate using `await new Promise(r => setTimeout(r, N))`** — NEVER use separate `browser.act({ kind: "wait" })` steps.

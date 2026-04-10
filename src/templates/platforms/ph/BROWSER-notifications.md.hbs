@@ -47,9 +47,9 @@ async () => {
 ```javascript
 () => {
   const body = document.body.innerText;
-  const hasOwnComment = body.includes('{{name}}') || body.includes('{{handle}}');
+  const hasOurComment = body.includes('{{name}}') || body.includes('{{handle_slug}}');
   const commentEl = document.getElementById('comment-' + commentId);
-  return { hasOwnComment, hasCommentEl: !!commentEl, url: window.location.href };
+  return { hasOurComment, hasCommentEl: !!commentEl, url: window.location.href };
 }
 ```
 
@@ -162,7 +162,7 @@ async () => {
   });
 
   // 3. Find our comments (exclude header nav link match)
-  const ourComments = comments.filter(c => c.author === '{{handle}}');
+  const ourComments = comments.filter(c => c.author === '{{handle_slug}}');
   const hasOurComment = ourComments.length > 0;
   const lastOurIdx = hasOurComment ? ourComments[ourComments.length - 1].idx : -1;
 
@@ -170,7 +170,7 @@ async () => {
   const newReplies = comments.filter(c =>
     c.idx > lastOurIdx &&
     c.dt && new Date(c.dt) > cutoff &&
-    c.author !== '{{handle}}'
+    c.author !== '{{handle_slug}}'
   ).map(c => ({ author: c.author, time: c.dt }));
 
   return { pageCount, hasOurComment, lastOurIdx, newReplies, url: window.location.href };

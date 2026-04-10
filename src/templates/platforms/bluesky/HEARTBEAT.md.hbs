@@ -28,7 +28,7 @@ Read `limits.json`:
 ## 1b. Read Today Summary
 
 Read `memory/today_summary.json`. Use tallies to inform comment decisions:
-- `disagreements` < 25% of `comments` AND `comments >= 4` → next MUST disagree (e.g., 4 comments need 1, 8 need 2)
+- `disagreements` < 25% of `comments` AND `comments >= 4` → next MUST disagree (Bluesky is a cozy community — keep pushback gentle)
 - `last_style` was insight → next must be short/personal/pushback
 - Any style is 60%+ of total → MUST use a different style
 - `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question
@@ -173,7 +173,7 @@ Before executing any `original_post` task:
    If `publish_button_still_disabled` → text is likely over 300 chars. Shorten and retry.
 6. 🚨 **Post-publish verification (MANDATORY):** Wait 5s, then navigate to profile and check:
    ```javascript
-   // Navigate to https://bsky.app/profile/{{handle}}
+   // Navigate to {{profile_url}}
    // Wait 4s for page load
    var firstPost = document.querySelector('[data-testid="postText"]');
    if (!firstPost) return { verified: false, reason: 'no_posts_on_profile' };

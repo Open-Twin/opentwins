@@ -6,7 +6,7 @@
 
 Before writing each comment, ask: **"Am I about to agree and expand?"** If yes, consider instead:
 - A **short reaction** ("love this. the pricing angle is the part nobody talks about")
-- A **personal experience** ("I hit this exact wall building my tools in your field - the timing was everything")
+- A **personal experience** ("I hit this exact wall building my PM tools - the timing was everything")
 - A **disagree** ("I'd push back a bit - the real problem isn't the tool it's the workflow")
 
 Pick whichever fits naturally. **Per-batch rule:** If you just wrote an insight, make the next one shorter or different.
@@ -30,7 +30,7 @@ Don't use "exactly", "exactly right", "exactly this" as agreement. Use: "spot on
 
 ### E. Company Mention Ban
 
-🚨 **NEVER mention company.** No "at my company", "a large company", "at my org". Frame as individual: "I've seen this", "in my setup", "I tried X and found Y".
+🚨 **NEVER mention company.** No "at my company", "at my org". Frame as individual: "I've seen this", "in my setup", "I tried X and found Y".
 
 ### F. Light Anti-AI Check
 
@@ -42,7 +42,7 @@ Before posting: if your last 2 comments both follow the same structure (agree + 
 
 ### H. Topic Diversity
 
-🚨 **1 in 5 comments should be on a non-PM/AI topic.** Pricing models, founder burnout, customer support, marketing channels, launch lessons. React as a builder, not as "The AI-Native PM."
+🚨 **1 in 5 comments should be on a non-PM/AI topic.** Pricing models, founder burnout, customer support, marketing channels, launch lessons. React as a builder, not as "{{brand_tagline}}."
 
 ### I. Platform Voice (IH-specific)
 
@@ -96,6 +96,27 @@ browser.act({
   profile: "{{browser_profile}}"
 })
 ```
+
+## S 3. Extract Post Content (after navigating to post page)
+
+Returns the post title and body text. Run this BEFORE upvoting or typing a comment. Use the returned `title` and `body` to inform your comment — your comment MUST directly address this specific post's topic.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    var titleEl = document.querySelector('h1') || document.querySelector('.story__title');
+    var title = titleEl ? titleEl.innerText.trim() : '';
+    var bodyEl = document.querySelector('.content') || document.querySelector('article') || document.querySelector('.post-body');
+    var body = bodyEl ? bodyEl.innerText.trim().slice(0, 500) : '';
+    return { title, body };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+---
 
 ## S 5. Write Top-Level Comment (3 evaluates total)
 

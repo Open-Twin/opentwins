@@ -107,7 +107,7 @@ browser.act({
     var alreadyLiked = !!target.querySelector('[data-testid="unlike"]');
     var alreadyReplied = articles.some(function(a) {
       var user = a.querySelector('[data-testid="User-Name"]');
-      return user && user.innerText.includes('@{{handle}}');
+      return user && user.innerText.includes('@{{handle_slug}}');
     });
     return { text: text.slice(0, 300), hasMedia: hasMedia, liked: !!likeBtn, alreadyLiked: alreadyLiked, alreadyReplied: alreadyReplied };
   }`,

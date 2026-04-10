@@ -67,7 +67,7 @@ exec cat memory/replied_notifications_substack.txt memory/commented_posts.txt 2>
 ## SS 1b. Read Today Summary
 
 Read `memory/today_summary.json`. Use tallies to inform comment decisions:
-- `disagreements` < 25% of `comments` AND `comments >= 3` → next MUST disagree (e.g., 4 comments need 1, 8 need 2)
+- `disagreements` < 33% of `comments` AND `comments >= 3` → next MUST disagree (Substack writers respect measured pushback)
 - `last_style` was insight → next must be short/personal/pushback
 - Any style is 60%+ of total → MUST use a different style
 - `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question

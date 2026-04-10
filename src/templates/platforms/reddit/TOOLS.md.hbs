@@ -44,7 +44,7 @@ Rules:
 - Post to most relevant sub (not biggest)
 - Best time: Saturday morning Kyiv (Friday evening US)
 
-Subs: r/productivity (workflow), r/cursor (AI/dev tools), r/SaaS (build-in-public), r/projectmanagement (PM craft), r/PMPExam (PMP community)
+Subs: r/productivity (workflow), r/cursor (AI/dev tools), r/SaaS (build-in-public), r/projectmanagement (PM craft), r/PMPExam (PM community)
 
 Checklist:
 - [ ] Title honest, not clickbait
@@ -56,7 +56,7 @@ Checklist:
 
 ## Browser Rules
 
-**CRITICAL: `profile: "promo-reddit"` on EVERY browser call.** If omitted, wrong browser opens.
+**CRITICAL: `profile: "{{browser_profile}}"` on EVERY browser call.** If omitted, wrong browser opens.
 
 - **Always www.reddit.com** (never old.reddit.com)
 - Navigate: `www.reddit.com/r/{sub}/hot` or `/new`
@@ -97,7 +97,7 @@ Rules:
 
 Search for pain points — best promo opportunities.
 
-**r/productivity:** "Todoist", "Notion alternative", "meeting app", "tools in your field"
+**r/productivity:** "Todoist", "Notion alternative", "meeting app", "PM tools"
 **r/cursor, r/ChatGPT:** "AI agent building", "autonomous coding", "AI for project management"
 **r/projectmanagement:** "AI tools for PM", "project management automation", "agile AI"
 
@@ -113,11 +113,11 @@ Strategy:
 ## User Flair
 
 **Set flair in active subreddits** (makes account recognizable, builds topical authority):
-- r/productivity: "AI-Native PM | Building tools in your field"
-- r/cursor: "AI-Native PM | Director of PM"
-- r/projectmanagement: "Director of PM | PMP"
-- r/PMPExam: "PMP | Director of PM"
-- r/Entrepreneur: "tools Builder"
+- r/productivity: "{{brand_tagline}} | Building PM tools"
+- r/cursor: "{{brand_tagline}} | {{role}}"
+- r/projectmanagement: "{{role}} | {{certifications}}"
+- r/PMPExam: "{{certifications}} | {{role}}"
+- r/Entrepreneur: "PM Tools Builder"
 - r/startups: BANNED — do not interact
 
 **Checked:** Weekly during update_memory task. If no flair set → set appropriate flair for that sub.
@@ -147,7 +147,7 @@ Strategy:
 
 ## Removed Comment Detection
 
-Once per day (first task): visit `www.reddit.com/user/{{handle}}`
+Once per day (first task): visit `www.reddit.com/user/{{handle_slug}}`
 If comment missing/removed:
 - Log Type = "Alert"
 - Alert Slack

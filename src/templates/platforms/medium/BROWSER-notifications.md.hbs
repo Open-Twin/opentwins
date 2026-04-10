@@ -22,7 +22,7 @@ browser.act({
       const isNote = text.includes('left a note');
       if (!isResponse && !isNote) continue;
       const author = text.split('\\n')[0] || '';
-      if (author.toLowerCase().includes('{{handle}}')) continue;
+      if (author.toLowerCase().includes('{{handle_slug}}')) continue;
       const links = Array.from(n.querySelectorAll('a'));
       const aLink = links.find(a => a.href.includes('/p/'));
       items.push({
@@ -41,7 +41,7 @@ browser.act({
 
 ## § 2. Check Already Replied (browse_and_engage only — NOT for notifications)
 
-🚨 False-positives on notification pages (our original comment has `/@{{handle}}` link). Use tracking file dedup for notifications.
+🚨 False-positives on notification pages (our original comment has `/@{{handle_slug}}` link). Use tracking file dedup for notifications.
 
 ```javascript
 browser.act({
@@ -49,13 +49,13 @@ browser.act({
   fn: `async () => {
     await new Promise(r => setTimeout(r, 3000));
     // Only works on regular articles — NOT on notification response pages
-    const {{handle}}Links = Array.from(document.querySelectorAll('a[href*="/@{{handle}}"]'))
+    const handleLinks = Array.from(document.querySelectorAll('a[href*="/@{{handle_slug}}"]'))
       .filter(a => !a.href.includes('sidebar_menu'));
-    const hasOurComment = {{handle}}Links.length > 0 ||
+    const hasOurComment = handleLinks.length > 0 ||
                           /\\nYou\\n\\n\\d+\\s+(mins?|hours?|days?)\\s+ago/.test(document.body.innerText);
     return {
       alreadyCommented: hasOurComment,
-      {{handle}}LinksCount: {{handle}}Links.length
+      handleLinksCount: handleLinks.length
     };
   }`,
   profile: "{{browser_profile}}"

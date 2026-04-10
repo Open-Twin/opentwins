@@ -70,7 +70,7 @@ MANDATORY: If any reset applied, WRITE limits.json immediately before proceeding
 ## 1b. Read Today Summary
 
 Read `memory/today_summary.json`. Use tallies to inform comment decisions:
-- `disagreements` < 25% of `comments` AND `comments >= 4` → next MUST disagree (e.g., 4 comments need 1, 8 need 2)
+- `disagreements` < 40% of `comments` AND `comments >= 4` → next MUST disagree (dev culture values honest critique)
 - `last_style` was insight → next must be short/personal/pushback
 - Any style is 60%+ of total → MUST use a different style
 - `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question
@@ -164,6 +164,7 @@ For each due task:
      🚨 Empty output = ALL already tracked → skip. Lines printed = NEW. NEVER cat/read the tracking file to verify — grep is authoritative.
      Empty output = all already engaged → try different tags (count toward 3-iteration cap).
   6. Navigate ONLY to passing articles, using the full URL from the API
+- 🚨 **MANDATORY: Read article before commenting** (BROWSER-engage.md SS 2b). Your comment MUST directly address the returned `title` and `body`.
 - **After each successful comment:** `exec grep -qxF "{slug}" memory/commented_posts.txt || echo "{slug}" >> memory/commented_posts.txt` (slug only, NO author prefix, dedup-safe)
 - **After each successful reaction:** `exec grep -qxF "{slug}" memory/reacted_articles.txt || echo "{slug}" >> memory/reacted_articles.txt` (slug only, NO author prefix, dedup-safe)
 - 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) before writing comment
@@ -183,12 +184,13 @@ articlesToReact = ceil(reactionsToAdd / 2)  // 2 per article (Like+Unicorn)
 - remainingReactions < maxReactionsNeeded -> react to articlesToReact articles only
 - NEVER exceed limits.daily.reactions.limit
 
-**Execution per heartbeat — react + comment in SAME visit (3 evaluates per article):**
+**Execution per heartbeat — react + comment in SAME visit (4 evaluates per article):**
 1. For each candidate article (navigate ONCE per article):
-   a. **SS 3 Step 2 (ONE evaluate):** react + dedup + type — combines Like+Unicorn + dedup check + scroll + type comment. Returns `alreadyCommented`, `reactionsAdded`, `typed`.
-   b. If `alreadyCommented` → backfill tracking, skip. If `typed: true` → run SS 3 Step 3 (submit + verify).
-   c. Track reactions: `exec grep -qxF "{slug}" memory/reacted_articles.txt || echo "{slug}" >> memory/reacted_articles.txt`
-   d. Track comment (only after verified): `exec grep -qxF "{slug}" memory/commented_posts.txt || echo "{slug}" >> memory/commented_posts.txt`
+   a. 🚨 **MANDATORY: Read article content first** (BROWSER-engage.md SS 2b — returns `title` and `body`). Your comment MUST directly address this article's topic.
+   b. **SS 3 Step 2 (ONE evaluate):** react + dedup + type — combines Like+Unicorn + dedup check + scroll + type comment. Returns `alreadyCommented`, `reactionsAdded`, `typed`.
+   c. If `alreadyCommented` → backfill tracking, skip. If `typed: true` → run SS 3 Step 3 (submit + verify).
+   d. Track reactions: `exec grep -qxF "{slug}" memory/reacted_articles.txt || echo "{slug}" >> memory/reacted_articles.txt`
+   e. Track comment (only after verified): `exec grep -qxF "{slug}" memory/commented_posts.txt || echo "{slug}" >> memory/commented_posts.txt`
 2. Pick the best-fit article for commenting (highest relevance to PM/AI angle). React-only articles: navigate, run Step 2 without comment text (just react + dedup check).
 3. 🚨 **MANDATORY: Follow article author from article page** — BROWSER-engage.md SS 5 (no navigation needed). Every comment = follow.
 4. Log Type="Comment"/"Reaction"

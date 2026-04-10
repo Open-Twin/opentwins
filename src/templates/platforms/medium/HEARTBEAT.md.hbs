@@ -62,7 +62,7 @@ exec cat memory/replied_notifications_medium.txt memory/commented_posts.txt 2>/d
 ## § 1b. Read Today Summary
 
 Read `memory/today_summary.json`. Use tallies to inform comment decisions:
-- `disagreements` < 25% of `comments` AND `comments >= 3` → next MUST disagree (e.g., 4 comments need 1, 8 need 2)
+- `disagreements` < 40% of `comments` AND `comments >= 3` → next MUST disagree (Medium authors engage with pushback)
 - `last_style` was insight → next must be short/personal/pushback
 - Any style is 60%+ of total → MUST use a different style
 - `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question
@@ -97,7 +97,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 5. 🚨 **Loop through ALL new notifications** — do NOT stop after the first one:
    For each NEW notification:
    - Navigate to article URL
-   - ❌ **Do NOT use BROWSER-notifications.md § 2** (alreadyReplied check) — it false-positives on all notification pages because our original comment's `/@{{handle}}` link is always present. Tracking file is the authoritative dedup.
+   - ❌ **Do NOT use BROWSER-notifications.md § 2** (alreadyReplied check) — it false-positives on all notification pages because our original comment's `/@{{handle_slug}}` link is always present. Tracking file is the authoritative dedup.
    - Read context (BROWSER-core.md § 2 or inline evaluate)
    - Write response (BROWSER-core.md § 3: scroll to inline editor → **clear** → type+submit → verify via responses panel) — 2-3 browser steps total (3 if 500 requires reload+re-verify)
    - After verified success: append to tracking:

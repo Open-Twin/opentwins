@@ -29,7 +29,7 @@ browser.act({
         preview: lines.slice(2).join(' ').slice(0, 200),
         alreadyReplied: hasReplyNumber
       };
-    }).filter(item => item.author !== '{{handle}}' && !item.alreadyReplied);
+    }).filter(item => item.author !== '{{handle_slug}}' && !item.alreadyReplied);
 
     return filtered;
   }`,
@@ -59,7 +59,7 @@ browser.act({
       const lines = container.innerText.split('\\n').filter(l => l.trim());
       const author = lines[0] || '';
 
-      if (author === '{{handle}}') continue;
+      if (author === '{{handle_slug}}') continue;
 
       const commentIcon = container.querySelector('svg[aria-label="Reply"]');
       const iconParent = commentIcon ? commentIcon.parentElement : null;

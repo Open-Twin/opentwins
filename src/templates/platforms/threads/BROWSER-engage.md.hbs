@@ -39,7 +39,7 @@ SOUL.md anti-AI rules apply to ALL comments, not just replies. Before posting an
 
 If you catch yourself writing "exactly" or "the X is the right frame" for the 2nd time in a session, stop and pick a different opener.
 
-🚨 **NEVER mention company.** No "at my company", "at my org", "at work we", "a large company", or any company reference. Frame as individual: "I've seen this", "ran into this myself", "in my setup".
+🚨 **NEVER mention company.** No "at my company", "at my org", "at work we", or any company reference. Frame as individual: "I've seen this", "ran into this myself", "in my setup".
 
 ### G. Hard Disagreement Rule (per-batch)
 
@@ -47,7 +47,7 @@ If you catch yourself writing "exactly" or "the X is the right frame" for the 2n
 
 ### H. Topic Diversity
 
-🚨 **1 in 5 comments should be on an adjacent topic WITHOUT forcing PM/AI.** React to posts about dev culture, career frustration, remote work, tooling opinions — as a person, not as "The AI-Native PM."
+🚨 **1 in 5 comments should be on an adjacent topic WITHOUT forcing PM/AI.** React to posts about dev culture, career frustration, remote work, tooling opinions — as a person, not as "{{brand_tagline}}."
 
 ### I. Platform Voice (Threads-specific)
 
@@ -177,7 +177,7 @@ browser.act({
   kind: "evaluate",
   fn: `async () => {
     await new Promise(r => setTimeout(r, 3000));
-    const alreadyCommented = document.querySelectorAll('a[href*="/@{{handle}}"]').length > 1;
+    const alreadyCommented = document.querySelectorAll('a[href*="/@{{handle_slug}}"]').length > 1;
     const links = Array.from(document.querySelectorAll('a[href*="/post/"]'));
     if (!links[0]) return { alreadyCommented, text: 'no post' };
     let container = links[0];

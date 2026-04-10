@@ -33,7 +33,7 @@ Reply handling: HEARTBEAT.md | Self-review: SOUL.md § "What Got Us Caught on HN
 
 ## Dev.to API
 
-**Use API before browser when available.**
+**Use API before browser.** Script: `{{opentwins_home}}/scripts/devto-api.sh`
 
 **Commands:** `my-articles`, `publish <file.md>`, `update <id> <file.md>`, `search <tag>`, `fresh [rising|fresh]`, `comments <id>`, `check-replies`, `me`
 
@@ -89,7 +89,7 @@ Every heartbeat: `my-articles` + `check-replies`. Compare to recent memory. Aler
 
 ## Browser
 
-**CRITICAL: Profile = `promo-devto`.** Pass on ALL calls.
+**CRITICAL: Profile = `{{browser_profile}}`.** Pass on ALL calls.
 
 **Comments use Markdown** on Dev.to.
 

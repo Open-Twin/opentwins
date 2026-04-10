@@ -18,7 +18,7 @@ End-of-day / on-demand. DO NOT load on routine heartbeats. Read sections as need
 2. **Extract patterns** (2+ occurrences only):
    - Conversions: "what app?" triggers?
    - Timing: best slots?
-   - Brand pillars covered? ({{#each pillars}}{{this.name}}{{#unless @last}}, {{/unless}}{{/each}})
+   - Brand pillars covered? (PM frameworks, PM tools, conferences, agents in practice, PM career)
    - Trending: caught any?
    - Strategic replies: which accounts got engagement?
    - Quote tweets: which topics performed?
@@ -26,8 +26,6 @@ End-of-day / on-demand. DO NOT load on routine heartbeats. Read sections as need
 3. **Daily template** (ALL days):
 
 ```
-{{active_hours}} schedule:
-
 08:00-10:00: Morning warmup
   - 1x non_promo_engagement (3 likes + 1 genuine reply = 4 budget, coffee brain voice)
   - 1x strategic_reply (browse target accounts, find 100+ like tweet, reply with value)
@@ -79,7 +77,7 @@ End-of-day / on-demand. DO NOT load on routine heartbeats. Read sections as need
 
 7. **Anti-collision:** Sort by time. < 10min apart → shift +10min, update jitter.
 
-8. **Active hours:** {{active_hours}} {{timezone}}. Clamp if needed.
+8. **Active hours:** 08:00-23:00 Kyiv. Clamp if needed.
 
 9. **Write:** `schedule.json` with metadata.for_date = target date (TODAY), all tasks
 
@@ -95,7 +93,7 @@ End-of-day / on-demand. DO NOT load on routine heartbeats. Read sections as need
     "topic": "AI Project Management",
     "max_replies": 1,
     "trending_check": true,
-    "angle": "{{role}} running AI agents daily, building open-source tools in your field",
+    "angle": "{{role}} running 10+ AI agents daily, building open-source PM tools",
     "min_likes": 20
   }
 }
@@ -107,7 +105,7 @@ End-of-day / on-demand. DO NOT load on routine heartbeats. Read sections as need
   "action": "strategic_reply",
   "config": {
     "niche": "ai_dev",
-    "target_accounts": [{{#if behavior.target_accounts}}{{#each behavior.target_accounts}}"@{{this}}"{{#unless @last}}, {{/unless}}{{/each}}{{else}}"browse trending accounts in your niche"{{/if}}],
+    "target_accounts": ["@levelsio", "@swyx", "@GergelyOrosz"],
     "min_likes": 100,
     "max_replies": 1
   }

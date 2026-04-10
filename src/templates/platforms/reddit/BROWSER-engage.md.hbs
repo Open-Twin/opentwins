@@ -54,7 +54,7 @@ This is a HARD REQUIREMENT, not a suggestion. Check before finishing the batch �
 
 ### H. Topic Diversity
 
-🚨 **1 in 5 brand sub comments should be on an adjacent topic WITHOUT forcing a PM/AI angle.** Team dynamics, hiring, remote work, dev culture, career advice, tooling opinions — react as a person, not as "The AI-Native PM." If the post is about developer burnout, you can just talk about burnout without connecting it to AI agents.
+🚨 **1 in 5 brand sub comments should be on an adjacent topic WITHOUT forcing a PM/AI angle.** Team dynamics, hiring, remote work, dev culture, career advice, tooling opinions — react as a person, not as "{{brand_tagline}}." If the post is about developer burnout, you can just talk about burnout without connecting it to AI agents.
 
 ### I. Platform Voice (Reddit-specific structural rules)
 
@@ -95,6 +95,25 @@ browser.act({
       postType: p.getAttribute('post-type') || 'text',
       isLinkOnly: p.hasAttribute('is-link-post') && !p.querySelector('[slot="text-body"]')
     }));
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+## 2b. Extract Post Content (after navigating to post page)
+
+Returns the post title and body text from the current post page. Run this BEFORE upvoting or expanding the composer. Use the returned `title` and `body` to inform your comment — your comment MUST directly address this specific post's topic.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    const post = document.querySelector('shreddit-post');
+    if (!post) return { error: 'no post element' };
+    const title = post.getAttribute('post-title') || '';
+    const bodyEl = post.querySelector('[slot="text-body"]');
+    const body = bodyEl ? bodyEl.textContent.trim().slice(0, 500) : '';
+    return { title, body };
   }`,
   profile: "{{browser_profile}}"
 })
@@ -207,7 +226,7 @@ browser.act({
   fn: `async () => {
     await new Promise(r => setTimeout(r, 3000));
     var comments = Array.from(document.querySelectorAll('shreddit-comment'));
-    var ourComment = comments.find(function(c) { return c.getAttribute('author') === '{{handle}}'; });
+    var ourComment = comments.find(function(c) { return c.getAttribute('author') === '{{handle_slug}}'; });
     if (!ourComment) return { verified: false, totalComments: comments.length };
     var slot = ourComment.querySelector('div[slot="comment"]');
     var text = slot ? slot.textContent.trim() : '';

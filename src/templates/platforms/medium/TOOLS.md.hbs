@@ -96,10 +96,10 @@ Medium notifications persist after reply. Use browser view.
 **Rule:** Never reply twice to same response. DO reply to new follow-ups.
 
 **Filter:**
-1. From @{{handle}} → SKIP
+1. From @{{handle_slug}} → SKIP
 2. Match response language
 3. **Tracking file dedup** (`replied_notifications_medium.txt`) — grep pre-check. SKIP if found.
-4. ❌ NEVER use browser-based `/@{{handle}}` link check for notification replies — always false-positives (see BROWSER-notifications.md § 2).
+4. ❌ NEVER use browser-based `/@{{handle_slug}}` link check for notification replies — always false-positives (see BROWSER-notifications.md § 2).
 
 Log: Type=Reply, User, Article URL, Reply (100 chars)
 

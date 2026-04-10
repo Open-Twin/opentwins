@@ -64,7 +64,7 @@ browser.act({
     var allComments = document.querySelectorAll('shreddit-comment');
     for (var i = 0; i < allComments.length; i++) {
       var c = allComments[i];
-      if (c.getAttribute('author') === '{{handle}}' && c.getAttribute('parentid') === thingId) {
+      if (c.getAttribute('author') === '{{handle_slug}}' && c.getAttribute('parentid') === thingId) {
         return { alreadyReplied: true };
       }
     }
@@ -141,7 +141,7 @@ browser.act({
     var allComments = document.querySelectorAll('shreddit-comment');
     var found = false;
     for (var j = 0; j < allComments.length; j++) {
-      if (allComments[j].getAttribute('author') === '{{handle}}' && allComments[j].getAttribute('parentid') === thingId) {
+      if (allComments[j].getAttribute('author') === '{{handle_slug}}' && allComments[j].getAttribute('parentid') === thingId) {
         found = true;
         break;
       }

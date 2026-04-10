@@ -167,9 +167,9 @@ browser.act({
 - Author name: `n.innerText.split('\n')[0]`
 
 ### Article Page (browse_and_engage dedup ONLY)
-- Our comment: `a[href*="/@{{handle}}"]` filtered by `.filter(a => !a.href.includes('sidebar_menu'))` count > 0
+- Our comment: `a[href*="/@{{handle_slug}}"]` filtered by `.filter(a => !a.href.includes('sidebar_menu'))` count > 0
 - Secondary: `/\nYou\n\n\d+\s+(mins?|hours?|days?)\s+ago/` on body text
-- ❌ **NEVER use this for notification replies** — our original comment's `/@{{handle}}` link always causes false positives on response pages (tested 2026-02-19: 4/4 false positives). Use tracking file dedup only.
+- ❌ **NEVER use this for notification replies** — our original comment's `/@{{handle_slug}}` link always causes false positives on response pages (tested 2026-02-19: 4/4 false positives). Use tracking file dedup only.
 
 ### Editor (Inline Slate.js — NOT dialog)
 - Selector: `div[contenteditable="true"][role="textbox"]` — pick the one NOT inside `div[role="dialog"]`

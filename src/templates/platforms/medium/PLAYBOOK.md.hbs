@@ -16,7 +16,7 @@
 
 Use `exec` to fetch the public RSS feed:
 ```bash
-curl -s "https://medium.com/feed/@{{handle}}"
+curl -s "https://medium.com/feed/@{{handle_slug}}"
 ```
 
 Extract from each `<item>`: `<title>`, `<pubDate>`, `<category>` tags. This gives article titles, dates, and topics without browser.

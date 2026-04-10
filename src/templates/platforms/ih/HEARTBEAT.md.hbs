@@ -63,7 +63,7 @@ Store: `available = limit - current`
 ## 1b. Read Today Summary
 
 Read `memory/today_summary.json`. Use tallies to inform comment decisions:
-- `disagreements` < 25% of `comments` AND `comments >= 3` → next MUST disagree (e.g., 4 comments need 1, 8 need 2)
+- `disagreements` < 40% of `comments` AND `comments >= 3` → next MUST disagree (IH builders respect honest critique)
 - `last_style` was insight → next must be short/personal/pushback
 - Any style is 60%+ of total → MUST use a different style
 - `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question
@@ -160,7 +160,7 @@ if daily.comments.current >= limit: mark_done("daily limit reached")
    ⚠️ Always STORE the full `slug-hash` in tracking file. The dual check handles legacy short-hash entries.
    If "SKIP" → exclude from candidates (already commented, cheaper than browser navigation)
 4. Select 1-2 qualifying posts from remaining candidates
-5. For each: navigate → wait 3s inside first evaluate → **on-page duplicate check** → upvote (S 6, 1 eval) → 🚨 **Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) → comment (S 5, 3 evals) = **5 evaluates per post**
+5. For each: navigate → 🚨 **MANDATORY: Read post before commenting** (BROWSER-engage.md S 3 — your comment MUST directly address the returned `title` and `body`) → wait 3s inside first evaluate → **on-page duplicate check** → upvote (S 6, 1 eval) → 🚨 **Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) → comment (S 5, 3 evals) = **6 evaluates per post**
    - ❌ NEVER use separate `exec sleep 3` for page load wait
    - ✅ Combine page-load wait + duplicate check into upvote evaluate:
      ```javascript

@@ -21,7 +21,7 @@ browser.act({
             url: link ? 'https://x.com' + link.getAttribute('href') : '',
             handle: user ? (user.innerText.split('\\n').find(l => l.startsWith('@')) || '') : ''
           };
-        }).filter(m => m.url && m.handle !== '@{{handle}}')
+        }).filter(m => m.url && m.handle !== '@{{handle_slug}}')
       });
     }, 2000));
   }`,
@@ -56,17 +56,17 @@ browser.act({
       if (likeBtn) { likeBtn.click(); liked = true; }
       else if (target.querySelector('[data-testid="unlike"]')) { liked = true; }
 
-      // Check if we already replied (look for @{{handle}} in replies below)
+      // Check if we already replied (look for @{{handle_slug}} in replies below)
       const targetIdx = articles.indexOf(target);
       const alreadyReplied = articles.slice(targetIdx + 1).some(a => {
         const handle = a.querySelector('[data-testid="User-Name"]')?.innerText?.split('\\n').find(l => l.startsWith('@'));
-        return handle === '@{{handle}}';
+        return handle === '@{{handle_slug}}';
       });
 
       // Count our total replies in this thread (depth check)
       var ourReplyCount = articles.filter(a => {
         var h = a.querySelector('[data-testid="User-Name"]')?.innerText?.split('\\n').find(l => l.startsWith('@'));
-        return h === '@{{handle}}';
+        return h === '@{{handle_slug}}';
       }).length;
       var tooDeep = ourReplyCount >= 3;
 
@@ -98,7 +98,7 @@ browser.act({
       });
       const hasOurReply = articles.slice(targetIdx + 1).some(article => {
         const handle = article.querySelector('[data-testid="User-Name"]')?.innerText.split('\\n').find(l => l.startsWith('@'));
-        return handle === '@{{handle}}';
+        return handle === '@{{handle_slug}}';
       });
       resolve({ success: hasOurReply });
     }, 1500));
