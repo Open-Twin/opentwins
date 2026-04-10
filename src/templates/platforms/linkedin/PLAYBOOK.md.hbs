@@ -51,7 +51,7 @@ End-of-day and on-demand tasks. **Do NOT load on routine heartbeats.** Only read
      }
      ```
 6. Apply adjustments (only if pattern seen 2+ times)
-7. Apply jitter (+-30min), anti-collision (10min spacing), active hours (08:00-23:00)
+7. Apply jitter (±30min), anti-collision (10min spacing), active hours (08:00-23:00)
 8. **Write:** `schedule.json` with metadata.for_date = target date (TODAY), all tasks
 
 **Note:** `update_memory` at 22:00 is MANDATORY in every schedule — never skip it.

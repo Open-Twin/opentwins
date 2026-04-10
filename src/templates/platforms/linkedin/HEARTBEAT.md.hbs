@@ -45,7 +45,7 @@ Read `limits.json`, apply resets:
 ## 1b. Read Today Summary
 
 Read `memory/today_summary.json`. Use tallies to inform comment decisions:
-- `disagreements` < 25% of `comments` AND `comments >= 3` → next MUST disagree (e.g., 4 comments need 1, 8 need 2)
+- `disagreements` < 33% of `comments` AND `comments >= 3` → next MUST disagree (LinkedIn tolerates professional pushback)
 - `last_style` was insight → next must be short/personal/pushback
 - Any style is 60%+ of total → MUST use a different style
 - `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question
@@ -164,8 +164,8 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
    🚨 **If `trackId` is empty** (some feed posts don't expose URLs in search DOM): grep cannot pre-check. Navigate to the post first, then page-level dedup catches it. After navigating, extract trackId from URL: `window.location.href.match(/(\d{16,20})/)?.[1]` for feed posts, or slug for Pulse.
 7. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) — check if defaulting to agree+expand, enforce 35-word cap, don't quote their framing, don't use "exactly", no company mentions, run anti-AI check
 8. **Comment — three paths based on post type:**
-   - **Feed posts with `postUrl` (`isPulse: false`, `trackId` exists):** Comment INLINE using SS 4 (do NOT navigate). Step 1 + Step 2.
-   - **Feed posts WITHOUT `postUrl` (`trackId` empty):** These posts have no URL in search DOM. Click into the post from search results (evaluate: `items[idx].querySelector('span').click()` or similar), wait 3s, then extract trackId + page-level dedup in ONE evaluate:
+   - **Feed posts with `postUrl` (`isPulse: false`, `trackId` exists):** Comment INLINE using SS 4 (do NOT navigate). 🚨 Use the `content` field from SS 2 extraction to inform your comment — your comment MUST directly address the post's topic. Step 1 + Step 2.
+   - **Feed posts WITHOUT `postUrl` (`trackId` empty):** These posts have no URL in search DOM. Click into the post from search results (evaluate: `items[idx].querySelector('span').click()` or similar), wait 3s, then 🚨 **MANDATORY: Read post content** (BROWSER-engage.md SS 3c — your comment MUST directly address the returned `text`), then extract trackId + page-level dedup in ONE evaluate:
      ```javascript
      async () => {
        await new Promise(r => setTimeout(r, 3000));
@@ -196,7 +196,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
      exec grep -qF "{trackId}" memory/commented_posts.txt || echo "{trackId}" >> memory/commented_posts.txt
      ```
      Then skip to next candidate.
-     Otherwise use `title` + `content` to write a contextual comment. Type in TipTap editor + submit using `button[data-view-name="comment-post"]`.
+     Otherwise use `title` + `content` to write a contextual comment. 🚨 **Pulse uses QUILL editor — MUST use BROWSER-engage.md SS 4b (Quill path). Do NOT use SS 4 (TipTap path) — it silently fails on Pulse.** SS 4b uses `quillInstance.setText()` to properly update Delta state, then verifies by searching for our comment in the rendered list (not by checking editor emptiness).
 9. **After each successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
 10. 🚨 **MANDATORY: Send connection request to post author** — use `username` from SS 2. Run BROWSER-notifications.md SS 7 (navigate to profile → safety checks → custom-invite → personalized note → send). Skip silently if: already connected, pending, recruiter headline, or `weekly.connection_requests.current >= limit`. 🚨 **Connection notes: NEVER mention company** — use individual framing only.
 11. If no qualifying posts, try up to 2 more queries from different categories
@@ -213,8 +213,8 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
    exec printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/commented_posts.txt || true
    ```
    Only navigate to posts NOT in tracking file.
-6. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) before writing comment
-7. Navigate to unchecked post URL, use BROWSER-notifications.md SS 5 for comment. After success: `exec echo "{post_id}" >> memory/commented_posts.txt`
+6. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) before writing comment. 🚨 Use the `content` field from SS 3 extraction to inform your comment — your comment MUST directly address the post's topic.
+7. Navigate to unchecked post URL, 🚨 **MANDATORY: Read post content** (BROWSER-engage.md SS 3c), then use BROWSER-notifications.md SS 5 for comment. After success: `exec echo "{post_id}" >> memory/commented_posts.txt`
 8. 🚨 **MANDATORY: Send connection request to post author** after commenting — BROWSER-notifications.md SS 7 (safety checks + personalized note). Skip if already connected/pending/recruiter. 🚨 **Connection notes: NEVER mention company.**
 
 ### publish_article

@@ -232,6 +232,27 @@ browser.act({
 
 ---
 
+## SS 3c. Extract Post Content (after navigating to post page)
+
+Returns the post author and text. Run this BEFORE commenting on any post you navigated to. Use the returned `author` and `text` to inform your comment — your comment MUST directly address this specific post's topic.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    var authorEl = document.querySelector('.update-components-actor__title span span');
+    var author = authorEl ? authorEl.innerText.trim().split('\\n')[0] : '';
+    var postEl = document.querySelector('.feed-shared-update-v2__description') || document.querySelector('.update-components-text');
+    var text = postEl ? postEl.innerText.trim().slice(0, 500) : '';
+    return { author, text };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+---
+
 ## SS 4. Comment Inline (Search/Feed)
 
 LinkedIn inline comments use TipTap/ProseMirror editor (NOT Quill).
@@ -287,6 +308,8 @@ browser.act({
 ```
 
 ### Step 2: Submit + verify (ONE async evaluate)
+🚨 **Verification MUST check the comment list, not the editor.** The editor can be empty AND the comment can still have failed (LinkedIn silently rejects empty content). We need to find our comment URN in the rendered comment list.
+
 ```javascript
 browser.act({
   kind: "evaluate",
@@ -296,7 +319,7 @@ browser.act({
     var item = items[TARGET_IDX];
     if (!item) return { error: 'no-item' };
 
-    // Verify text in editor
+    // Verify text in editor before submitting
     var editor = item.querySelector('div.tiptap.ProseMirror[role="textbox"]');
     if (!editor) editor = item.querySelector('[contenteditable="true"][role="textbox"]');
     if (!editor || !editor.textContent.trim()) return { error: 'editor empty or missing' };
@@ -306,23 +329,192 @@ browser.act({
     if (!submitBtn) return { error: 'no submit button' };
     submitBtn.click();
 
-    // Wait for submission
-    await new Promise(r => setTimeout(r, 3000));
+    // Wait for submission + render
+    await new Promise(r => setTimeout(r, 4000));
 
-    // Verify: editor empty + snippet visible
+    // 🚨 AUTHORITATIVE VERIFY: find our comment in the comment list
+    // Look for articles/divs with our author link as child, containing our snippet
+    var snippet = "${commentText.slice(0, 35).replace(/"/g, '\\"')}";
+    var allAuthorLinks = item.querySelectorAll('a[href*="/in/{{handle}}"]');
+    var ourCommentFound = false;
+    for (var i = 0; i < allAuthorLinks.length; i++) {
+      // Walk up to find the comment container, then search its text for our snippet
+      var parent = allAuthorLinks[i].closest('article') || allAuthorLinks[i].closest('[class*="comment-entity"]') || allAuthorLinks[i].closest('[data-urn*="comment"]');
+      if (!parent) parent = allAuthorLinks[i].parentElement;
+      for (var hops = 0; hops < 6 && parent; hops++) {
+        if (parent.innerText && parent.innerText.indexOf(snippet) > -1 && !parent.querySelector('[role="textbox"]')) {
+          ourCommentFound = true;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      if (ourCommentFound) break;
+    }
+
+    // Also verify editor is empty as secondary signal
     var editorAfter = item.querySelector('div.tiptap.ProseMirror[role="textbox"]');
     if (!editorAfter) editorAfter = item.querySelector('[contenteditable="true"][role="textbox"]');
     var editorEmpty = !editorAfter || editorAfter.textContent.trim().length === 0;
-    var snippet = "${commentText.slice(0, 40).replace(/"/g, '\\"')}";
-    var snippetInPage = item.innerText.indexOf(snippet) > -1;
 
-    return { submitted: true, editorEmpty: editorEmpty, snippetVisible: snippetInPage, verified: editorEmpty && snippetInPage };
+    return {
+      submitted: true,
+      editorEmpty: editorEmpty,
+      ourCommentFound: ourCommentFound,
+      verified: ourCommentFound  // authoritative: must find our comment in the DOM
+    };
   }`,
   profile: "{{browser_profile}}"
 })
 ```
 
-If `verified: false`: retry ONCE. Still fails → do NOT log, retry with next post.
+If `verified: false`: retry ONCE. Still fails → do NOT log, do NOT increment counters, skip to next post.
+
+## SS 4b. Comment on Pulse Article (Quill Editor)
+
+🚨 **Pulse articles use QUILL editor, NOT TipTap.** `execCommand('insertText')` inserts text in the DOM but leaves Quill's internal Delta state EMPTY → submit is silently rejected. Must use Quill's API directly.
+
+**Prerequisite:** Agent has already navigated to the Pulse article URL and confirmed the article loads (dedup/content-read step in HEARTBEAT.md).
+
+### Step 1: Scroll to comments + open composer + insert via Quill API (ONE async evaluate)
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    // Scroll to bottom to lazy-load comment section
+    window.scrollTo(0, document.body.scrollHeight);
+    await new Promise(r => setTimeout(r, 2500));
+
+    // Focus the editor (Pulse renders a placeholder that becomes a Quill editor on click)
+    var composer = document.querySelector('.ql-editor[contenteditable="true"]')
+                 || document.querySelector('[class*="comments-comment-box"] [contenteditable="true"]')
+                 || document.querySelector('.comments-comment-box__form [contenteditable="true"]');
+    if (!composer) {
+      // Try clicking the comment placeholder first
+      var placeholder = document.querySelector('[class*="comments-comment-box__comment-input"]') || document.querySelector('button[aria-label*="Comment"]');
+      if (placeholder) { placeholder.click(); await new Promise(r => setTimeout(r, 1500)); }
+      composer = document.querySelector('.ql-editor[contenteditable="true"]') || document.querySelector('[class*="comments-comment-box"] [contenteditable="true"]');
+    }
+    if (!composer) return { error: 'no_quill_editor_found' };
+
+    // Get the Quill instance via its container element
+    // LinkedIn wraps Quill in .ql-container; Quill stores instance on the container element
+    var qlContainer = composer.closest('.ql-container') || composer.parentElement;
+    var quillInstance = null;
+
+    // Method 1: Quill.find() (if Quill global is exposed)
+    if (typeof window.Quill !== 'undefined' && window.Quill.find) {
+      quillInstance = window.Quill.find(qlContainer);
+    }
+    // Method 2: walk DOM for __quill property set by Quill internals
+    if (!quillInstance) {
+      var probe = composer;
+      while (probe && !quillInstance) {
+        if (probe.__quill) quillInstance = probe.__quill;
+        probe = probe.parentElement;
+      }
+    }
+
+    var text = "${commentText.replace(/"/g, '\\"').replace(/\n/g, '\\n')}";
+
+    if (quillInstance) {
+      // PROPER way: Quill API updates both DOM and Delta state
+      quillInstance.setText(text);
+      // Place cursor at end and trigger text-change via a no-op edit
+      quillInstance.setSelection(text.length, 0, 'user');
+    } else {
+      // Fallback: simulate typing via InputEvents which Quill listens to
+      composer.focus();
+      composer.innerHTML = '';
+      // Fire beforeinput + input events that Quill's Delta binding will catch
+      var inputEvent = new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: text });
+      composer.dispatchEvent(inputEvent);
+      // If beforeinput wasn't canceled, insert via execCommand as last resort
+      document.execCommand('insertText', false, text);
+      composer.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    await new Promise(r => setTimeout(r, 800));
+
+    var currentText = composer.innerText || composer.textContent || '';
+    return {
+      editorFound: true,
+      quillInstanceUsed: !!quillInstance,
+      textInserted: currentText.trim().length > 0,
+      preview: currentText.slice(0, 80)
+    };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If `textInserted: false` → skip this target, log error with `Reason: quill_insertion_failed`. Do NOT attempt submit.
+
+### Step 2: Submit + authoritative verify (ONE async evaluate)
+🚨 **Pulse submit button uses `aria-label` starting with "Post comment on", NOT `data-view-name="comment-post"`.** Verified Apr 9, 2026 — data-view-name selector works for feed inline comments only. For Pulse, find the button inside the composer's form by aria-label prefix.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    // Find the submit button: lives inside composer form, identified by aria-label starting with "Post comment on"
+    var composer = document.querySelector('.ql-editor[contenteditable="true"]');
+    var form = composer ? composer.closest('form') : null;
+    if (!form) return { error: 'no_form' };
+    var btns = Array.from(form.querySelectorAll('button'));
+    var submitBtn = btns.find(function(b) {
+      var label = (b.getAttribute('aria-label') || '').toLowerCase();
+      return label.indexOf('post comment on') === 0;
+    });
+    // Fallback: try data-view-name in case LinkedIn standardizes later
+    if (!submitBtn) submitBtn = form.querySelector('button[data-view-name="comment-post"]');
+    if (!submitBtn) return { error: 'no_submit_button', labels: btns.map(function(b) { return b.getAttribute('aria-label'); }) };
+    if (submitBtn.disabled || submitBtn.getAttribute('aria-disabled') === 'true') {
+      return { error: 'submit_disabled', reason: 'Quill Delta likely empty even though DOM has text' };
+    }
+    submitBtn.click();
+
+    // Wait for submission + render into comment list
+    await new Promise(r => setTimeout(r, 5000));
+
+    // 🚨 AUTHORITATIVE VERIFY: find our comment in the Pulse comments list
+    var snippet = "${commentText.slice(0, 35).replace(/"/g, '\\"')}";
+    var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle}}"]'));
+    var ourCommentFound = false;
+    var foundWhere = '';
+    for (var i = 0; i < ourLinks.length; i++) {
+      if (ourLinks[i].href.includes('sidebar_menu') || ourLinks[i].href.includes('author')) continue;
+      var parent = ourLinks[i].closest('article') || ourLinks[i].closest('[class*="comment-entity"]') || ourLinks[i].closest('[data-urn*="comment"]');
+      if (!parent) parent = ourLinks[i].parentElement;
+      for (var hops = 0; hops < 8 && parent; hops++) {
+        if (parent.innerText && parent.innerText.indexOf(snippet) > -1 && !parent.querySelector('[role="textbox"]') && !parent.querySelector('.ql-editor')) {
+          ourCommentFound = true;
+          foundWhere = parent.tagName + '.' + (parent.className || '').slice(0, 40);
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      if (ourCommentFound) break;
+    }
+
+    // Also check editor cleared
+    var editorAfter = document.querySelector('.ql-editor[contenteditable="true"]');
+    var editorEmpty = !editorAfter || (editorAfter.innerText || '').trim().length === 0;
+
+    return {
+      submitted: true,
+      editorEmpty: editorEmpty,
+      ourCommentFound: ourCommentFound,
+      foundWhere: foundWhere,
+      verified: ourCommentFound
+    };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If `verified: false`: retry Step 1 + Step 2 ONCE. Still fails → do NOT log, do NOT increment counters, skip.
+
+🚨 **Critical:** `verified` is ONLY true if `ourCommentFound` is true. Editor being empty is NOT proof — Quill can clear the DOM on submit rejection. The only authoritative signal is our comment appearing in the comment list.
 
 ## SS 6. Like Posts (Batch) + Verify (ONE async evaluate)
 
