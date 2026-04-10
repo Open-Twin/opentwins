@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi, useMutation, today } from '../hooks/useApi.ts';
 import { useAgentsEnabled, HealthBanner } from '../contexts/HealthContext.tsx';
@@ -278,7 +278,7 @@ export function Dashboard() {
                   {/* Footer: schedule or last run */}
                   <div className="flex items-center justify-between mono text-[12px] pt-2" style={{ borderTop: '1px solid var(--c-border-dim)', color: 'var(--c-text-muted)' }}>
                     {status?.daemon && sched ? (
-                      <span>next run {new Date(sched.nextRun).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                      <Countdown target={sched.nextRun} />
                     ) : (
                       <span>scheduler off</span>
                     )}
@@ -454,6 +454,36 @@ export function Dashboard() {
         </div>
       )}
     </div>
+  );
+}
+
+function Countdown({ target }: { target: string }) {
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const diff = Math.max(0, new Date(target).getTime() - now);
+  const totalSec = Math.floor(diff / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+
+  if (diff <= 0) {
+    return <span style={{ color: 'var(--c-teal)' }}>running soon...</span>;
+  }
+
+  const parts: string[] = [];
+  if (h > 0) parts.push(`${h}h`);
+  parts.push(`${m}m`);
+  parts.push(`${String(s).padStart(2, '0')}s`);
+
+  return (
+    <span className="tabular-nums">
+      next in <span style={{ color: 'var(--c-teal)' }}>{parts.join(' ')}</span>
+    </span>
   );
 }
 
