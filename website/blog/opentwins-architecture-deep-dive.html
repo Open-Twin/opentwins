@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How OpenTwins Works: Architecture Deep Dive | OpenTwins</title>
+  <meta name="description" content="Technical walkthrough of OpenTwins internals: the agent loop, browser automation, Claude integration, content strategy engine and real-time dashboard.">
+  <meta name="keywords" content="OpenTwins architecture, AI agent architecture, social media automation technical, browser automation agent">
+  <meta name="author" content="OpenTwins">
+  <meta name="theme-color" content="#2dd4bf">
+  <link rel="canonical" href="https://opentwins.ai/blog/opentwins-architecture-deep-dive.html">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23080b12'/><text x='16' y='22' font-size='16' font-weight='bold' font-family='monospace' fill='%232dd4bf' text-anchor='middle'>OT</text></svg>">
+
+  <meta property="og:title" content="How OpenTwins Works: Architecture Deep Dive">
+  <meta property="og:description" content="Technical walkthrough of OpenTwins internals: agent loop, browser automation, Claude integration and dashboard.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://opentwins.ai/blog/opentwins-architecture-deep-dive.html">
+  <meta property="og:site_name" content="OpenTwins">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:image" content="https://opentwins.ai/og-image.png">
+  <meta property="article:published_time" content="2026-04-01T09:00:00Z">
+  <meta property="article:author" content="OpenTwins">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How OpenTwins Works: Architecture Deep Dive">
+  <meta name="twitter:description" content="Technical walkthrough of OpenTwins internals: agent loop, browser automation, Claude integration and dashboard.">
+  <meta name="twitter:image" content="https://opentwins.ai/og-image.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "How OpenTwins Works: Architecture Deep Dive",
+    "description": "Technical walkthrough of OpenTwins internals: the agent loop, browser automation, Claude integration, content strategy engine and real-time dashboard.",
+    "datePublished": "2026-04-01T09:00:00Z",
+    "dateModified": "2026-04-01T09:00:00Z",
+    "author": {
+      "@type": "Organization",
+      "name": "OpenTwins",
+      "url": "https://opentwins.ai"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "OpenTwins",
+      "url": "https://opentwins.ai"
+    },
+    "mainEntityOfPage": "https://opentwins.ai/blog/opentwins-architecture-deep-dive.html",
+    "wordCount": 2400,
+    "timeRequired": "PT14M"
+  }
+  </script>
+
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { background: #080b12; color: #e2e8f0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .nav-blur { backdrop-filter: blur(12px); background: rgba(8,11,18,0.85); }
+    .prose h2 { color: #fff; font-size: 1.5rem; font-weight: 700; margin-top: 2.5rem; margin-bottom: 1rem; }
+    .prose h3 { color: #e2e8f0; font-size: 1.2rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; }
+    .prose p { color: #94a3b8; line-height: 1.8; margin-bottom: 1.25rem; }
+    .prose ul, .prose ol { color: #94a3b8; margin-bottom: 1.25rem; padding-left: 1.5rem; }
+    .prose li { margin-bottom: 0.5rem; line-height: 1.7; }
+    .prose a { color: #2dd4bf; text-decoration: underline; text-decoration-color: rgba(45,212,191,0.3); }
+    .prose a:hover { text-decoration-color: #2dd4bf; }
+    .prose strong { color: #e2e8f0; }
+    .prose code { font-family: 'JetBrains Mono', monospace; background: rgba(30,41,59,0.5); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: #2dd4bf; }
+    .prose pre { background: rgba(30,41,59,0.5); border: 1px solid rgba(45,212,191,0.1); border-radius: 8px; padding: 1rem 1.25rem; overflow-x: auto; margin-bottom: 1.5rem; }
+    .prose pre code { background: none; padding: 0; }
+    .prose blockquote { border-left: 3px solid rgba(45,212,191,0.3); padding-left: 1rem; margin: 1.5rem 0; }
+    .prose blockquote p { color: #cbd5e1; font-style: italic; }
+    .toc a { color: #64748b; text-decoration: none; transition: color 0.2s; }
+    .toc a:hover { color: #2dd4bf; }
+    .cta-box { background: rgba(45,212,191,0.05); border: 1px solid rgba(45,212,191,0.15); border-radius: 12px; }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen">
+
+  <nav class="fixed top-0 left-0 right-0 z-50 nav-blur border-b border-white/5">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3 group">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center border border-teal-400/20 bg-teal-400/5 group-hover:bg-teal-400/10 transition-colors"><span class="font-mono text-sm font-bold text-teal-400">OT</span></div>
+        <span class="text-lg font-semibold tracking-wide">OpenTwins</span>
+      </a>
+      <div class="flex items-center gap-6">
+        <a href="/" class="text-sm text-slate-400 hover:text-teal-400 transition-colors">Home</a>
+        <a href="/blog/" class="text-sm text-teal-400 font-medium">Blog</a>
+        <a href="https://github.com/Open-Twin/opentwins" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="pt-32 pb-24">
+    <article class="max-w-3xl mx-auto px-6">
+      <header class="mb-12">
+        <div class="flex items-center gap-3 mb-4">
+          <a href="/blog/" class="font-mono text-xs text-teal-400/60 hover:text-teal-400 transition-colors">&larr; Blog</a>
+          <span class="text-slate-600">-</span>
+          <span class="font-mono text-xs text-slate-500">April 1, 2026</span>
+          <span class="text-slate-600">-</span>
+          <span class="font-mono text-xs text-slate-500">14 min read</span>
+        </div>
+        <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-6">How OpenTwins Works: Architecture Deep Dive</h1>
+        <p class="text-lg text-slate-400">A technical walkthrough of the systems behind OpenTwins. How agents decide what to engage with, how browser automation works and how everything connects.</p>
+      </header>
+
+      <div class="toc mb-12 p-6 rounded-xl bg-slate-800/20 border border-white/5">
+        <div class="font-mono text-xs uppercase tracking-[0.15em] text-slate-500 mb-4">Table of Contents</div>
+        <ol class="space-y-2 text-sm list-decimal list-inside">
+          <li><a href="#system-overview">System Overview</a></li>
+          <li><a href="#agent-loop">The Agent Loop</a></li>
+          <li><a href="#browser-automation">Browser Automation Layer</a></li>
+          <li><a href="#claude-integration">Claude Integration and Prompt Architecture</a></li>
+          <li><a href="#identity-system">The Identity System</a></li>
+          <li><a href="#content-strategy-engine">Content Strategy Engine</a></li>
+          <li><a href="#scheduler">The Scheduler</a></li>
+          <li><a href="#dashboard-architecture">Dashboard Architecture</a></li>
+          <li><a href="#data-flow">Data Flow and Storage</a></li>
+          <li><a href="#extending-opentwins">Extending OpenTwins</a></li>
+        </ol>
+      </div>
+
+      <div class="prose">
+
+        <h2 id="system-overview">System Overview</h2>
+
+        <p>OpenTwins is a Node.js application that runs locally on your machine. At its core, it's an orchestrator that coordinates three things: an AI model (Claude) for decision-making and content generation, a browser automation layer for platform interaction and a scheduler that determines when agents should run.</p>
+
+        <p>The high-level architecture looks like this:</p>
+
+        <pre><code>┌─────────────────────────────────────────┐
+│              Dashboard (React)           │
+│         localhost:3847                   │
+├─────────────────────────────────────────┤
+│              Core Orchestrator           │
+│  ┌──────────┐ ┌──────────┐ ┌─────────┐  │
+│  │ Scheduler│ │ Identity │ │ Strategy│  │
+│  │          │ │ System   │ │ Engine  │  │
+│  └────┬─────┘ └────┬─────┘ └────┬────┘  │
+│       │            │            │        │
+│  ┌────▼────────────▼────────────▼────┐   │
+│  │          Agent Loop               │   │
+│  │  (one per platform)               │   │
+│  └────┬──────────────────────┬───────┘   │
+│       │                      │           │
+│  ┌────▼──────┐        ┌─────▼────────┐  │
+│  │  Browser  │        │   Claude     │  │
+│  │  (OpenClaw)│       │   (API/CLI)  │  │
+│  └───────────┘        └──────────────┘  │
+└─────────────────────────────────────────┘</code></pre>
+
+        <p>Everything runs in a single process (with child processes for browser instances). There's no database server, no cloud dependency beyond the Claude API and no Docker required. Configuration lives in <code>~/.opentwins/</code> as JSON files.</p>
+
+        <h2 id="agent-loop">The Agent Loop</h2>
+
+        <p>Each platform gets its own agent instance running an identical loop. The loop executes once per configured interval (default: every 60 minutes during active hours). Here's the sequence:</p>
+
+        <ol>
+          <li><strong>Wake</strong> - the scheduler triggers the agent for this platform</li>
+          <li><strong>Feed scan</strong> - the browser navigates to the platform feed and extracts visible posts</li>
+          <li><strong>Scoring</strong> - Claude evaluates each post against the user's content strategy: topic relevance, engagement level, recency, author reputation</li>
+          <li><strong>Selection</strong> - the top N posts are selected for engagement (N is configurable, default 3-5)</li>
+          <li><strong>Generation</strong> - for each selected post, Claude generates an appropriate action: comment, like, share or skip</li>
+          <li><strong>Execution</strong> - the browser performs the action with human-like timing (random delays between keystrokes, natural scroll patterns)</li>
+          <li><strong>Logging</strong> - every action is recorded with timestamp, platform, post URL, action type and generated content</li>
+          <li><strong>Sleep</strong> - the agent waits for the next scheduled cycle</li>
+        </ol>
+
+        <p>The loop is intentionally simple. Complexity lives in the Claude prompts and the browser automation, not in the orchestration logic. This makes it easy to debug: if an agent is misbehaving, you can inspect the prompt that was sent and the response that came back.</p>
+
+        <h3>Error Handling</h3>
+
+        <p>Browser automation is inherently fragile. Pages load slowly, elements change position, captchas appear. The agent loop handles this with a layered retry strategy:</p>
+
+        <ul>
+          <li><strong>Element not found:</strong> Wait 2 seconds, retry once, then skip the action</li>
+          <li><strong>Page load timeout:</strong> Refresh, wait, retry once</li>
+          <li><strong>Captcha detected:</strong> Pause the agent, notify the user through the dashboard</li>
+          <li><strong>Session expired:</strong> Pause the agent, prompt the user to re-authenticate</li>
+          <li><strong>Rate limit detected:</strong> Back off exponentially, reduce activity for the rest of the day</li>
+        </ul>
+
+        <p>If an agent encounters 3 consecutive failures, it pauses itself and sends a notification through the dashboard. No silent failures.</p>
+
+        <h2 id="browser-automation">Browser Automation Layer</h2>
+
+        <p>OpenTwins uses <a href="https://github.com/anthropics/openclaw">OpenClaw</a> for browser automation. OpenClaw is an open-source browser control library built on Chromium that provides a higher-level API than raw Playwright or Puppeteer.</p>
+
+        <p>The key difference between OpenClaw and traditional browser automation is the abstraction level. Instead of targeting specific CSS selectors (which break whenever a platform updates their UI), OpenClaw uses a combination of visual recognition and DOM analysis to interact with elements semantically. "Find the comment input field" rather than "find element with class .comment-box-v2__input".</p>
+
+        <h3>Session Management</h3>
+
+        <p>When you connect a platform through the OpenTwins setup wizard, the system opens a browser window and lets you log in manually. Your session cookies are then stored locally in an encrypted profile at <code>~/.opentwins/browsers/</code>. Each platform gets its own browser profile, completely isolated from the others.</p>
+
+        <pre><code>~/.opentwins/
+  browsers/
+    linkedin/     # LinkedIn browser profile
+    twitter/      # Twitter browser profile
+    reddit/       # Reddit browser profile
+  config.json     # Main configuration
+  identity.json   # Your voice and identity settings
+  logs/           # Action logs</code></pre>
+
+        <p>Sessions are reused across agent cycles. When a session expires (typically every few weeks), the agent detects the login page, pauses and notifies you to re-authenticate. Your actual passwords are never stored - only the session cookies.</p>
+
+        <h3>Human-Like Behavior</h3>
+
+        <p>Platform detection systems look for behavioral patterns that distinguish bots from humans. OpenTwins incorporates several anti-detection measures:</p>
+
+        <ul>
+          <li><strong>Variable typing speed:</strong> Characters are typed with random delays between 50-200ms, with occasional "pauses" mid-word that mimic thinking</li>
+          <li><strong>Natural scrolling:</strong> Pages are scrolled at varying speeds with occasional pauses, not instant jumps to specific elements</li>
+          <li><strong>Mouse movement:</strong> The cursor moves in natural curves rather than teleporting between elements</li>
+          <li><strong>Reading time:</strong> Before engaging with a post, the agent "reads" it by pausing for a duration proportional to the post's length</li>
+          <li><strong>Session noise:</strong> Agents occasionally browse unrelated pages, check notifications or visit profiles without engaging</li>
+        </ul>
+
+        <p>For a broader discussion of safe automation practices, see our guide on <a href="/blog/social-media-automation-without-getting-banned.html">social media automation that doesn't get you banned</a>.</p>
+
+        <h2 id="claude-integration">Claude Integration and Prompt Architecture</h2>
+
+        <p>OpenTwins uses Claude as its "brain." Every decision an agent makes - what to engage with, what to say, whether to skip a post - is made by Claude based on a carefully structured prompt.</p>
+
+        <p>The integration supports two modes:</p>
+
+        <ul>
+          <li><strong>Claude Code mode:</strong> Uses the Claude Code CLI (requires a Claude Code subscription, ~$20/month). The agent spawns Claude Code as a subprocess and communicates through stdin/stdout.</li>
+          <li><strong>API mode:</strong> Uses the Anthropic API directly (requires API credits). This is the default mode and offers more granular control over model parameters.</li>
+        </ul>
+
+        <h3>Prompt Structure</h3>
+
+        <p>Every Claude interaction follows a consistent prompt structure:</p>
+
+        <pre><code>System prompt:
+  - Identity context (who the user is, their expertise)
+  - Voice guidelines (writing style, vocabulary, tone)
+  - Platform-specific rules (LinkedIn vs Twitter conventions)
+  - Safety constraints (what not to say, topics to avoid)
+
+User prompt:
+  - The specific post content being evaluated
+  - Existing comments (to avoid repetition)
+  - Action request (score, generate comment, etc.)
+  - Output format specification (JSON)</code></pre>
+
+        <p>The system prompt is assembled once per agent cycle from the user's identity configuration. The user prompt changes for each post. All prompts include a JSON output format specification so responses can be reliably parsed.</p>
+
+        <h3>Cost Optimization</h3>
+
+        <p>AI model calls are the primary cost driver. OpenTwins minimizes costs through:</p>
+
+        <ul>
+          <li><strong>Batch scoring:</strong> Multiple posts are scored in a single Claude call rather than one call per post</li>
+          <li><strong>Prompt caching:</strong> The system prompt (which includes identity context) is cached across calls within a cycle</li>
+          <li><strong>Model selection:</strong> Scoring uses Claude Haiku (cheap and fast) while content generation uses Claude Sonnet (better quality)</li>
+          <li><strong>Skip early:</strong> Posts that clearly don't match the user's topics are filtered before reaching Claude</li>
+        </ul>
+
+        <p>Typical daily costs range from $1-3 for moderate activity across 3-5 platforms. The dashboard tracks token usage and estimated costs in real time.</p>
+
+        <h2 id="identity-system">The Identity System</h2>
+
+        <p>The identity system is what makes agent output sound like you rather than generic AI. It's stored in <code>~/.opentwins/identity.json</code> and includes:</p>
+
+        <pre><code>{
+  "name": "Jane Chen",
+  "role": "CTO at Acme Corp",
+  "expertise": [
+    "distributed systems",
+    "engineering management",
+    "developer tools"
+  ],
+  "voice": {
+    "tone": "technical but accessible",
+    "formality": "professional-casual",
+    "humor": "dry, occasional",
+    "sentence_length": "medium, varied",
+    "avoid_words": ["synergy", "leverage", "disrupt"],
+    "signature_phrases": ["the tricky part is", "in my experience"]
+  },
+  "writing_samples": [
+    "Had a great discussion with the team about...",
+    "One thing I've learned about scaling..."
+  ],
+  "opinions": {
+    "remote_work": "strongly pro, with caveats about async communication",
+    "ai_in_development": "optimistic but realistic about current limitations",
+    "microservices": "right tool for the right job, not a default"
+  }
+}</code></pre>
+
+        <p>The setup wizard builds this through a conversational interface. You don't need to fill out a JSON file manually. The wizard asks questions like "How would you respond to someone praising microservices for a small startup?" and uses your answers to populate the configuration.</p>
+
+        <h2 id="content-strategy-engine">Content Strategy Engine</h2>
+
+        <p>The content strategy engine determines <em>what</em> agents engage with. It's a scoring system that evaluates posts along multiple dimensions:</p>
+
+        <ul>
+          <li><strong>Topic relevance (0-10):</strong> How closely does this post match the user's defined topics?</li>
+          <li><strong>Engagement potential (0-10):</strong> Is this post getting traction? A post with moderate engagement (50-500 likes) is ideal - visible enough to matter but not so popular that your comment gets buried.</li>
+          <li><strong>Author value (0-10):</strong> Is this someone worth building a relationship with? The system considers follower count, posting frequency and whether the user has engaged with them before.</li>
+          <li><strong>Recency (0-10):</strong> How old is the post? Commenting on a 2-hour-old post is more valuable than a 2-day-old one.</li>
+          <li><strong>Action type fit:</strong> Should this be a comment, a like, a share or nothing?</li>
+        </ul>
+
+        <p>Posts that score above the configured threshold (default: 6.0 out of 10) are selected for engagement. The threshold is adjusted automatically based on feed volume - if there are many high-scoring posts, the bar rises to keep action counts within configured limits.</p>
+
+        <h2 id="scheduler">The Scheduler</h2>
+
+        <p>The scheduler controls when agents run. It's built around two concepts: <strong>active hours</strong> and <strong>intensity levels</strong>.</p>
+
+        <pre><code>// Default schedule configuration
+{
+  "timezone": "America/New_York",
+  "weekdays": {
+    "activeHours": [
+      { "start": "07:00", "end": "09:00", "intensity": "high" },
+      { "start": "09:00", "end": "12:00", "intensity": "medium" },
+      { "start": "12:00", "end": "14:00", "intensity": "high" },
+      { "start": "14:00", "end": "18:00", "intensity": "medium" },
+      { "start": "18:00", "end": "21:00", "intensity": "low" }
+    ]
+  },
+  "weekends": {
+    "activeHours": [
+      { "start": "09:00", "end": "12:00", "intensity": "low" },
+      { "start": "14:00", "end": "17:00", "intensity": "low" }
+    ]
+  }
+}</code></pre>
+
+        <p>Intensity levels map to action frequency:</p>
+
+        <ul>
+          <li><strong>High:</strong> Agent runs every 30 minutes, up to 8 actions per cycle</li>
+          <li><strong>Medium:</strong> Agent runs every 60 minutes, up to 5 actions per cycle</li>
+          <li><strong>Low:</strong> Agent runs every 120 minutes, up to 3 actions per cycle</li>
+        </ul>
+
+        <p>The scheduler adds random jitter (up to 15 minutes) to avoid running at perfectly predictable intervals. It also respects per-platform daily limits, stopping an agent for the day once it hits its configured maximum.</p>
+
+        <h2 id="dashboard-architecture">Dashboard Architecture</h2>
+
+        <p>The dashboard is a React application served at <code>localhost:3847</code>. It communicates with the core orchestrator through a WebSocket connection for real-time updates and a REST API for historical data.</p>
+
+        <p>Key dashboard features:</p>
+
+        <ul>
+          <li><strong>Live feed:</strong> Real-time stream of agent actions as they happen</li>
+          <li><strong>Activity log:</strong> Searchable history of all actions with full content</li>
+          <li><strong>Analytics:</strong> Engagement metrics, growth trends, per-platform breakdowns</li>
+          <li><strong>Cost tracker:</strong> Real-time token usage and estimated API costs</li>
+          <li><strong>Agent controls:</strong> Start, stop, pause individual agents</li>
+          <li><strong>Platform setup:</strong> Browser authentication flow for each platform</li>
+          <li><strong>Identity editor:</strong> Modify voice settings and topic configuration</li>
+        </ul>
+
+        <p>The dashboard requires no separate installation. It's bundled with the main package and starts automatically when you run <code>opentwins start --ui</code>.</p>
+
+        <h2 id="data-flow">Data Flow and Storage</h2>
+
+        <p>OpenTwins stores everything locally. No data leaves your machine except for Claude API calls (which send post content and your identity context to Anthropic's API).</p>
+
+        <h3>Local Storage</h3>
+
+        <ul>
+          <li><strong>Configuration:</strong> JSON files in <code>~/.opentwins/</code></li>
+          <li><strong>Action logs:</strong> SQLite database at <code>~/.opentwins/logs/actions.db</code></li>
+          <li><strong>Browser profiles:</strong> Chromium user data directories per platform</li>
+          <li><strong>Analytics cache:</strong> Computed metrics cached in SQLite for dashboard performance</li>
+        </ul>
+
+        <h3>What Goes to Claude</h3>
+
+        <p>Every Claude API call sends:</p>
+
+        <ul>
+          <li>Your identity configuration (name, role, expertise, voice settings)</li>
+          <li>The content of the post being evaluated</li>
+          <li>Existing comments on that post (for context)</li>
+          <li>The action request (score, generate, etc.)</li>
+        </ul>
+
+        <p>Claude API calls are subject to Anthropic's data retention policy. If privacy is a concern, you can use Claude Code mode (which routes through your Claude Code subscription) or self-host a compatible model.</p>
+
+        <h2 id="extending-opentwins">Extending OpenTwins</h2>
+
+        <p>OpenTwins is designed to be extensible. The two most common extension points are:</p>
+
+        <h3>Adding a New Platform</h3>
+
+        <p>Each platform is implemented as a module in <code>src/platforms/</code>. A platform module needs to implement four functions:</p>
+
+        <pre><code>// src/platforms/my-platform.ts
+export interface PlatformModule {
+  // Navigate to the feed and extract posts
+  scanFeed(browser: BrowserContext): Promise&lt;Post[]&gt;
+
+  // Perform an engagement action
+  executeAction(browser: BrowserContext, action: Action): Promise&lt;void&gt;
+
+  // Check if the session is still valid
+  checkSession(browser: BrowserContext): Promise&lt;boolean&gt;
+
+  // Open the login page for authentication
+  authenticate(browser: BrowserContext): Promise&lt;void&gt;
+}</code></pre>
+
+        <p>The platform module handles all platform-specific browser interactions. The core orchestrator, Claude integration and scheduling work identically across all platforms.</p>
+
+        <h3>Custom Scoring Functions</h3>
+
+        <p>If the default scoring model doesn't fit your needs, you can register custom scoring functions that run before or after Claude's evaluation:</p>
+
+        <pre><code>// ~/.opentwins/plugins/my-scorer.js
+module.exports = {
+  name: 'my-custom-scorer',
+  score(post) {
+    // Boost posts from specific authors
+    if (post.author.followers > 10000) {
+      return { bonus: 2.0, reason: 'high-follower author' };
+    }
+    return { bonus: 0, reason: null };
+  }
+};</code></pre>
+
+        <p>Plugins are loaded from <code>~/.opentwins/plugins/</code> at startup. They can modify post scores, filter posts before they reach Claude or add post-processing to generated content.</p>
+
+        <p>The full source code is available on <a href="https://github.com/Open-Twin/opentwins">GitHub</a>. The codebase is TypeScript throughout, with minimal dependencies. If you want to contribute or fork, the README has a development setup guide that gets you running in under 5 minutes.</p>
+
+        <p>For a non-technical overview of what OpenTwins can do, check out the <a href="https://opentwins.ai">main site</a>. For practical usage guides, see our articles on <a href="/blog/grow-linkedin-presence-ai-agents.html">LinkedIn growth with AI agents</a> and <a href="/blog/ai-social-media-engagement-guide.html">AI-powered social media engagement</a>.</p>
+
+      </div>
+
+      <div class="cta-box p-8 mt-16 text-center">
+        <h3 class="text-xl font-bold mb-3">Want to try it yourself?</h3>
+        <p class="text-slate-400 mb-6 text-sm">OpenTwins is free, open source and sets up in under 5 minutes.</p>
+        <a href="https://opentwins.ai/#get-started" class="inline-flex px-6 py-3 rounded-lg text-sm font-medium bg-teal-400/10 text-teal-400 border border-teal-400/25 hover:bg-teal-400/20 transition-all">Get Started with OpenTwins</a>
+      </div>
+
+      <div class="mt-16 pt-12 border-t border-white/5">
+        <h3 class="font-mono text-xs uppercase tracking-[0.15em] text-slate-500 mb-6">Related Articles</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <a href="/blog/social-media-automation-without-getting-banned.html" class="block p-4 rounded-lg bg-slate-800/20 border border-white/5 hover:border-teal-400/20 transition-colors">
+            <div class="text-sm font-semibold text-white mb-1">Social Media Automation That Doesn't Get You Banned</div>
+            <div class="text-xs text-slate-500">11 min read</div>
+          </a>
+          <a href="/blog/ai-social-media-engagement-guide.html" class="block p-4 rounded-lg bg-slate-800/20 border border-white/5 hover:border-teal-400/20 transition-colors">
+            <div class="text-sm font-semibold text-white mb-1">AI-Powered Social Media Engagement: A Practical Guide</div>
+            <div class="text-xs text-slate-500">13 min read</div>
+          </a>
+        </div>
+      </div>
+    </article>
+  </main>
+
+  <footer class="py-12 border-t border-white/5">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+      <div class="flex items-center gap-3">
+        <div class="w-6 h-6 rounded-md flex items-center justify-center border border-teal-400/20 bg-teal-400/5"><span class="font-mono text-xs font-bold text-teal-400">OT</span></div>
+        <span class="text-sm text-slate-400">OpenTwins</span>
+        <span class="font-mono text-xs text-slate-600">MIT License</span>
+      </div>
+      <div class="flex items-center gap-6">
+        <a href="https://github.com/Open-Twin/opentwins" target="_blank" rel="noopener noreferrer" class="text-sm text-slate-500 hover:text-teal-400 transition-colors">GitHub</a>
+        <a href="/blog/" class="text-sm text-slate-500 hover:text-teal-400 transition-colors">Blog</a>
+        <a href="https://github.com/Open-Twin/opentwins/blob/main/README.md" target="_blank" rel="noopener noreferrer" class="text-sm text-slate-500 hover:text-teal-400 transition-colors">Docs</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
