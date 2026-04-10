@@ -184,22 +184,45 @@ async function waitForGatewayHealthy(port: number, timeoutMs: number): Promise<b
 
 async function launchBrowserAtUrl(platform: string, url: string): Promise<void> {
   const name = openclawProfileName(platform);
-  const result = await execa('openclaw', [
-    'browser', '--browser-profile', name,
-    'open', url,
-  ], { reject: false, timeout: 30000 });
+  // Note: --browser-profile is a GLOBAL flag — must come BEFORE the subcommand
 
-  if (result.exitCode !== 0) {
-    const err = (result.stderr || result.stdout || '').slice(0, 400);
+  // Stop any existing Chrome for this profile (start fails if already running)
+  await execa('openclaw', ['browser', '--browser-profile', name, 'stop'], { reject: false, timeout: 10000 });
+  await new Promise((r) => setTimeout(r, 1000));
+
+  // Start Chrome fresh
+  const startResult = await execa('openclaw', [
+    'browser', '--browser-profile', name, 'start',
+  ], { reject: false, timeout: 20000 });
+
+  if (startResult.exitCode !== 0) {
+    const err = (startResult.stderr || startResult.stdout || '').slice(0, 400);
     throw new Error(
-      `openclaw browser open failed: ${err}\n` +
+      `openclaw browser start failed: ${err}\n` +
       `Make sure the OpenClaw gateway is running: openclaw gateway status`
     );
+  }
+
+  // Wait for Chrome to initialize before navigating
+  await new Promise((r) => setTimeout(r, 2000));
+
+  // Navigate the existing tab to the login URL
+  const navResult = await execa('openclaw', [
+    'browser', '--browser-profile', name, 'navigate', url,
+  ], { reject: false, timeout: 15000 });
+
+  if (navResult.exitCode !== 0) {
+    // Navigate failed — fall back to opening a new tab
+    await execa('openclaw', [
+      'browser', '--browser-profile', name, 'open', url,
+    ], { reject: false, timeout: 15000 });
   }
 }
 
 // ── Public API ────────────────────────────────────────────────
 
+// setupProfile creates the OpenClaw browser profile and launches Chrome at the login page.
+// It does NOT mark the profile as configured — call confirmProfile() after the user logs in.
 export async function setupProfile(platform: string): Promise<void> {
   const name = openclawProfileName(platform);
   const loginUrl = PLATFORM_LOGIN_URLS[platform];
@@ -230,7 +253,14 @@ export async function setupProfile(platform: string): Promise<void> {
     log.warn(`No login URL configured for ${platform}. Launch the browser manually.`);
   }
 
-  // 3. Track it in OpenTwins so `hasBrowserProfile()` returns true
+  // Note: profiles.json is NOT updated here. The caller must invoke confirmProfile()
+  // after the user confirms they've logged in.
+}
+
+// confirmProfile marks the browser profile as configured so hasBrowserProfile() returns true.
+// Called after the user clicks "I've logged in" in the UI.
+export function confirmProfile(platform: string): void {
+  const name = openclawProfileName(platform);
   const cfg = loadProfilesConfig();
   if (!cfg.profiles.some((p) => p.platform === platform)) {
     cfg.profiles.push({
@@ -240,6 +270,7 @@ export async function setupProfile(platform: string): Promise<void> {
     });
     saveProfilesConfig(cfg);
   }
+  log.success(`Profile for ${platform} confirmed as configured`);
 }
 
 export async function loginProfile(platform: string): Promise<void> {

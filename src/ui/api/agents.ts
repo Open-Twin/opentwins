@@ -6,7 +6,7 @@ import { getPlatformWorkspaceDir, getLockFile, getBrowserProfilesConfigPath, get
 import { PLATFORM_TYPES, PLATFORM_API_KEYS } from '../../util/platform-types.js';
 import { loadConfig, configExists } from '../../config/loader.js';
 import { findLatestSessionFile, extractEventsFromSession } from '../../util/session-parser.js';
-import { setupProfile } from '../../browser/manager.js';
+import { setupProfile, confirmProfile } from '../../browser/manager.js';
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -393,11 +393,28 @@ export async function handleBrowserSetup(req: Request, res: Response): Promise<v
     await setupProfile(platform);
     res.json({
       ok: true,
-      message: `Chrome launched for ${platform}. Log in, then close Chrome when done.`,
+      message: `Chrome launched for ${platform}. Log in, then confirm.`,
     });
   } catch (err) {
     res.status(500).json({
       error: err instanceof Error ? err.message : 'Browser setup failed',
     });
+  }
+}
+
+// ── POST /api/agents/:platform/browser-confirm ────────────────
+// Called when the user clicks "I've logged in" — marks the browser profile as configured.
+
+export function handleBrowserConfirm(req: Request, res: Response): void {
+  const platform = req.params.platform as string;
+  if (!PLATFORM_TYPES.includes(platform as any)) {
+    res.status(400).json({ error: `Unknown platform: ${platform}` });
+    return;
+  }
+  try {
+    confirmProfile(platform);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Confirm failed' });
   }
 }

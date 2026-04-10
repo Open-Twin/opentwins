@@ -298,52 +298,69 @@ function StepWelcome({ status, draft, update, onNext }: {
           </button>
         </div>
 
-        {/* Token input */}
+        {/* Token input with instructions */}
         {draft.auth.mode === 'subscription' ? (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-[12px] uppercase tracking-[0.12em] font-medium" style={{ color: 'var(--c-text-muted)' }}>
-                Claude Code OAuth Token
+          <div className="space-y-4">
+            {/* How to get a token — step-by-step */}
+            <div className="rounded-lg p-4 space-y-3" style={{ background: 'rgba(45,212,191,0.04)', border: '1px solid rgba(45,212,191,0.15)' }}>
+              <div className="text-sm font-medium" style={{ color: 'var(--c-text)' }}>How to get your token:</div>
+              <div className="space-y-2">
+                <TokenStep num={1} text="Open a new terminal window" />
+                <TokenStep num={2}>
+                  Run this command: <CopyableCmd cmd="claude setup-token" />
+                </TokenStep>
+                <TokenStep num={3} text="Follow the prompts to log in (if asked)" />
+                <TokenStep num={4} text="Copy the token that starts with sk-ant-oat01-..." />
+                <TokenStep num={5} text="Paste it below" />
               </div>
-              <span className="mono text-[11px]" style={{ color: 'var(--c-text-muted)' }}>generate via: claude setup-token</span>
             </div>
-            <input
-              type="password"
-              value={draft.auth.claude_token || ''}
-              onChange={(e) => update((d) => { d.auth.claude_token = e.target.value; d.auth.validated = false; })}
-              placeholder="sk-ant-oat01-…"
-              className="mono w-full bg-transparent outline-none text-sm px-3 py-2.5 rounded-lg transition-colors"
-              style={{ color: 'var(--c-text)', border: '1px solid var(--c-border-dim)' }}
-              onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'}
-              onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'}
-            />
+
+            <div>
+              <div className="text-[12px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: 'var(--c-text-muted)' }}>
+                Paste your token
+              </div>
+              <input
+                type="password"
+                value={draft.auth.claude_token || ''}
+                onChange={(e) => update((d) => { d.auth.claude_token = e.target.value; d.auth.validated = false; })}
+                placeholder="sk-ant-oat01-…"
+                className="mono w-full bg-transparent outline-none text-sm px-3 py-2.5 rounded-lg transition-colors"
+                style={{ color: 'var(--c-text)', border: '1px solid var(--c-border-dim)' }}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'}
+              />
+            </div>
           </div>
         ) : (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-[12px] uppercase tracking-[0.12em] font-medium" style={{ color: 'var(--c-text-muted)' }}>
-                Anthropic API Key
+          <div className="space-y-4">
+            {/* How to get an API key — step-by-step */}
+            <div className="rounded-lg p-4 space-y-3" style={{ background: 'rgba(45,212,191,0.04)', border: '1px solid rgba(45,212,191,0.15)' }}>
+              <div className="text-sm font-medium" style={{ color: 'var(--c-text)' }}>How to get your API key:</div>
+              <div className="space-y-2">
+                <TokenStep num={1}>
+                  Go to <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" className="hover:underline" style={{ color: 'var(--c-teal)' }}>console.anthropic.com/settings/keys ↗</a>
+                </TokenStep>
+                <TokenStep num={2} text='Click "Create Key"' />
+                <TokenStep num={3} text="Copy the key that starts with sk-ant-api03-..." />
+                <TokenStep num={4} text="Paste it below" />
               </div>
-              <a
-                href="https://console.anthropic.com/settings/keys"
-                target="_blank"
-                rel="noopener"
-                className="mono text-[11px] hover:underline"
-                style={{ color: 'var(--c-teal-dim)' }}
-              >
-                get your key ↗
-              </a>
             </div>
-            <input
-              type="password"
-              value={draft.auth.api_key || ''}
-              onChange={(e) => update((d) => { d.auth.api_key = e.target.value; d.auth.validated = false; })}
-              placeholder="sk-ant-api03-…"
-              className="mono w-full bg-transparent outline-none text-sm px-3 py-2.5 rounded-lg transition-colors"
-              style={{ color: 'var(--c-text)', border: '1px solid var(--c-border-dim)' }}
-              onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'}
-              onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'}
-            />
+
+            <div>
+              <div className="text-[12px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: 'var(--c-text-muted)' }}>
+                Paste your API key
+              </div>
+              <input
+                type="password"
+                value={draft.auth.api_key || ''}
+                onChange={(e) => update((d) => { d.auth.api_key = e.target.value; d.auth.validated = false; })}
+                placeholder="sk-ant-api03-…"
+                className="mono w-full bg-transparent outline-none text-sm px-3 py-2.5 rounded-lg transition-colors"
+                style={{ color: 'var(--c-text)', border: '1px solid var(--c-border-dim)' }}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'}
+              />
+            </div>
           </div>
         )}
 
@@ -988,6 +1005,22 @@ function PrereqRow({ label, ok, install }: { label: string; ok: boolean; install
       ) : (
         <CopyableCmd cmd={install} />
       )}
+    </div>
+  );
+}
+
+function TokenStep({ num, text, children }: { num: number; text?: string; children?: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <div
+        className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold mono shrink-0 mt-0.5"
+        style={{ background: 'rgba(45,212,191,0.15)', color: 'var(--c-teal)', border: '1px solid rgba(45,212,191,0.3)' }}
+      >
+        {num}
+      </div>
+      <div className="text-sm leading-relaxed" style={{ color: 'var(--c-text-dim)' }}>
+        {text || children}
+      </div>
     </div>
   );
 }

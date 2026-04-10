@@ -3,7 +3,7 @@ import ora from 'ora';
 import { program } from '../program.js';
 import { handleAction } from '../error-handler.js';
 import { loadConfig } from '../../config/loader.js';
-import { setupProfile, loginProfile, healthCheck, listProfiles } from '../../browser/manager.js';
+import { setupProfile, confirmProfile, loginProfile, healthCheck, listProfiles } from '../../browser/manager.js';
 import * as log from '../../util/logger.js';
 import { PLATFORM_TYPES } from '../../util/platform-types.js';
 
@@ -29,6 +29,8 @@ browser
     }
 
     await setupProfile(platform);
+    // CLI flow: mark as configured immediately (user is expected to log in before closing the terminal)
+    confirmProfile(platform);
   }));
 
 browser

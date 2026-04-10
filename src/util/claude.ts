@@ -48,7 +48,7 @@ export async function runClaudeAgent(opts: ClaudeRunOptions): Promise<ClaudeRunR
       cwd: resolve(opts.workingDir),
       timeout: opts.timeoutMs,
       env: {
-        ...process.env,
+        ...extendedEnv(),
         ...buildAuthEnv(opts.auth),
       },
       reject: false,
@@ -73,7 +73,7 @@ export async function validateAuth(auth: AuthConfig): Promise<boolean> {
     const result = await execa('claude', ['-p', '--model', 'sonnet', 'say ok'], {
       timeout: 30000,
       env: {
-        ...process.env,
+        ...extendedEnv(),
         ...buildAuthEnv(auth),
       },
       reject: false,
@@ -84,12 +84,25 @@ export async function validateAuth(auth: AuthConfig): Promise<boolean> {
   }
 }
 
+// Extend PATH for child processes so we find CLIs in common non-standard locations
+const EXTRA_PATHS = [
+  `${process.env.HOME}/.local/bin`,
+  `${process.env.HOME}/.nvm/versions/node/${process.version}/bin`,
+  '/usr/local/bin',
+  '/opt/homebrew/bin',
+].join(':');
+
+function extendedEnv(): Record<string, string> {
+  return { ...process.env as Record<string, string>, PATH: `${EXTRA_PATHS}:${process.env.PATH || ''}` };
+}
+
 export async function isClaudeInstalled(): Promise<boolean> {
   try {
     const result = await execaCommand('claude --version', {
       timeout: 5000,
       shell: true,
       reject: false,
+      env: extendedEnv(),
     });
     return result.exitCode === 0;
   } catch {
@@ -103,6 +116,7 @@ export async function isOpenClawInstalled(): Promise<boolean> {
       timeout: 5000,
       shell: true,
       reject: false,
+      env: extendedEnv(),
     });
     return result.exitCode === 0;
   } catch {

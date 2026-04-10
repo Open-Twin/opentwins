@@ -8,7 +8,7 @@ import { loadConfig, configExists } from '../config/loader.js';
 import { isDaemonRunning, startDaemon, stopDaemon } from '../scheduler/daemon.js';
 import { getQualityMetrics, getDisagreementRatio } from './api/quality.js';
 import { handleUpdateConfig } from './api/config.js';
-import { handleListAgents, handleGetAgent, handleRunAgent, handleStopAgent, handleUpdateLimits, handleUpdateAgent, handleGetAgentFeed, handleBrowserSetup } from './api/agents.js';
+import { handleListAgents, handleGetAgent, handleRunAgent, handleStopAgent, handleUpdateLimits, handleUpdateAgent, handleGetAgentFeed, handleBrowserSetup, handleBrowserConfirm } from './api/agents.js';
 import { handleSetup, handleSetupStatus, handleValidateAuth } from './api/setup.js';
 import { handleHealth } from './api/health.js';
 import { handleUsage } from './api/usage.js';
@@ -186,6 +186,7 @@ export async function startDashboard(port: number): Promise<void> {
   app.get('/api/agents/:platform', (req, res) => handleGetAgent(req, res));
   app.get('/api/agents/:platform/feed', (req, res) => handleGetAgentFeed(req, res));
   app.post('/api/agents/:platform/browser-setup', (req, res) => { handleBrowserSetup(req, res); });
+  app.post('/api/agents/:platform/browser-confirm', (req, res) => { handleBrowserConfirm(req, res); });
   app.post('/api/agents/:platform/run', (req, res) => { handleRunAgent(req, res); });
   app.post('/api/agents/:platform/stop', (req, res) => handleStopAgent(req, res));
   app.put('/api/agents/:platform/limits', (req, res) => handleUpdateLimits(req, res));
@@ -217,7 +218,30 @@ export async function startDashboard(port: number): Promise<void> {
     });
   }
 
-  app.listen(port, () => {
-    log.success(`Dashboard running at http://localhost:${port}`);
+  await new Promise<void>((resolve, reject) => {
+    const server = app.listen(port, () => {
+      log.success(`Dashboard running at http://localhost:${port}`);
+      resolve();
+    });
+    server.on('error', async (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        log.warn(`Port ${port} is already in use. Stopping the old process…`);
+        try {
+          // Kill whatever is on the port and retry once
+          const { execaCommand } = await import('execa');
+          await execaCommand(`lsof -ti :${port} | xargs kill`, { shell: true, reject: false });
+          await new Promise((r) => setTimeout(r, 1000));
+          app.listen(port, () => {
+            log.success(`Dashboard running at http://localhost:${port}`);
+            resolve();
+          });
+        } catch {
+          log.error(`Could not free port ${port}. Stop the other process manually.`);
+          reject(err);
+        }
+      } else {
+        reject(err);
+      }
+    });
   });
 }

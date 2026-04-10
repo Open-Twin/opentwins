@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useApi, useMutation } from '../hooks/useApi.ts';
 import { useAgentsEnabled, HealthBanner } from '../contexts/HealthContext.tsx';
 
@@ -156,11 +157,20 @@ export function Agents() {
 
   const handleRemovePlatform = async (platform: string) => {
     if (!config) return;
-    const result = await saveConfig({ platforms: config.platforms.filter((p) => p.platform !== platform) }) as { ok?: boolean } | null;
+    const remaining = config.platforms.filter((p) => p.platform !== platform);
+    if (remaining.length === 0) {
+      setFlash('Cannot remove the last platform — at least one is required');
+      setTimeout(() => setFlash(null), 4000);
+      return;
+    }
+    const result = await saveConfig({ platforms: remaining }) as { ok?: boolean; error?: string } | null;
     if (result?.ok) {
       setFlash(`Removed ${PLATFORM_LABELS[platform] || platform}`);
       if (selected === platform) setSelected(null);
       refetch(); refetchConfig();
+      setTimeout(() => setFlash(null), 4000);
+    } else {
+      setFlash(`Failed to remove: ${(result as any)?.error || 'unknown error'}`);
       setTimeout(() => setFlash(null), 4000);
     }
   };
@@ -257,13 +267,13 @@ export function Agents() {
 
       {/* Detail panel */}
       {activePlatform && activeAgent && (
-        <AgentPanel platform={activePlatform} summary={activeAgent} onRefresh={refetch} onRemove={handleRemovePlatform} />
+        <AgentPanel platform={activePlatform} summary={activeAgent} onRefresh={refetch} onRemove={handleRemovePlatform} agentCount={agents?.length || 0} />
       )}
     </div>
   );
 }
 
-function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: string; summary: AgentSummary; onRefresh: () => void; onRemove: (p: string) => void }) {
+function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { platform: string; summary: AgentSummary; onRefresh: () => void; onRemove: (p: string) => void; agentCount: number }) {
   const { enabled: agentsEnabled, reason: agentsDisabledReason } = useAgentsEnabled();
   const { data: agent, loading, refetch } = useApi<AgentDetail>(`/api/agents/${platform}`, [platform]);
   const { mutate: runAgent, loading: starting } = useMutation(`/api/agents/${platform}/run`, 'POST');
@@ -271,6 +281,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
   const { mutate: saveLimits, loading: savingLimits } = useMutation(`/api/agents/${platform}/limits`);
   const { mutate: saveAgent } = useMutation(`/api/agents/${platform}`);
   const { mutate: setupBrowser, loading: settingUpBrowser } = useMutation<unknown, { ok: boolean; message?: string; error?: string }>(`/api/agents/${platform}/browser-setup`, 'POST');
+  const { mutate: confirmBrowser } = useMutation<unknown, { ok: boolean }>(`/api/agents/${platform}/browser-confirm`, 'POST');
   const [editLimits, setEditLimits] = useState<Record<string, Record<string, number>> | null>(null);
   const [editBehavior, setEditBehavior] = useState<AgentDetail['behavior'] | null>(null);
   const [editApiKeys, setEditApiKeys] = useState<Record<string, string> | null>(null);
@@ -307,11 +318,18 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
     }
   };
 
-  const handleBrowserSetupDone = () => {
+  const handleBrowserSetupDone = async () => {
+    const result = await confirmBrowser({});
     setBrowserSetupOpen(false);
     setBrowserSetupError(null);
-    setFlash('Browser profile ready');
-    setTimeout(() => { setFlash(null); onRefresh(); refetch(); }, 2000);
+    if (result?.ok) {
+      setFlash('Browser profile confirmed');
+      onRefresh();
+      refetch();
+      setTimeout(() => setFlash(null), 3000);
+    } else {
+      setBrowserSetupError('Failed to confirm browser profile');
+    }
   };
 
   const startEditLimits = () => {
@@ -481,9 +499,10 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
 
               <button
                 onClick={() => { if (confirm(`Remove ${platform} agent? This won't delete browser profiles or activity history.`)) onRemove(platform); }}
-                className="mono text-[13px] px-3 py-1.5 rounded-md transition-all opacity-50 hover:opacity-100"
+                disabled={agentCount <= 1}
+                className="mono text-[13px] px-3 py-1.5 rounded-md transition-all opacity-50 hover:opacity-100 disabled:opacity-20 disabled:cursor-not-allowed"
                 style={{ color: 'var(--c-red)', border: '1px solid rgba(248,113,113,0.2)' }}
-                title="Remove agent"
+                title={agentCount <= 1 ? 'At least one platform is required' : 'Remove agent'}
               >
                 Remove
               </button>
@@ -852,18 +871,19 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
       {/* Live Activity Feed */}
       <AgentFeed platform={platform} running={state === 'running'} />
 
-      {/* Browser setup modal */}
-      {browserSetupOpen && (
+      {/* Browser setup modal — rendered via portal to avoid stacking context issues */}
+      {browserSetupOpen && createPortal(
         <BrowserSetupModal
           platform={platform}
           color={color}
           onDone={handleBrowserSetupDone}
           onCancel={() => setBrowserSetupOpen(false)}
-        />
+        />,
+        document.body
       )}
 
-      {/* Browser setup error toast */}
-      {browserSetupError && (
+      {/* Browser setup error toast — also portal */}
+      {browserSetupError && createPortal(
         <div className="fixed bottom-6 right-6 max-w-sm px-4 py-3 rounded-lg shadow-2xl animate-fade-up z-50"
           style={{ background: 'var(--c-panel)', border: '1px solid rgba(248,113,113,0.4)' }}>
           <div className="flex items-start gap-3">
@@ -880,7 +900,8 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
               ✕
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
