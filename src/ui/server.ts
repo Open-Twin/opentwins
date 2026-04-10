@@ -92,21 +92,64 @@ export async function startDashboard(port: number): Promise<void> {
     nextPipeline.setHours(pipelineHour, 45, 0, 0);
     if (nextPipeline <= now) nextPipeline.setDate(nextPipeline.getDate() + 1);
 
-    // Compute next heartbeat times per platform
+    // Compute next heartbeat times per platform (respects per-agent interval)
     const enabledPlatforms = config.platforms.filter((p) => p.enabled);
     const platformSchedules = enabledPlatforms.map((p, i) => {
+      const intervalMin = p.heartbeat_interval_minutes || 60;
       const minuteOffset = (i * 10) % 60;
-      const nextRun = new Date(now);
-      nextRun.setMinutes(minuteOffset, 0, 0);
-      if (nextRun <= now || nextRun.getHours() < config.active_hours.start || nextRun.getHours() > config.active_hours.end) {
-        // Next hour
-        nextRun.setHours(nextRun.getHours() + 1, minuteOffset, 0, 0);
+      const { start, end } = config.active_hours;
+
+      // Find the next run time based on the interval
+      const candidate = new Date(now);
+      candidate.setSeconds(0, 0);
+
+      if (intervalMin <= 15) {
+        // Every 15 min — find next 15-min boundary
+        const m = candidate.getMinutes();
+        const nextM = Math.ceil((m + 1) / 15) * 15;
+        candidate.setMinutes(nextM);
+      } else if (intervalMin <= 30) {
+        // Twice per hour at minuteOffset and minuteOffset+30
+        const m = candidate.getMinutes();
+        const slot1 = minuteOffset;
+        const slot2 = (minuteOffset + 30) % 60;
+        const slots = [slot1, slot2].sort((a, b) => a - b);
+        const nextSlot = slots.find((s) => s > m);
+        if (nextSlot !== undefined) {
+          candidate.setMinutes(nextSlot);
+        } else {
+          candidate.setHours(candidate.getHours() + 1, slots[0]);
+        }
+      } else if (intervalMin <= 60) {
+        // Hourly at minuteOffset
+        if (candidate.getMinutes() >= minuteOffset) {
+          candidate.setHours(candidate.getHours() + 1);
+        }
+        candidate.setMinutes(minuteOffset);
+      } else {
+        // Every N hours — find next slot
+        const intervalHours = Math.max(1, Math.round(intervalMin / 60));
+        let h = candidate.getHours();
+        if (candidate.getMinutes() >= minuteOffset) h++;
+        // Find next hour that's a valid slot
+        while (h <= 23 && (h < start || h > end || (h - start) % intervalHours !== 0)) h++;
+        if (h > end) {
+          // Next day
+          candidate.setDate(candidate.getDate() + 1);
+          h = start;
+        }
+        candidate.setHours(h, minuteOffset);
       }
-      if (nextRun.getHours() > config.active_hours.end) {
-        nextRun.setDate(nextRun.getDate() + 1);
-        nextRun.setHours(config.active_hours.start, minuteOffset, 0, 0);
+
+      // Ensure within active hours
+      if (candidate.getHours() < start || candidate.getHours() > end) {
+        if (candidate.getHours() > end) {
+          candidate.setDate(candidate.getDate() + 1);
+        }
+        candidate.setHours(start, minuteOffset, 0, 0);
       }
-      return { platform: p.platform, nextRun: nextRun.toISOString() };
+
+      return { platform: p.platform, nextRun: candidate.toISOString(), intervalMin };
     });
 
     res.json({
