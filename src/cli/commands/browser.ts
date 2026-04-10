@@ -48,9 +48,13 @@ browser
 
     console.log(chalk.bold('Browser Profile Health'));
     console.log('');
-    for (const r of results) {
-      const icon = r.healthy ? chalk.green('OK') : chalk.red('EXPIRED');
-      console.log(`  ${r.platform.padEnd(12)} ${icon}  port:${r.port}`);
+    if (results.length === 0) {
+      log.info('No profiles configured. Run: opentwins browser setup <platform>');
+    } else {
+      for (const r of results) {
+        const icon = r.healthy ? chalk.green('OK') : chalk.red('MISSING');
+        console.log(`  ${r.platform.padEnd(12)} ${icon}  ${r.openclawProfile}  ${chalk.dim(`(${r.status})`)}`);
+      }
     }
     console.log('');
   }));
@@ -67,7 +71,7 @@ browser
       log.info('No profiles configured. Run: opentwins browser setup <platform>');
     } else {
       for (const p of profiles) {
-        console.log(`  ${p.platform.padEnd(12)} port:${p.port}  ${p.profileDir}`);
+        console.log(`  ${p.platform.padEnd(12)} ${p.openclawProfile}`);
       }
     }
     console.log('');

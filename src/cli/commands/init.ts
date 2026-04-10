@@ -2,6 +2,7 @@ import { input, confirm, checkbox, select } from '@inquirer/prompts';
 import chalk from 'chalk';
 import ora from 'ora';
 import { mkdirSync } from 'node:fs';
+import { execaCommand } from 'execa';
 import { program } from '../program.js';
 import { handleAction } from '../error-handler.js';
 import { OpenTwinsConfigSchema, type OpenTwinsConfig, type AuthConfig, type ContentPillar } from '../../config/schema.js';
@@ -14,11 +15,45 @@ import { PLATFORM_TYPES, PLATFORM_DISPLAY_NAMES, PLATFORM_HANDLE_LABELS, PLATFOR
 import type { PlatformType } from '../../util/platform-types.js';
 import * as log from '../../util/logger.js';
 
+async function checkPrereqs(): Promise<boolean> {
+  console.log(chalk.bold.underline('Step 1: Prerequisites'));
+  console.log('');
+
+  const claudeOk = await isClaudeInstalled();
+  if (!claudeOk) {
+    log.error('Claude Code CLI not found.');
+    console.log('');
+    console.log('  Install Claude Code:');
+    console.log(chalk.cyan('    npm install -g @anthropic-ai/claude-code'));
+    console.log('');
+    console.log('  Then run `opentwins init` again.');
+    return false;
+  }
+  log.success('Claude Code CLI found');
+
+  const openclawOk = await isOpenClawInstalled();
+  if (!openclawOk) {
+    log.error('OpenClaw CLI not found.');
+    console.log('');
+    console.log('  OpenClaw provides browser automation for platform agents.');
+    console.log('  Without it, agents cannot interact with social platforms.');
+    console.log('');
+    console.log('  Install OpenClaw:');
+    console.log(chalk.cyan('    npm install -g openclaw'));
+    console.log('');
+    console.log('  Then run `opentwins init` again.');
+    return false;
+  }
+  log.success('OpenClaw CLI found');
+  return true;
+}
+
 program
   .command('init')
   .description('Initialize OpenTwins with your identity and platforms')
   .option('--force', 'Overwrite existing config')
-  .action(handleAction(async (opts: { force?: boolean }) => {
+  .option('--cli', 'Use the interactive CLI prompts instead of the web wizard')
+  .action(handleAction(async (opts: { force?: boolean; cli?: boolean }) => {
     console.log('');
     console.log(chalk.bold('  Welcome to OpenTwins'));
     console.log(chalk.dim('  Your autonomous digital twins across every social platform'));
@@ -29,36 +64,40 @@ program
       return;
     }
 
-    // ── Step 1: Prerequisites ─────────────────────────────────────
-    console.log(chalk.bold.underline('Step 1: Prerequisites'));
+    const prereqsOk = await checkPrereqs();
+    if (!prereqsOk) process.exit(1);
+
+    // Default: launch the web wizard unless --cli was requested
+    if (!opts.cli) {
+      console.log('');
+      console.log(chalk.bold.underline('Step 2: Web Setup Wizard'));
+      console.log('');
+      const port = 3847;
+      console.log(chalk.dim('  Launching the setup wizard in your browser…'));
+      console.log(chalk.cyan(`    http://localhost:${port}/setup`));
+      console.log('');
+
+      // Start the dashboard and open the browser
+      const { startDashboard } = await import('../../ui/server.js');
+      await startDashboard(port);
+
+      // Open browser (best-effort)
+      try {
+        await execaCommand(`open http://localhost:${port}/setup`, { shell: true, reject: false });
+      } catch {
+        // ignore — user can open manually
+      }
+
+      console.log(chalk.dim('  The wizard is running. Follow the steps in your browser.'));
+      console.log(chalk.dim('  Press Ctrl+C here to stop the server.'));
+      console.log('');
+      // Keep the process alive — the dashboard server runs in-process
+      return;
+    }
+
+    // ── Fallback: the old interactive CLI flow (--cli) ────────────
+    console.log(chalk.dim('  Running interactive CLI flow (--cli flag set)'));
     console.log('');
-
-    const claudeOk = await isClaudeInstalled();
-    if (!claudeOk) {
-      log.error('Claude Code CLI not found.');
-      console.log('');
-      console.log('  Install Claude Code:');
-      console.log(chalk.cyan('    npm install -g @anthropic-ai/claude-code'));
-      console.log('');
-      console.log('  Then run `opentwins init` again.');
-      process.exit(1);
-    }
-    log.success('Claude Code CLI found');
-
-    const openclawOk = await isOpenClawInstalled();
-    if (!openclawOk) {
-      log.error('OpenClaw CLI not found.');
-      console.log('');
-      console.log('  OpenClaw provides browser automation for platform agents.');
-      console.log('  Without it, agents cannot interact with social platforms.');
-      console.log('');
-      console.log('  Install OpenClaw:');
-      console.log(chalk.cyan('    npm install -g openclaw'));
-      console.log('');
-      console.log('  Then run `opentwins init` again.');
-      process.exit(1);
-    }
-    log.success('OpenClaw CLI found');
 
     // ── Step 2: Authentication ────────────────────────────────────
     console.log('');

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useApi, useMutation } from '../hooks/useApi.ts';
+import { useAgentsEnabled, HealthBanner } from '../contexts/HealthContext.tsx';
 
 type AgentState = 'needs_setup' | 'needs_api_keys' | 'ready' | 'running' | 'completed' | 'failed' | 'disabled';
 
@@ -116,6 +117,7 @@ function profileUrl(platform: string, handle: string): string {
 }
 
 export function Agents() {
+  const { enabled: agentsEnabled, reason: agentsDisabledReason } = useAgentsEnabled();
   const { data: agents, refetch } = useApi<AgentSummary[]>('/api/agents');
   const { data: config, refetch: refetchConfig } = useApi<{ platforms: Array<{ platform: string; handle: string; profile_url: string; enabled: boolean; limits: any }> }>('/api/config');
   const { mutate: saveConfig, loading: savingConfig } = useMutation('/api/config');
@@ -165,6 +167,8 @@ export function Agents() {
 
   return (
     <div className="space-y-8">
+      {!agentsEnabled && <HealthBanner reason={agentsDisabledReason} />}
+
       {/* Header */}
       <div className="animate-fade-up flex items-start justify-between gap-6 flex-wrap">
         <div>
@@ -260,15 +264,19 @@ export function Agents() {
 }
 
 function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: string; summary: AgentSummary; onRefresh: () => void; onRemove: (p: string) => void }) {
+  const { enabled: agentsEnabled, reason: agentsDisabledReason } = useAgentsEnabled();
   const { data: agent, loading, refetch } = useApi<AgentDetail>(`/api/agents/${platform}`, [platform]);
   const { mutate: runAgent, loading: starting } = useMutation(`/api/agents/${platform}/run`, 'POST');
   const { mutate: stopAgent, loading: stopping } = useMutation(`/api/agents/${platform}/stop`, 'POST');
   const { mutate: saveLimits, loading: savingLimits } = useMutation(`/api/agents/${platform}/limits`);
   const { mutate: saveAgent } = useMutation(`/api/agents/${platform}`);
+  const { mutate: setupBrowser, loading: settingUpBrowser } = useMutation<unknown, { ok: boolean; message?: string; error?: string }>(`/api/agents/${platform}/browser-setup`, 'POST');
   const [editLimits, setEditLimits] = useState<Record<string, Record<string, number>> | null>(null);
   const [editBehavior, setEditBehavior] = useState<AgentDetail['behavior'] | null>(null);
   const [editApiKeys, setEditApiKeys] = useState<Record<string, string> | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
+  const [browserSetupOpen, setBrowserSetupOpen] = useState(false);
+  const [browserSetupError, setBrowserSetupError] = useState<string | null>(null);
 
   const state = summary.state;
   const color = PLATFORM_COLORS[platform] || '#888';
@@ -287,6 +295,23 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
       setFlash('Stop signal sent');
       setTimeout(() => { setFlash(null); onRefresh(); refetch(); }, 2000);
     }
+  };
+
+  const handleBrowserSetup = async () => {
+    setBrowserSetupError(null);
+    const result = await setupBrowser({});
+    if (result?.ok) {
+      setBrowserSetupOpen(true);
+    } else {
+      setBrowserSetupError(result?.error || 'Browser setup failed. Check that OpenClaw gateway is running.');
+    }
+  };
+
+  const handleBrowserSetupDone = () => {
+    setBrowserSetupOpen(false);
+    setBrowserSetupError(null);
+    setFlash('Browser profile ready');
+    setTimeout(() => { setFlash(null); onRefresh(); refetch(); }, 2000);
   };
 
   const startEditLimits = () => {
@@ -423,10 +448,19 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
               )}
 
               {state === 'needs_setup' && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm" style={{ color: 'var(--c-amber)' }}>Browser not configured</span>
-                  <CmdHint cmd={`opentwins browser setup ${platform}`} />
-                </div>
+                <button
+                  onClick={handleBrowserSetup}
+                  disabled={settingUpBrowser || !agentsEnabled}
+                  title={!agentsEnabled ? (agentsDisabledReason || 'Agents unavailable') : 'Launch Chrome to log in'}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    color: 'var(--c-amber)',
+                    background: 'rgba(251,191,36,0.08)',
+                    border: '1px solid rgba(251,191,36,0.3)',
+                  }}
+                >
+                  {settingUpBrowser ? 'Launching Chrome…' : '🌐 Set up browser'}
+                </button>
               )}
 
               {state === 'running' && (
@@ -434,7 +468,15 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
               )}
 
               {(state === 'ready' || state === 'completed' || state === 'failed') && (
-                <ActionBtn onClick={handleRun} loading={starting} accent>▶ Run Now</ActionBtn>
+                <ActionBtn
+                  onClick={handleRun}
+                  loading={starting}
+                  accent
+                  disabled={!agentsEnabled}
+                  title={!agentsEnabled ? (agentsDisabledReason || 'Agents unavailable') : undefined}
+                >
+                  ▶ Run Now
+                </ActionBtn>
               )}
 
               <button
@@ -809,6 +851,131 @@ function AgentPanel({ platform, summary, onRefresh, onRemove }: { platform: stri
 
       {/* Live Activity Feed */}
       <AgentFeed platform={platform} running={state === 'running'} />
+
+      {/* Browser setup modal */}
+      {browserSetupOpen && (
+        <BrowserSetupModal
+          platform={platform}
+          color={color}
+          onDone={handleBrowserSetupDone}
+          onCancel={() => setBrowserSetupOpen(false)}
+        />
+      )}
+
+      {/* Browser setup error toast */}
+      {browserSetupError && (
+        <div className="fixed bottom-6 right-6 max-w-sm px-4 py-3 rounded-lg shadow-2xl animate-fade-up z-50"
+          style={{ background: 'var(--c-panel)', border: '1px solid rgba(248,113,113,0.4)' }}>
+          <div className="flex items-start gap-3">
+            <div className="text-lg" style={{ color: 'var(--c-red)' }}>⚠</div>
+            <div className="flex-1">
+              <div className="text-sm font-medium mb-1" style={{ color: 'var(--c-red)' }}>Browser setup failed</div>
+              <div className="mono text-[12px]" style={{ color: 'var(--c-text-muted)' }}>{browserSetupError}</div>
+            </div>
+            <button
+              onClick={() => setBrowserSetupError(null)}
+              className="text-sm opacity-50 hover:opacity-100"
+              style={{ color: 'var(--c-text-muted)' }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Browser Setup Modal ───────────────────────────────────────
+
+function BrowserSetupModal({ platform, color, onDone, onCancel }: {
+  platform: string;
+  color: string;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-6"
+      style={{ background: 'rgba(6,8,13,0.85)', backdropFilter: 'blur(8px)' }}
+      onClick={onCancel}
+    >
+      <div
+        className="panel noise max-w-lg w-full animate-fade-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6">
+          {/* Header with platform badge */}
+          <div className="flex items-center gap-3 mb-5">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: `${color}15`, border: `1px solid ${color}40` }}
+            >
+              <div className="text-xl">🌐</div>
+            </div>
+            <div>
+              <div className="text-lg font-semibold capitalize" style={{ color: 'var(--c-text)' }}>
+                {platform} browser setup
+              </div>
+              <div className="mono text-[12px]" style={{ color: 'var(--c-text-muted)' }}>
+                Chrome is launching with a dedicated profile
+              </div>
+            </div>
+          </div>
+
+          {/* Steps */}
+          <div className="space-y-3 mb-6">
+            <InstructionStep num={1} text={`Chrome has opened the ${platform} login page`} />
+            <InstructionStep num={2} text="Sign in (complete captchas or 2FA if prompted)" />
+            <InstructionStep num={3} text="Come back here and click the button below" />
+          </div>
+
+          {/* Status hint */}
+          <div className="mono text-[12px] px-3 py-2 rounded-lg mb-5" style={{
+            color: 'var(--c-text-muted)',
+            background: 'rgba(255,255,255,0.015)',
+            border: '1px solid var(--c-border-dim)',
+          }}>
+            OpenClaw manages a dedicated browser profile for this platform. You only need to log in once — the session persists across agent runs.
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-3">
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+              style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)', background: 'transparent' }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onDone}
+              className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-all"
+              style={{
+                color: 'var(--c-teal)',
+                background: 'var(--c-teal-glow)',
+                border: '1px solid rgba(45,212,191,0.3)',
+              }}
+            >
+              ✓ I've logged in
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InstructionStep({ num, text }: { num: number; text: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div
+        className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold mono shrink-0"
+        style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border-dim)', color: 'var(--c-text-dim)' }}
+      >
+        {num}
+      </div>
+      <div className="text-sm pt-0.5" style={{ color: 'var(--c-text)' }}>{text}</div>
     </div>
   );
 }
@@ -985,22 +1152,8 @@ function LimitGroup({ title, limits, editing, color, onChange }: {
   );
 }
 
-function CmdHint({ cmd }: { cmd: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      onClick={() => { navigator.clipboard.writeText(cmd); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-      className="mono text-[14px] px-2.5 py-1 rounded-md transition-colors"
-      style={{ background: 'rgba(251,191,36,0.06)', color: 'var(--c-amber)', border: '1px solid rgba(251,191,36,0.15)' }}
-      title="Click to copy"
-    >
-      {copied ? 'Copied!' : cmd}
-    </button>
-  );
-}
-
-function ActionBtn({ children, onClick, loading: isLoading, accent, danger, disabled }: {
-  children: React.ReactNode; onClick: () => void; loading?: boolean; accent?: boolean; danger?: boolean; disabled?: boolean;
+function ActionBtn({ children, onClick, loading: isLoading, accent, danger, disabled, title }: {
+  children: React.ReactNode; onClick: () => void; loading?: boolean; accent?: boolean; danger?: boolean; disabled?: boolean; title?: string;
 }) {
   const color = danger ? 'var(--c-red)' : 'var(--c-teal)';
   const bg = danger ? 'rgba(248,113,113,0.08)' : 'var(--c-teal-glow)';
@@ -1009,7 +1162,8 @@ function ActionBtn({ children, onClick, loading: isLoading, accent, danger, disa
     <button
       onClick={onClick}
       disabled={isLoading || disabled}
-      className="mono text-[13px] px-4 py-1.5 rounded-md font-medium transition-all duration-200 disabled:opacity-50"
+      title={title}
+      className="mono text-[13px] px-4 py-1.5 rounded-md font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       style={{ background: bg, color, border: `1px solid ${border}` }}
     >
       {isLoading ? (danger ? 'Stopping...' : 'Starting...') : children}

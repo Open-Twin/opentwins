@@ -16,7 +16,7 @@ OpenTwins deploys AI agents that engage on Reddit, Twitter/X, LinkedIn, Bluesky,
 # Install from npm
 npm install -g opentwins
 
-# Initialize - walks you through identity, platforms, and auth
+# Initialize - launches a web wizard in your browser
 opentwins init
 
 # Set up browser profiles (one per platform)
@@ -27,6 +27,14 @@ opentwins browser setup linkedin
 
 # Start everything (scheduler + dashboard)
 opentwins start --ui
+```
+
+`opentwins init` checks prerequisites, starts the dashboard, and opens a setup wizard at `http://localhost:3847/setup`. The wizard walks you through authentication, identity, platforms, voice, and schedule — no CLI prompts.
+
+If you prefer the old interactive CLI flow (useful for headless or scripted installs), pass `--cli`:
+
+```bash
+opentwins init --cli
 ```
 
 ## Install from Source
@@ -52,7 +60,9 @@ opentwins --version
 ## Commands
 
 ```
-opentwins init              Set up your identity, platforms, and auth
+opentwins init              Launch the web setup wizard (default)
+opentwins init --cli        Interactive CLI setup (fallback, headless-friendly)
+opentwins init --force      Overwrite an existing config
 opentwins start             Start the agent scheduler
 opentwins start --ui        Start scheduler + web dashboard
 opentwins start -d          Start as background daemon
@@ -109,11 +119,11 @@ Runs daily to generate fresh content for all platforms:
 
 Access at `http://localhost:3847` when running `opentwins start --ui` or `opentwins ui`.
 
-- **Command** - Agent status, pipeline status, recent runs, quality overview
-- **Agents** - Per-agent controls: run/stop, edit limits, view schedule
-- **Activity** - Searchable log of all posted content
-- **Quality** - Style distribution, disagreement rate, word count trends
-- **Config** - Edit identity, platforms, and settings live
+- **Command** — Mission control: KPI cards (agents, runs, tool calls, automation), platform agent cards, recent runs table, content pipeline flow
+- **Agents** — Per-agent controls with hero panel (run/stop/remove), today's stats, limits with progress bars, behavior tuning, today's schedule, live activity feed from the latest Claude session
+- **Activity** — Sessions grouped by run, each expandable to show the full event feed (thinking, tool calls, errors) with filter chips by event kind
+- **Quality** — Today's snapshot KPIs with health coloring, trend charts (volume, disagreement rate, word density, style distribution) over 7/14/30 days
+- **Config** — Identity, professional context, content pillars, voice, schedule, and pipeline settings. Saving regenerates agent files automatically
 
 ## Architecture
 
@@ -140,13 +150,15 @@ OpenTwins uses:
 
 ## Configuration
 
-After `opentwins init`, your config lives at `~/.opentwins/config.json`. Edit via the web dashboard or re-run `opentwins init --force`.
+After `opentwins init`, your config lives at `~/.opentwins/config.json`. Edit it via the web dashboard's **Config** tab or re-run `opentwins init --force` to start the wizard from scratch.
 
 ### Authentication
 
 Two options:
-- **Claude Code subscription** - Uses OAuth token from `claude setup-token`
-- **Anthropic API key** - Uses API key from [console.anthropic.com](https://console.anthropic.com/settings/keys)
+- **Claude Code subscription** — Uses OAuth token from `claude setup-token`
+- **Anthropic API key** — Uses API key from [console.anthropic.com](https://console.anthropic.com/settings/keys)
+
+The setup wizard validates credentials before saving, so you'll know immediately if the token is wrong.
 
 ## License
 

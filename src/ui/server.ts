@@ -4,11 +4,14 @@ import { fileURLToPath } from 'node:url';
 import { existsSync, readFileSync } from 'node:fs';
 import { getLockFile } from '../util/paths.js';
 import { getDb } from '../db/index.js';
-import { loadConfig } from '../config/loader.js';
+import { loadConfig, configExists } from '../config/loader.js';
 import { isDaemonRunning, startDaemon, stopDaemon } from '../scheduler/daemon.js';
 import { getQualityMetrics, getDisagreementRatio } from './api/quality.js';
 import { handleUpdateConfig } from './api/config.js';
-import { handleListAgents, handleGetAgent, handleRunAgent, handleStopAgent, handleUpdateLimits, handleUpdateAgent, handleGetAgentFeed } from './api/agents.js';
+import { handleListAgents, handleGetAgent, handleRunAgent, handleStopAgent, handleUpdateLimits, handleUpdateAgent, handleGetAgentFeed, handleBrowserSetup } from './api/agents.js';
+import { handleSetup, handleSetupStatus, handleValidateAuth } from './api/setup.js';
+import { handleHealth } from './api/health.js';
+import { handleUsage } from './api/usage.js';
 import { getSessions } from '../util/session-parser.js';
 import * as log from '../util/logger.js';
 
@@ -39,6 +42,11 @@ export async function startDashboard(port: number): Promise<void> {
     const { platform, date } = req.query;
     const targetDate = (date as string) || new Date().toISOString().split('T')[0];
 
+    if (!configExists()) {
+      res.json({ sessions: [] });
+      return;
+    }
+
     try {
       const config = loadConfig();
       const platforms = platform
@@ -55,6 +63,10 @@ export async function startDashboard(port: number): Promise<void> {
   });
 
   app.get('/api/status', async (_req, res) => {
+    if (!configExists()) {
+      res.json({ configured: false });
+      return;
+    }
     const config = loadConfig();
     const running = await isDaemonRunning();
     const today = new Date().toISOString().split('T')[0];
@@ -115,6 +127,10 @@ export async function startDashboard(port: number): Promise<void> {
   });
 
   app.get('/api/config', (_req, res) => {
+    if (!configExists()) {
+      res.status(404).json({ error: 'Not configured' });
+      return;
+    }
     try {
       const config = loadConfig();
       const safe = { ...config, auth: { ...config.auth, claude_token: '***', api_key: '***' } };
@@ -123,6 +139,17 @@ export async function startDashboard(port: number): Promise<void> {
       res.status(500).json({ error: 'Failed to load config' });
     }
   });
+
+  // Setup / onboarding
+  app.get('/api/setup/status', (req, res) => handleSetupStatus(req, res));
+  app.post('/api/setup/validate-auth', (req, res) => { handleValidateAuth(req, res); });
+  app.post('/api/setup', (req, res) => { handleSetup(req, res); });
+
+  // Live health monitor — OpenClaw gateway + Claude service status
+  app.get('/api/health', (req, res) => { handleHealth(req, res); });
+
+  // Token usage & cost report
+  app.get('/api/usage', (req, res) => { handleUsage(req, res); });
 
   app.get('/api/quality', (req, res) => getQualityMetrics(req, res));
   app.get('/api/quality/disagreement', (req, res) => getDisagreementRatio(req, res));
@@ -158,6 +185,7 @@ export async function startDashboard(port: number): Promise<void> {
   app.get('/api/agents', (req, res) => handleListAgents(req, res));
   app.get('/api/agents/:platform', (req, res) => handleGetAgent(req, res));
   app.get('/api/agents/:platform/feed', (req, res) => handleGetAgentFeed(req, res));
+  app.post('/api/agents/:platform/browser-setup', (req, res) => { handleBrowserSetup(req, res); });
   app.post('/api/agents/:platform/run', (req, res) => { handleRunAgent(req, res); });
   app.post('/api/agents/:platform/stop', (req, res) => handleStopAgent(req, res));
   app.put('/api/agents/:platform/limits', (req, res) => handleUpdateLimits(req, res));

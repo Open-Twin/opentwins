@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi, useMutation, today } from '../hooks/useApi.ts';
+import { useAgentsEnabled, HealthBanner } from '../contexts/HealthContext.tsx';
 
 interface StatusData {
   daemon: boolean;
@@ -91,6 +92,7 @@ function KpiCard({ label, value, sub, accent }: { label: string; value: string |
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const { enabled: agentsEnabled, reason: agentsDisabledReason } = useAgentsEnabled();
   const { data: status, loading, refetch } = useApi<StatusData>('/api/status');
   const { data: activityResp } = useApi<{ sessions: Array<{ platform: string; toolCount: number; eventCount: number }> }>(`/api/activity?date=${today()}`);
   const { data: quality } = useApi<QualitySummary[]>(`/api/quality?date=${today()}`);
@@ -137,6 +139,8 @@ export function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {!agentsEnabled && <HealthBanner reason={agentsDisabledReason} />}
+
       {/* ── Header ──────────────────────────────────────────────── */}
       <div className="animate-fade-up flex items-start justify-between gap-6 flex-wrap">
         <div>
@@ -161,15 +165,19 @@ export function Dashboard() {
           )}
           <button
             onClick={toggleScheduler}
-            disabled={startingScheduler || stoppingScheduler}
-            className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg font-medium text-sm transition-all disabled:opacity-60"
+            disabled={startingScheduler || stoppingScheduler || (!agentsEnabled && !status?.daemon)}
+            className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               background: status?.daemon ? 'rgba(52,211,153,0.12)' : 'var(--c-panel)',
               border: `1px solid ${status?.daemon ? 'rgba(52,211,153,0.3)' : 'var(--c-border-dim)'}`,
               color: status?.daemon ? 'var(--c-green)' : 'var(--c-text-dim)',
               boxShadow: status?.daemon ? '0 0 20px rgba(52,211,153,0.08)' : undefined,
             }}
-            title={status?.daemon ? 'Pause all agent heartbeats and pipeline' : 'Start hourly agent heartbeats and daily pipeline'}
+            title={
+              !agentsEnabled && !status?.daemon ? (agentsDisabledReason || 'Agents unavailable') :
+              status?.daemon ? 'Pause all agent heartbeats and pipeline' :
+              'Start hourly agent heartbeats and daily pipeline'
+            }
           >
             <span className={`status-dot ${status?.daemon ? 'online' : 'offline'}`} />
             {startingScheduler ? 'Starting…' : stoppingScheduler ? 'Stopping…' : status?.daemon ? 'Automation On' : 'Automation Off'}

@@ -4,8 +4,9 @@ import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { getPlatformWorkspaceDir, getLockFile, getBrowserProfilesConfigPath, getConfigPath } from '../../util/paths.js';
 import { PLATFORM_TYPES, PLATFORM_API_KEYS } from '../../util/platform-types.js';
-import { loadConfig } from '../../config/loader.js';
+import { loadConfig, configExists } from '../../config/loader.js';
 import { findLatestSessionFile, extractEventsFromSession } from '../../util/session-parser.js';
+import { setupProfile } from '../../browser/manager.js';
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -67,6 +68,10 @@ const agentLogs: Record<string, { output: string; startedAt: string; completedAt
 // ── GET /api/agents ───────────────────────────────────────────
 
 export function handleListAgents(_req: Request, res: Response): void {
+  if (!configExists()) {
+    res.json([]);
+    return;
+  }
   try {
     const config = loadConfig();
     const agents = config.platforms.map((p) => {
@@ -99,6 +104,10 @@ export function handleGetAgent(req: Request, res: Response): void {
   const platform = req.params.platform as string;
   if (!PLATFORM_TYPES.includes(platform as any)) {
     res.status(400).json({ error: `Unknown platform: ${platform}` });
+    return;
+  }
+  if (!configExists()) {
+    res.status(404).json({ error: 'Not configured' });
     return;
   }
 
@@ -366,5 +375,29 @@ export function handleGetAgentFeed(req: Request, res: Response): void {
     res.json({ events, sessionFile, totalEvents: events.length });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to read session' });
+  }
+}
+
+// ── POST /api/agents/:platform/browser-setup ──────────────────
+// Launch Chrome with a dedicated profile for this platform so the user can log in.
+// This calls the same setupProfile() used by `opentwins browser setup <platform>`.
+
+export async function handleBrowserSetup(req: Request, res: Response): Promise<void> {
+  const platform = req.params.platform as string;
+  if (!PLATFORM_TYPES.includes(platform as any)) {
+    res.status(400).json({ error: `Unknown platform: ${platform}` });
+    return;
+  }
+
+  try {
+    await setupProfile(platform);
+    res.json({
+      ok: true,
+      message: `Chrome launched for ${platform}. Log in, then close Chrome when done.`,
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: err instanceof Error ? err.message : 'Browser setup failed',
+    });
   }
 }
