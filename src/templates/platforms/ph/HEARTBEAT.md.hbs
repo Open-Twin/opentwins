@@ -53,7 +53,7 @@ Read `limits.json`. For each counter (comments, upvotes, bookmarks):
 ## 1b. Read Today Summary
 
 Read `memory/today_summary.json`. Use tallies to inform comment decisions:
-- `disagreements` < 25% of `comments` AND `comments >= 4` → next MUST disagree (PH makers want product questions more than critique — keep it measured)
+- `disagreements` < {{behavior.disagree_target_pct}}% of `comments` AND `comments >= 4` → next MUST disagree (PH makers want product questions more than critique — keep it measured)
 - `last_style` was insight → next must be short/personal/pushback
 - Any style is 60%+ of total → MUST use a different style
 - `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question

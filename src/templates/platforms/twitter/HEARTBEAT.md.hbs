@@ -37,7 +37,7 @@ INSIGHTS.md: read only for schedule gen / original content, NOT routine heartbea
 ## § 1b. Read Today Summary
 
 Read `memory/today_summary.json`. Use tallies to inform comment decisions:
-- `disagreements` < 50% of `comments` AND `comments >= 3` → next MUST disagree (Twitter thrives on hot takes — be aggressive)
+- `disagreements` < {{behavior.disagree_target_pct}}% of `comments` AND `comments >= 3` → next MUST disagree (Twitter thrives on hot takes — be aggressive)
 - `last_style` was insight → next must be short/personal/pushback
 - Any style is 60%+ of total → MUST use a different style
 - `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question
