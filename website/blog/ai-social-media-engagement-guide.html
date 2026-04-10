@@ -49,6 +49,34 @@
   }
   </script>
 
+  <!-- Structured Data: BreadcrumbList -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://opentwins.ai/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Blog",
+        "item": "https://opentwins.ai/blog/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": "AI Social Media Engagement: A Practical Guide",
+        "item": "https://opentwins.ai/blog/ai-social-media-engagement-guide.html"
+      }
+    ]
+  }
+  </script>
+
   <link rel="stylesheet" href="/styles.css">
   <style>
     body { background: #080b12; color: #e2e8f0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
@@ -153,7 +181,7 @@
 
         <p><strong>Browser-based:</strong> The tool controls a real web browser, interacting with platforms the same way a human would. This approach is slower but much safer. From the platform's perspective, it looks identical to a human clicking and typing. Tools like OpenTwins, Phantom Buster and Browser Bear use this approach.</p>
 
-        <p>Browser-based engagement is almost always the right choice. The speed advantage of API-based tools is irrelevant when you're rate-limiting your actions anyway, and the risk of account suspension is dramatically lower.</p>
+        <p>Browser-based engagement is almost always the right choice. The speed advantage of API-based tools is irrelevant when you're rate-limiting your actions anyway and the risk of account suspension is dramatically lower.</p>
 
         <h2 id="platform-by-platform">Platform-by-Platform Breakdown</h2>
 

@@ -49,6 +49,34 @@
   }
   </script>
 
+  <!-- Structured Data: BreadcrumbList -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://opentwins.ai/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Blog",
+        "item": "https://opentwins.ai/blog/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": "Grow Your LinkedIn Presence with AI Agents",
+        "item": "https://opentwins.ai/blog/grow-linkedin-presence-ai-agents.html"
+      }
+    ]
+  }
+  </script>
+
   <link rel="stylesheet" href="/styles.css">
   <style>
     body { background: #080b12; color: #e2e8f0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
@@ -147,7 +175,7 @@
 
         <p>Research from LinkedIn themselves shows that users who engage daily see 5x more profile views and 3x more connection requests than those who post once a week. The compounding effect is real, but it requires a level of consistency that most professionals simply can't maintain alongside their day job.</p>
 
-        <p>Many people start strong. Week one, they're commenting on everything. By week three, a product launch or a deadline hits, and their LinkedIn activity drops to zero. When they come back two months later, they're starting from scratch.</p>
+        <p>Many people start strong. Week one, they're commenting on everything. By week three, a product launch or a deadline hits and their LinkedIn activity drops to zero. When they come back two months later, they're starting from scratch.</p>
 
         <h3>The Ghost Profile Problem</h3>
 
@@ -155,7 +183,7 @@
 
         <h2 id="what-ai-agents-do">What AI Agents Actually Do on LinkedIn</h2>
 
-        <p>AI agents for LinkedIn aren't the spammy automation tools of 2020. Modern agents, powered by large language models like Claude, can read a post, understand its context, and generate a comment that sounds like something you would actually write.</p>
+        <p>AI agents for LinkedIn aren't the spammy automation tools of 2020. Modern agents, powered by large language models like Claude, can read a post, understand its context and generate a comment that sounds like something you would actually write.</p>
 
         <p>Here's what a well-configured AI agent does in a typical cycle:</p>
 
@@ -244,7 +272,7 @@
 
         <h2 id="rate-limits">Understanding LinkedIn's Rate Limits</h2>
 
-        <p>LinkedIn has sophisticated detection for automated behavior, and the limits are tighter than most people think:</p>
+        <p>LinkedIn has sophisticated detection for automated behavior and the limits are tighter than most people think:</p>
 
         <ul>
           <li><strong>Connection requests:</strong> 100-200 per week (with a daily soft limit around 20-30)</li>
