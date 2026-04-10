@@ -77,6 +77,39 @@
   }
   </script>
 
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Can social media automation get you banned?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Social media automation can get you banned if it triggers spam-like behavior patterns. The main triggers are velocity anomalies (sudden activity spikes), timing patterns (perfectly regular intervals), content repetition (identical or near-identical comments), API fingerprints (using unofficial APIs) and user reports. However, browser-based automation with conservative rate limits and unique content carries very low risk."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do platforms detect automated accounts?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Platforms detect automated accounts through behavioral analysis (comparing current activity against historical baselines), timing pattern analysis (checking for regular intervals between actions), content fingerprinting (detecting templated or repetitive comments), API access monitoring (flagging unofficial API usage), network graph analysis (detecting mass follow/unfollow patterns) and user reports. Detection systems target spam behavior rather than automation itself."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the safest way to automate social media?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The safest way to automate social media is to use browser-based tools (not API-based), stay within conservative daily limits (15-25 comments on LinkedIn, 25-40 on Twitter), ramp up gradually over 3-4 weeks, generate unique contextual comments for every post, operate during natural business hours with random timing between actions and review automated output weekly. Tools like OpenTwins use real browser automation with configurable rate limits to minimize detection risk."
+        }
+      }
+    ]
+  }
+  </script>
+
   <link rel="stylesheet" href="/styles.css">
   <style>
     body { background: #080b12; color: #e2e8f0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
@@ -133,6 +166,18 @@
         <p class="text-lg text-slate-400">Platform detection is smarter than ever. Here's what actually triggers flags, what doesn't and how to automate safely based on what we know about each platform's detection systems.</p>
       </header>
 
+      <!-- Key Takeaways -->
+      <div style="background: rgba(45,212,191,0.06); border: 1px solid rgba(45,212,191,0.15); border-radius: 12px; padding: 24px; margin-bottom: 32px;">
+        <div style="font-weight: 700; margin-bottom: 12px; color: #2dd4bf;">Key Takeaways</div>
+        <ul style="margin: 0; padding-left: 1.25rem; color: #cbd5e1; font-size: 0.95rem; line-height: 1.8;">
+          <li>Platform detection systems target spam-like behavior, not automation itself - high-quality engagement that adds value is rarely flagged.</li>
+          <li>The top detection triggers are velocity anomalies, timing patterns, content repetition, API fingerprints and user reports.</li>
+          <li>Browser-based automation is significantly safer than API-based tools because it produces request patterns identical to real human interaction.</li>
+          <li>Safe daily limits for LinkedIn are 15-25 comments and 30-50 likes; for Twitter, 25-40 replies and 50-100 likes.</li>
+          <li>Always ramp up gradually over 3-4 weeks, starting at 25% of target activity and increasing by 25% each week.</li>
+        </ul>
+      </div>
+
       <div class="toc mb-12 p-6 rounded-xl bg-slate-800/20 border border-white/5">
         <div class="font-mono text-xs uppercase tracking-[0.15em] text-slate-500 mb-4">Table of Contents</div>
         <ol class="space-y-2 text-sm list-decimal list-inside">
@@ -152,9 +197,9 @@
 
         <h2 id="detection-landscape">The Detection Landscape in 2026</h2>
 
-        <p>Social media platforms have invested hundreds of millions of dollars in bot detection over the past five years. LinkedIn, Twitter, Reddit and Meta all run sophisticated detection systems that analyze behavioral patterns, network graphs and content fingerprints to identify automated accounts.</p>
+        <p>Social media platforms have invested hundreds of millions of dollars in bot detection over the past five years. LinkedIn, Twitter, Reddit and Meta all run sophisticated detection systems that analyze behavioral patterns, network graphs and content fingerprints to identify automated accounts. Safe social media automation means using tools that mimic real human behavior while staying within platform-acceptable activity limits.</p>
 
-        <p>But here's what most people get wrong: detection systems aren't looking for automation per se. They're looking for <strong>spam</strong>. The platform doesn't care if you use a tool to post. It cares if your behavior degrades the experience for other users.</p>
+        <p>OpenTwins is an open-source AI agent platform that approaches this problem through browser-based automation, configurable rate limits and AI-generated content that varies in style and substance for every interaction. But here's what most people get wrong: detection systems aren't looking for automation per se. They're looking for <strong>spam</strong>. The platform doesn't care if you use a tool to post. It cares if your behavior degrades the experience for other users.</p>
 
         <p>This distinction matters because it defines what "safe" automation looks like. If your automated engagement adds genuine value to conversations, platforms have little incentive to flag it. If it's repetitive, irrelevant or high-volume garbage, you'll get caught regardless of how sophisticated your tooling is.</p>
 
@@ -255,7 +300,7 @@
 
         <p>This is the single most important technical decision for automation safety.</p>
 
-        <p><strong>API-based tools</strong> connect to platforms through their programming interfaces (official or unofficial). Platforms can detect API access patterns, rate-limit them independently from browser traffic and (in the case of unofficial APIs) take legal action against the tool providers. LinkedIn famously sued hiQ Labs over unauthorized scraping in a case that went to the Supreme Court.</p>
+        <p><strong>API-based tools</strong> like <a href="https://expandi.io" target="_blank" rel="noopener noreferrer">Expandi</a> and <a href="https://phantombuster.com" target="_blank" rel="noopener noreferrer">PhantomBuster</a> connect to platforms through their programming interfaces (official or unofficial). Platforms can detect API access patterns, rate-limit them independently from browser traffic and (in the case of unofficial APIs) take legal action against the tool providers. LinkedIn famously sued hiQ Labs over unauthorized scraping in a case that went to the Supreme Court.</p>
 
         <p><strong>Browser-based tools</strong> control a real web browser - the same Chromium that you use manually. From the platform's server, a request from a browser-based tool is indistinguishable from a request from a human user. The HTTP headers, cookies, JavaScript execution environment and network patterns are identical.</p>
 
@@ -311,7 +356,7 @@
           <li>Articles: 0-1 (quality over quantity)</li>
         </ul>
 
-        <p>Important: these limits assume browser-based automation with varied timing and unique content. API-based automation should use significantly lower limits.</p>
+        <p>Important: these limits assume browser-based automation with varied timing and unique content. API-based automation should use significantly lower limits. Scheduling tools like <a href="https://buffer.com" target="_blank" rel="noopener noreferrer">Buffer</a> and <a href="https://hootsuite.com" target="_blank" rel="noopener noreferrer">Hootsuite</a> operate within these limits for content posting, but they don't handle engagement automation. For tools that handle both posting and engagement, browser-based platforms like OpenTwins enforce these limits automatically through their scheduler configuration.</p>
 
         <h2 id="ramp-up">The Ramp-Up Protocol</h2>
 
