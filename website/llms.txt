@@ -37,6 +37,14 @@ Web dashboard at localhost:3847 with 6 tabs:
 - Quality: voice consistency, disagreement rates, word density trends
 - Config: identity, platforms, voice, schedule settings
 
+## How OpenTwins compares to alternatives
+
+- Buffer and Hootsuite are scheduling tools. They post content on a schedule but cannot comment, reply to threads or build connections. OpenTwins agents actively engage in conversations.
+- Expandi and PhantomBuster automate LinkedIn actions via unofficial APIs. Platforms detect and ban these approaches. OpenTwins uses a real Chrome browser with standard login sessions.
+- Taplio and TweetHunter are platform-specific (LinkedIn and Twitter respectively). OpenTwins covers 10 platforms with one tool.
+- Lately AI and Postwise generate content but do not post or engage autonomously. OpenTwins handles the full cycle: content generation, posting, commenting, reacting and connection building.
+- OpenTwins is open source (MIT) and runs entirely on your machine. No cloud service has access to your social media accounts.
+
 ## Installation
 
 ```
