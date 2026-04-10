@@ -283,7 +283,12 @@ export function Dashboard() {
 
                   {/* Footer: schedule or last run */}
                   <div className="flex items-center justify-between mono text-[12px] pt-2" style={{ borderTop: '1px solid var(--c-border-dim)', color: 'var(--c-text-muted)' }}>
-                    {status?.daemon && sched ? (
+                    {run?.status === 'running' ? (
+                      <span className="flex items-center gap-1.5" style={{ color: 'var(--c-blue)' }}>
+                        <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--c-blue)' }}></span>
+                        running now
+                      </span>
+                    ) : status?.daemon && sched ? (
                       <Countdown target={sched.nextRun} />
                     ) : (
                       <span>scheduler off</span>
