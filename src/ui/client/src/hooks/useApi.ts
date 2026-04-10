@@ -6,7 +6,8 @@ export function useApi<T>(url: string, deps: unknown[] = []) {
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(() => {
-    setLoading(true);
+    // Only show loading spinner on initial fetch (when no data yet)
+    // Background refetches update data silently without flashing
     setError(null);
     fetch(url)
       .then((res) => {
