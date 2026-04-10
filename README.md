@@ -1,10 +1,13 @@
 # OpenTwins
 
 [![CI](https://github.com/Open-Twin/opentwins/actions/workflows/ci.yml/badge.svg)](https://github.com/Open-Twin/opentwins/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/opentwins.svg)](https://www.npmjs.com/package/opentwins)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
 
 Your autonomous digital twins across every social platform. [opentwins.ai](https://opentwins.ai)
+
+> Deploy AI agents that engage on LinkedIn, Twitter/X, Reddit, Bluesky, Threads, Medium, Substack, Dev.to, Product Hunt, and Indie Hackers - using your identity, voice, and content strategy. Powered by Claude and OpenClaw.
 
 OpenTwins deploys AI agents that engage on Reddit, Twitter/X, LinkedIn, Bluesky, Threads, Medium, Substack, Dev.to, Product Hunt, and Indie Hackers - using your identity, voice, and content strategy.
 
