@@ -71,6 +71,14 @@ export function createScheduler(config: OpenTwinsConfig): Bree {
     });
   });
 
+  // Browser cleanup - close excess tabs every minute, kill zombie Chrome every run
+  jobs.push({
+    name: 'browser-cleanup',
+    cron: '* * * * *',
+    timezone: config.timezone,
+    path: findWorker('browser-cleanup.js'),
+  });
+
   return new Bree({
     jobs,
     root: false,
