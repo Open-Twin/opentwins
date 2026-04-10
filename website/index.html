@@ -73,7 +73,7 @@
         <a href="#results" class="text-sm text-slate-400 hover:text-teal transition-colors">Results</a>
         <a href="#for-you" class="text-sm text-slate-400 hover:text-teal transition-colors">Use Cases</a>
         <a href="#how-it-works" class="text-sm text-slate-400 hover:text-teal transition-colors">How It Works</a>
-        <a href="#features" class="text-sm text-slate-400 hover:text-teal transition-colors">Features</a>
+        <a href="#dashboard" class="text-sm text-slate-400 hover:text-teal transition-colors">Dashboard</a>
       </div>
       <div class="flex items-center gap-3">
         <a href="https://github.com/Open-Twin/opentwins" target="_blank" rel="noopener" class="hidden sm:flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors" aria-label="GitHub">
@@ -90,64 +90,318 @@
       <a href="#results" class="block text-sm text-slate-400 hover:text-teal">Results</a>
       <a href="#for-you" class="block text-sm text-slate-400 hover:text-teal">Use Cases</a>
       <a href="#how-it-works" class="block text-sm text-slate-400 hover:text-teal">How It Works</a>
-      <a href="#features" class="block text-sm text-slate-400 hover:text-teal">Features</a>
+      <a href="#dashboard" class="block text-sm text-slate-400 hover:text-teal">Dashboard</a>
       <a href="#get-started" class="block text-sm text-teal font-medium">Get Started</a>
     </div>
   </nav>
 
   <!-- ═══════════ HERO ═══════════ -->
-  <section class="relative pt-32 pb-16 md:pt-44 md:pb-24 overflow-hidden">
+  <style>
+    @keyframes count-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .counter-val { animation: count-up 0.3s ease forwards; }
+    @keyframes feed-in { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+    .feed-item { animation: feed-in 0.4s ease forwards; }
+    .feed-item.fading { opacity: 0; transform: translateX(-20px); transition: all 0.3s ease; }
+    .live-dot { animation: pulse 2s ease infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  </style>
+
+  <section class="relative pt-24 pb-16 md:pt-40 md:pb-20 overflow-hidden">
     <div class="absolute inset-0 hero-glow"></div>
     <div class="absolute inset-0 grid-bg opacity-40"></div>
-    <div class="relative max-w-6xl mx-auto px-6 text-center">
-      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-teal/20 bg-teal/5 mb-8">
-        <div class="w-1.5 h-1.5 rounded-full bg-teal animate-pulse"></div>
-        <span class="font-mono text-xs uppercase tracking-wider text-teal">Open Source &middot; Runs Locally</span>
+
+    <div class="relative max-w-6xl mx-auto px-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+
+        <!-- Left: copy + CTA -->
+        <div>
+          <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-teal/20 bg-teal/5 mb-8">
+            <div class="w-1.5 h-1.5 rounded-full bg-teal animate-pulse"></div>
+            <span class="font-mono text-xs uppercase tracking-wider text-teal">Open Source &middot; Runs Locally</span>
+          </div>
+
+          <h1 class="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.08] mb-6">
+            Grow your presence.<br>
+            <span class="gradient-text">Not your workload.</span>
+          </h1>
+
+          <p class="text-base text-slate-400 mb-10 max-w-md">
+            AI agents that engage across 10 platforms as you, in your voice.
+          </p>
+
+          <!-- Proof counters — above CTA for "proof then action" -->
+          <div class="flex items-center gap-5 mb-8 pb-8 border-b border-border-dim">
+            <div>
+              <div class="text-3xl font-black text-white" id="counter-comments">0</div>
+              <div class="text-xs text-slate-500">comments/week</div>
+            </div>
+            <div class="w-px h-10 bg-border-dim"></div>
+            <div>
+              <div class="text-3xl font-black text-white" id="counter-platforms">0</div>
+              <div class="text-xs text-slate-500">platforms</div>
+            </div>
+            <div class="w-px h-10 bg-border-dim"></div>
+            <div>
+              <div class="text-3xl font-black text-white" id="counter-hours">0</div>
+              <div class="text-xs text-slate-500">hours saved</div>
+            </div>
+          </div>
+
+          <!-- CTA — full-width on mobile -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-start gap-3">
+            <a href="#get-started" class="px-7 py-3 rounded-lg font-semibold text-sm bg-teal text-void hover:bg-teal/90 transition-all glow-teal-sm whitespace-nowrap text-center">
+              Start Growing Free
+            </a>
+            <div class="code-block px-4 py-2.5 flex items-center gap-3">
+              <span class="text-slate-500 select-none">$</span>
+              <code class="text-sm text-teal">npm install -g opentwins</code>
+              <button onclick="navigator.clipboard.writeText('npm install -g opentwins');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',2000)" class="text-xs text-slate-500 hover:text-teal transition-colors ml-1 font-mono">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: live agent feed -->
+        <div class="hidden lg:block">
+          <div class="rounded-2xl border border-border-dim bg-surface/80 overflow-hidden" style="box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 60px rgba(45,212,191,0.04);">
+            <!-- Feed header -->
+            <div class="px-5 py-3 flex items-center justify-between border-b border-border-dim">
+              <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-teal live-dot"></div>
+                <span class="font-mono text-xs uppercase tracking-wider text-teal">Agent Activity</span>
+                <span class="font-mono text-[9px] text-slate-600 uppercase tracking-wider">preview</span>
+              </div>
+              <span class="font-mono text-[10px] text-slate-500" id="feed-time">now</span>
+            </div>
+
+            <!-- Feed items -->
+            <div class="p-4 space-y-2.5 overflow-hidden" id="live-feed" style="height: 320px;">
+              <!-- JS will populate this -->
+            </div>
+
+            <!-- Feed footer -->
+            <div class="px-5 py-2.5 border-t border-border-dim flex items-center justify-between">
+              <span class="text-[10px] text-slate-500">Across all platforms</span>
+              <div class="flex gap-1.5">
+                <div class="w-1.5 h-1.5 rounded-full" style="background:#0A66C2"></div>
+                <div class="w-1.5 h-1.5 rounded-full" style="background:#1DA1F2"></div>
+                <div class="w-1.5 h-1.5 rounded-full" style="background:#FF4500"></div>
+                <div class="w-1.5 h-1.5 rounded-full" style="background:#3B49DF"></div>
+                <div class="w-1.5 h-1.5 rounded-full" style="background:#DA552F"></div>
+                <div class="w-1.5 h-1.5 rounded-full" style="background:#a78bfa"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ USE CASES — INTERACTIVE ═══════════ -->
+  <style>
+    .persona-btn {
+      transition: all 0.3s ease; position: relative; cursor: pointer;
+    }
+    .persona-btn::after {
+      content: ''; position: absolute; bottom: -2px; left: 50%; width: 0; height: 2px;
+      background: var(--btn-color); transition: all 0.3s ease; transform: translateX(-50%); border-radius: 1px;
+    }
+    .persona-btn:hover { background: color-mix(in srgb, var(--btn-color) 8%, transparent); border-color: color-mix(in srgb, var(--btn-color) 25%, #1e293b); }
+    .persona-btn:hover::after { width: 40%; }
+    .persona-btn.active { color: var(--btn-color) !important; background: color-mix(in srgb, var(--btn-color) 10%, transparent); border-color: color-mix(in srgb, var(--btn-color) 35%, transparent); }
+    .persona-btn.active::after { width: 100%; }
+    .persona-btn:focus-visible { outline: 2px solid var(--btn-color); outline-offset: 2px; }
+
+    .persona-stage { position: relative; min-height: 400px; }
+    .persona-content {
+      position: absolute; top: 0; left: 0; right: 0;
+      opacity: 0; transform: translateY(12px); pointer-events: none;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    .persona-content.active {
+      position: relative; opacity: 1; transform: translateY(0); pointer-events: auto;
+    }
+
+    .timeline-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid; position: relative; z-index: 1; flex-shrink: 0; }
+  </style>
+
+  <section id="for-you" class="py-24 border-t border-border-dim">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center mb-10 reveal">
+        <div class="font-mono text-xs uppercase tracking-[0.2em] text-teal-dim mb-3">Built For You</div>
+        <h2 class="text-3xl md:text-4xl font-bold mb-4">I am a...</h2>
+        <p class="text-slate-400 max-w-md mx-auto">Pick your role. See how OpenTwins works for you.</p>
       </div>
 
-      <h1 class="text-4xl sm:text-5xl md:text-7xl font-black tracking-tight leading-[1.08] mb-6">
-        Grow your presence.<br>
-        <span class="gradient-text">Not your workload.</span>
-      </h1>
-
-      <p class="text-lg md:text-xl text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed">
-        AI agents that comment, post, and build connections across <strong class="text-white">10 social platforms</strong> &mdash;
-        as you, in your voice, 24/7. Whether you're growing a brand, landing a job, or launching a product.
-      </p>
-
-      <div class="inline-flex flex-col sm:flex-row items-center gap-4 mb-12">
-        <div class="code-block px-5 py-3 flex items-center gap-3">
-          <span class="text-slate-500 select-none">$</span>
-          <code class="text-sm text-teal">npm install -g opentwins</code>
-          <button onclick="navigator.clipboard.writeText('npm install -g opentwins');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',2000)" class="text-xs text-slate-500 hover:text-teal transition-colors ml-2 font-mono">Copy</button>
-        </div>
-        <a href="#get-started" class="px-7 py-3 rounded-lg font-semibold text-sm bg-teal text-void hover:bg-teal/90 transition-all glow-teal-sm">
-          Start Growing Free
-        </a>
+      <!-- Persona selector -->
+      <div class="grid grid-cols-2 md:flex md:items-center md:justify-center gap-2 md:gap-3 mb-12 reveal" id="persona-selector" role="tablist" aria-label="Select your role">
+        <button class="persona-btn active px-5 py-3 rounded-xl text-sm md:text-base font-semibold bg-panel/50 border border-border-dim" style="--btn-color: #2dd4bf" data-persona="founder" onclick="selectPersona('founder')" role="tab" aria-selected="true" aria-controls="persona-founder">
+          <span class="mr-1.5" aria-hidden="true">🚀</span> Founder
+        </button>
+        <button class="persona-btn px-5 py-3 rounded-xl text-sm md:text-base font-semibold text-slate-400 bg-panel/50 border border-border-dim" style="--btn-color: #60a5fa" data-persona="leader" onclick="selectPersona('leader')" role="tab" aria-selected="false" aria-controls="persona-leader">
+          <span class="mr-1.5" aria-hidden="true">💼</span> Tech Leader
+        </button>
+        <button class="persona-btn px-5 py-3 rounded-xl text-sm md:text-base font-semibold text-slate-400 bg-panel/50 border border-border-dim" style="--btn-color: #fbbf24" data-persona="seeker" onclick="selectPersona('seeker')" role="tab" aria-selected="false" aria-controls="persona-seeker">
+          <span class="mr-1.5" aria-hidden="true">🎯</span> Job Seeker
+        </button>
+        <button class="persona-btn px-5 py-3 rounded-xl text-sm md:text-base font-semibold text-slate-400 bg-panel/50 border border-border-dim" style="--btn-color: #a78bfa" data-persona="creator" onclick="selectPersona('creator')" role="tab" aria-selected="false" aria-controls="persona-creator">
+          <span class="mr-1.5" aria-hidden="true">✍️</span> Creator
+        </button>
       </div>
 
-      <!-- Outcome stats -->
-      <div class="flex flex-wrap items-center justify-center gap-6 md:gap-10">
-        <div class="text-center">
-          <div class="text-3xl md:text-4xl font-black text-white">10x</div>
-          <div class="text-xs text-slate-500 mt-1">more engagement</div>
-        </div>
-        <div class="w-px h-10 bg-border-dim hidden sm:block"></div>
-        <div class="text-center">
-          <div class="text-3xl md:text-4xl font-black text-white">10+</div>
-          <div class="text-xs text-slate-500 mt-1">hours saved per week</div>
-        </div>
-        <div class="w-px h-10 bg-border-dim hidden sm:block"></div>
-        <div class="text-center">
-          <div class="text-3xl md:text-4xl font-black text-white">10</div>
-          <div class="text-xs text-slate-500 mt-1">platforms at once</div>
-        </div>
-        <div class="w-px h-10 bg-border-dim hidden sm:block"></div>
-        <div class="text-center">
-          <div class="text-3xl md:text-4xl font-black text-white">24/7</div>
-          <div class="text-xs text-slate-500 mt-1">always on</div>
+      <!-- Content stage — min-height prevents layout shift -->
+      <div class="persona-stage">
+
+      <!-- ── Founder ── -->
+      <div class="persona-content active" id="persona-founder" role="tabpanel">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+          <!-- Left: outcome headline + platforms -->
+          <div class="lg:col-span-2">
+            <h3 class="text-2xl font-bold mb-3" style="color: #2dd4bf">Ship your product.<br>Let your twin build the audience.</h3>
+            <p class="text-sm text-slate-400 mb-6">You ship. Your twin builds the audience.</p>
+            <div class="flex flex-wrap gap-2 mb-6">
+              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#DA552F"></span>Product Hunt</span>
+              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#FF4500"></span>Reddit</span>
+              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#4F46E5"></span>Indie Hackers</span>
+              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#1DA1F2"></span>Twitter</span>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <div class="text-center p-3 rounded-xl border border-teal/15 bg-teal/[0.04]">
+                <div class="text-xl font-black text-teal">47</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">launch day<br>comments</div>
+              </div>
+              <div class="text-center p-3 rounded-xl border border-teal/15 bg-teal/[0.04]">
+                <div class="text-xl font-black text-teal">3x</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">more<br>upvotes</div>
+              </div>
+              <div class="text-center p-3 rounded-xl border border-teal/15 bg-teal/[0.04]">
+                <div class="text-xl font-black text-teal">12</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">inbound<br>DMs/week</div>
+              </div>
+            </div>
+          </div>
+          <!-- Right: day-in-the-life timeline -->
+          <div class="lg:col-span-3 rounded-2xl border border-border-dim bg-panel/30 p-6">
+            <div class="font-mono text-xs uppercase tracking-wider text-teal-dim mb-5">A day with your twin</div>
+            <div class="space-y-5">
+              <div class="flex gap-4">
+                <div class="shrink-0 mt-1.5"><div class="timeline-dot border-teal bg-teal/20"></div></div>
+                <div><div class="font-mono text-xs text-teal mb-1">6:00 AM</div><div class="text-sm text-slate-300 font-medium">Content pipeline generates today's build-in-public update</div></div>
+              </div>
+              <div class="flex gap-4">
+                <div class="shrink-0 mt-1.5"><div class="timeline-dot border-teal bg-teal/20"></div></div>
+                <div><div class="font-mono text-xs text-teal mb-1">9:00 AM</div><div class="text-sm text-slate-300 font-medium">Engages in r/SaaS and r/startups — 8 thoughtful comments</div></div>
+              </div>
+              <div class="flex gap-4">
+                <div class="shrink-0 mt-1.5"><div class="timeline-dot border-teal bg-teal/20"></div></div>
+                <div><div class="font-mono text-xs text-teal mb-1">12:00 PM</div><div class="text-sm text-slate-300 font-medium">Posts a progress update on Indie Hackers + Twitter thread</div></div>
+              </div>
+              <div class="flex gap-4">
+                <div class="shrink-0 mt-1.5"><div class="timeline-dot border-teal bg-teal/20"></div></div>
+                <div><div class="font-mono text-xs text-teal mb-1">3:00 PM</div><div class="text-sm text-slate-300 font-medium">Replies to 5 comments on yesterday's Product Hunt post</div></div>
+              </div>
+              <div class="flex gap-4">
+                <div class="shrink-0 mt-1.5"><div class="timeline-dot border-teal bg-teal/20"></div></div>
+                <div><div class="font-mono text-xs text-teal mb-1">6:00 PM</div><div class="text-sm text-slate-300 font-medium">Sends 10 connection requests to people in your target market</div></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- ── Tech Leader ── -->
+      <div class="persona-content" id="persona-leader" role="tabpanel">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+          <div class="lg:col-span-2">
+            <h3 class="text-2xl font-bold mb-3" style="color: #60a5fa">Lead the conversation.<br>Don't just watch it.</h3>
+            <p class="text-sm text-slate-400 mb-6">Your twin turns your expertise into visibility.</p>
+            <div class="flex flex-wrap gap-2 mb-6">
+              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#0A66C2"></span>LinkedIn</span>
+              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#1DA1F2"></span>Twitter</span>
+              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#3B49DF"></span>Dev.to</span>
+              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#00AB6C"></span>Medium</span>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <div class="text-center p-3 rounded-xl border border-blue-500/15 bg-blue-500/[0.04]"><div class="text-xl font-black text-blue-400">5x</div><div class="text-[10px] text-slate-500 mt-0.5">profile<br>views</div></div>
+              <div class="text-center p-3 rounded-xl border border-blue-500/15 bg-blue-500/[0.04]"><div class="text-xl font-black text-blue-400">200+</div><div class="text-[10px] text-slate-500 mt-0.5">weekly<br>engagements</div></div>
+              <div class="text-center p-3 rounded-xl border border-blue-500/15 bg-blue-500/[0.04]"><div class="text-xl font-black text-blue-400">8</div><div class="text-[10px] text-slate-500 mt-0.5">speaking<br>invites/mo</div></div>
+            </div>
+          </div>
+          <div class="lg:col-span-3 rounded-2xl border border-border-dim bg-panel/30 p-6">
+            <div class="font-mono text-xs uppercase tracking-wider text-blue-400/70 mb-5">A day with your twin</div>
+            <div class="space-y-5">
+              <div class="flex gap-4"><div class="shrink-0 mt-1.5"><div class="timeline-dot border-blue-400 bg-blue-400/20"></div></div><div><div class="font-mono text-xs text-blue-400 mb-1">7:00 AM</div><div class="text-sm text-slate-300 font-medium">Pipeline scouts trending topics in AI, DevOps, and platform engineering</div></div></div>
+              <div class="flex gap-4"><div class="shrink-0 mt-1.5"><div class="timeline-dot border-blue-400 bg-blue-400/20"></div></div><div><div class="font-mono text-xs text-blue-400 mb-1">9:00 AM</div><div class="text-sm text-slate-300 font-medium">Publishes a short article on Dev.to about your latest architecture decision</div></div></div>
+              <div class="flex gap-4"><div class="shrink-0 mt-1.5"><div class="timeline-dot border-blue-400 bg-blue-400/20"></div></div><div><div class="font-mono text-xs text-blue-400 mb-1">11:00 AM</div><div class="text-sm text-slate-300 font-medium">Comments on 6 LinkedIn posts from industry leaders with technical depth</div></div></div>
+              <div class="flex gap-4"><div class="shrink-0 mt-1.5"><div class="timeline-dot border-blue-400 bg-blue-400/20"></div></div><div><div class="font-mono text-xs text-blue-400 mb-1">2:00 PM</div><div class="text-sm text-slate-300 font-medium">Engages in a Twitter thread about the future of AI agents</div></div></div>
+              <div class="flex gap-4"><div class="shrink-0 mt-1.5"><div class="timeline-dot border-blue-400 bg-blue-400/20"></div></div><div><div class="font-mono text-xs text-blue-400 mb-1">5:00 PM</div><div class="text-sm text-slate-300 font-medium">Sends connection requests to speakers from last week's KubeCon talks</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Job Seeker ── -->
+      <div class="persona-content" id="persona-seeker" role="tabpanel">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+          <div class="lg:col-span-2">
+            <h3 class="text-2xl font-bold mb-3" style="color: #fbbf24">Stop applying.<br>Start getting found.</h3>
+            <p class="text-sm text-slate-400 mb-6">Recruiters hire people they've seen before. Your twin makes sure they see you.</p>
+            <div class="flex flex-wrap gap-2 mb-6">
+              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#0A66C2"></span>LinkedIn</span>
+              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#1DA1F2"></span>Twitter</span>
+              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#3B49DF"></span>Dev.to</span>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <div class="text-center p-3 rounded-xl border border-amber-500/15 bg-amber-500/[0.04]"><div class="text-xl font-black text-amber-400">3x</div><div class="text-[10px] text-slate-500 mt-0.5">recruiter<br>messages</div></div>
+              <div class="text-center p-3 rounded-xl border border-amber-500/15 bg-amber-500/[0.04]"><div class="text-xl font-black text-amber-400">40+</div><div class="text-[10px] text-slate-500 mt-0.5">new connections<br>per week</div></div>
+              <div class="text-center p-3 rounded-xl border border-amber-500/15 bg-amber-500/[0.04]"><div class="text-xl font-black text-amber-400">0</div><div class="text-[10px] text-slate-500 mt-0.5">cold<br>applications</div></div>
+            </div>
+          </div>
+          <div class="lg:col-span-3 rounded-2xl border border-border-dim bg-panel/30 p-6">
+            <div class="font-mono text-xs uppercase tracking-wider text-amber-400/70 mb-5">A day with your twin</div>
+            <div class="space-y-5">
+              <div class="flex gap-4"><div class="shrink-0 mt-1.5"><div class="timeline-dot border-amber-400 bg-amber-400/20"></div></div><div><div class="font-mono text-xs text-amber-400 mb-1">8:00 AM</div><div class="text-sm text-slate-300 font-medium">Comments on 4 posts from engineering leaders at your target companies</div></div></div>
+              <div class="flex gap-4"><div class="shrink-0 mt-1.5"><div class="timeline-dot border-amber-400 bg-amber-400/20"></div></div><div><div class="font-mono text-xs text-amber-400 mb-1">10:00 AM</div><div class="text-sm text-slate-300 font-medium">Publishes a LinkedIn post about a problem you recently solved</div></div></div>
+              <div class="flex gap-4"><div class="shrink-0 mt-1.5"><div class="timeline-dot border-amber-400 bg-amber-400/20"></div></div><div><div class="font-mono text-xs text-amber-400 mb-1">1:00 PM</div><div class="text-sm text-slate-300 font-medium">Engages in Dev.to discussions about system design and best practices</div></div></div>
+              <div class="flex gap-4"><div class="shrink-0 mt-1.5"><div class="timeline-dot border-amber-400 bg-amber-400/20"></div></div><div><div class="font-mono text-xs text-amber-400 mb-1">4:00 PM</div><div class="text-sm text-slate-300 font-medium">Sends 15 targeted connection requests to hiring managers and engineers</div></div></div>
+              <div class="flex gap-4"><div class="shrink-0 mt-1.5"><div class="timeline-dot border-amber-400 bg-amber-400/20"></div></div><div><div class="font-mono text-xs text-amber-400 mb-1">7:00 PM</div><div class="text-sm text-slate-300 font-medium">You get a recruiter DM: "Saw your post — are you open to opportunities?"</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Creator ── -->
+      <div class="persona-content" id="persona-creator" role="tabpanel">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+          <div class="lg:col-span-2">
+            <h3 class="text-2xl font-bold mb-3" style="color: #a78bfa">Create once.<br>Reach everywhere.</h3>
+            <p class="text-sm text-slate-400 mb-6">You create. Your twin distributes and engages.</p>
+            <div class="flex flex-wrap gap-2 mb-6">
+              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#FF6719"></span>Substack</span>
+              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#00AB6C"></span>Medium</span>
+              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#888"></span>Threads</span>
+              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#0085FF"></span>Bluesky</span>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <div class="text-center p-3 rounded-xl border border-purple-500/15 bg-purple-500/[0.04]"><div class="text-xl font-black text-purple-400">4x</div><div class="text-[10px] text-slate-500 mt-0.5">newsletter<br>subscribers</div></div>
+              <div class="text-center p-3 rounded-xl border border-purple-500/15 bg-purple-500/[0.04]"><div class="text-xl font-black text-purple-400">100+</div><div class="text-[10px] text-slate-500 mt-0.5">claps per<br>article</div></div>
+              <div class="text-center p-3 rounded-xl border border-purple-500/15 bg-purple-500/[0.04]"><div class="text-xl font-black text-purple-400">6</div><div class="text-[10px] text-slate-500 mt-0.5">platforms<br>auto-active</div></div>
+            </div>
+          </div>
+          <div class="lg:col-span-3 rounded-2xl border border-border-dim bg-panel/30 p-6">
+            <div class="font-mono text-xs uppercase tracking-wider text-purple-400/70 mb-5">A day with your twin</div>
+            <div class="space-y-5">
+              <div class="flex gap-4"><div class="shrink-0 mt-1.5"><div class="timeline-dot border-purple-400 bg-purple-400/20"></div></div><div><div class="font-mono text-xs text-purple-400 mb-1">6:00 AM</div><div class="text-sm text-slate-300 font-medium">Pipeline summarizes your latest newsletter into a Threads post + tweet storm</div></div></div>
+              <div class="flex gap-4"><div class="shrink-0 mt-1.5"><div class="timeline-dot border-purple-400 bg-purple-400/20"></div></div><div><div class="font-mono text-xs text-purple-400 mb-1">9:00 AM</div><div class="text-sm text-slate-300 font-medium">Replies to all comments on your latest Substack and Medium articles</div></div></div>
+              <div class="flex gap-4"><div class="shrink-0 mt-1.5"><div class="timeline-dot border-purple-400 bg-purple-400/20"></div></div><div><div class="font-mono text-xs text-purple-400 mb-1">12:00 PM</div><div class="text-sm text-slate-300 font-medium">Engages with 10 posts from creators in your niche on Bluesky and Threads</div></div></div>
+              <div class="flex gap-4"><div class="shrink-0 mt-1.5"><div class="timeline-dot border-purple-400 bg-purple-400/20"></div></div><div><div class="font-mono text-xs text-purple-400 mb-1">3:00 PM</div><div class="text-sm text-slate-300 font-medium">Recommends 3 related newsletters on Substack to build community goodwill</div></div></div>
+              <div class="flex gap-4"><div class="shrink-0 mt-1.5"><div class="timeline-dot border-purple-400 bg-purple-400/20"></div></div><div><div class="font-mono text-xs text-purple-400 mb-1">8:00 PM</div><div class="text-sm text-slate-300 font-medium">You check the dashboard: 47 new subscribers, 12 claps, 8 new followers</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      </div><!-- /persona-stage -->
     </div>
   </section>
 
@@ -362,215 +616,6 @@
     </div>
   </section>
 
-  <!-- ═══════════ USE CASES — INTERACTIVE ═══════════ -->
-  <style>
-    .persona-btn {
-      transition: all 0.3s ease; position: relative; cursor: pointer;
-    }
-    .persona-btn::after {
-      content: ''; position: absolute; bottom: -2px; left: 50%; width: 0; height: 2px;
-      background: var(--btn-color); transition: all 0.3s ease; transform: translateX(-50%); border-radius: 1px;
-    }
-    .persona-btn:hover { background: color-mix(in srgb, var(--btn-color) 8%, transparent); border-color: color-mix(in srgb, var(--btn-color) 25%, #1e293b); }
-    .persona-btn:hover::after { width: 40%; }
-    .persona-btn.active { color: var(--btn-color) !important; background: color-mix(in srgb, var(--btn-color) 10%, transparent); border-color: color-mix(in srgb, var(--btn-color) 35%, transparent); }
-    .persona-btn.active::after { width: 100%; }
-    .persona-btn:focus-visible { outline: 2px solid var(--btn-color); outline-offset: 2px; }
-
-    .persona-stage { position: relative; min-height: 400px; }
-    .persona-content {
-      position: absolute; top: 0; left: 0; right: 0;
-      opacity: 0; transform: translateY(12px); pointer-events: none;
-      transition: opacity 0.35s ease, transform 0.35s ease;
-    }
-    .persona-content.active {
-      position: relative; opacity: 1; transform: translateY(0); pointer-events: auto;
-    }
-
-    .timeline-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid; position: relative; z-index: 1; }
-    .timeline-line { position: absolute; left: 4px; top: 10px; bottom: -10px; width: 2px; border-radius: 1px; }
-  </style>
-
-  <section id="for-you" class="py-24 border-t border-border-dim">
-    <div class="max-w-6xl mx-auto px-6">
-      <div class="text-center mb-10 reveal">
-        <div class="font-mono text-xs uppercase tracking-[0.2em] text-teal-dim mb-3">Built For You</div>
-        <h2 class="text-3xl md:text-4xl font-bold mb-4">I am a...</h2>
-        <p class="text-slate-400 max-w-md mx-auto">Pick your role. See how OpenTwins works for you.</p>
-      </div>
-
-      <!-- Persona selector -->
-      <div class="grid grid-cols-2 md:flex md:items-center md:justify-center gap-2 md:gap-3 mb-12 reveal" id="persona-selector" role="tablist" aria-label="Select your role">
-        <button class="persona-btn active px-5 py-3 rounded-xl text-sm md:text-base font-semibold bg-panel/50 border border-border-dim" style="--btn-color: #2dd4bf" data-persona="founder" onclick="selectPersona('founder')" role="tab" aria-selected="true" aria-controls="persona-founder">
-          <span class="mr-1.5" aria-hidden="true">🚀</span> Founder
-        </button>
-        <button class="persona-btn px-5 py-3 rounded-xl text-sm md:text-base font-semibold text-slate-400 bg-panel/50 border border-border-dim" style="--btn-color: #60a5fa" data-persona="leader" onclick="selectPersona('leader')" role="tab" aria-selected="false" aria-controls="persona-leader">
-          <span class="mr-1.5" aria-hidden="true">💼</span> Tech Leader
-        </button>
-        <button class="persona-btn px-5 py-3 rounded-xl text-sm md:text-base font-semibold text-slate-400 bg-panel/50 border border-border-dim" style="--btn-color: #fbbf24" data-persona="seeker" onclick="selectPersona('seeker')" role="tab" aria-selected="false" aria-controls="persona-seeker">
-          <span class="mr-1.5" aria-hidden="true">🎯</span> Job Seeker
-        </button>
-        <button class="persona-btn px-5 py-3 rounded-xl text-sm md:text-base font-semibold text-slate-400 bg-panel/50 border border-border-dim" style="--btn-color: #a78bfa" data-persona="creator" onclick="selectPersona('creator')" role="tab" aria-selected="false" aria-controls="persona-creator">
-          <span class="mr-1.5" aria-hidden="true">✍️</span> Creator
-        </button>
-      </div>
-
-      <!-- Content stage — min-height prevents layout shift -->
-      <div class="persona-stage">
-
-      <!-- ── Founder ── -->
-      <div class="persona-content active" id="persona-founder" role="tabpanel">
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
-          <!-- Left: outcome headline + platforms -->
-          <div class="lg:col-span-2">
-            <h3 class="text-2xl font-bold mb-3" style="color: #2dd4bf">Ship your product.<br>Let your twin build the audience.</h3>
-            <p class="text-sm text-slate-400 leading-relaxed mb-6">You're heads-down building. Meanwhile, your AI twin is posting progress updates, replying to user feedback, engaging in founder communities, and warming up your launch audience — every single day.</p>
-            <div class="flex flex-wrap gap-2 mb-6">
-              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#DA552F"></span>Product Hunt</span>
-              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#FF4500"></span>Reddit</span>
-              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#4F46E5"></span>Indie Hackers</span>
-              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#1DA1F2"></span>Twitter</span>
-            </div>
-            <div class="grid grid-cols-3 gap-3">
-              <div class="text-center p-3 rounded-xl border border-teal/15 bg-teal/[0.04]">
-                <div class="text-xl font-black text-teal">47</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">launch day<br>comments</div>
-              </div>
-              <div class="text-center p-3 rounded-xl border border-teal/15 bg-teal/[0.04]">
-                <div class="text-xl font-black text-teal">3x</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">more<br>upvotes</div>
-              </div>
-              <div class="text-center p-3 rounded-xl border border-teal/15 bg-teal/[0.04]">
-                <div class="text-xl font-black text-teal">12</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">inbound<br>DMs/week</div>
-              </div>
-            </div>
-          </div>
-          <!-- Right: day-in-the-life timeline -->
-          <div class="lg:col-span-3 rounded-2xl border border-border-dim bg-panel/30 p-6">
-            <div class="font-mono text-xs uppercase tracking-wider text-teal-dim mb-5">A day with your twin</div>
-            <div class="space-y-5">
-              <div class="flex gap-4">
-                <div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-teal bg-teal/20"></div><div class="timeline-line bg-teal/20"></div></div>
-                <div><div class="font-mono text-xs text-teal mb-1">6:00 AM</div><div class="text-sm text-slate-300 font-medium">Content pipeline generates today's build-in-public update</div><div class="text-xs text-slate-500 mt-0.5">Based on your latest commits and yesterday's engagement</div></div>
-              </div>
-              <div class="flex gap-4">
-                <div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-teal bg-teal/20"></div><div class="timeline-line bg-teal/20"></div></div>
-                <div><div class="font-mono text-xs text-teal mb-1">9:00 AM</div><div class="text-sm text-slate-300 font-medium">Engages in r/SaaS and r/startups — 8 thoughtful comments</div><div class="text-xs text-slate-500 mt-0.5">Finds relevant threads about your problem space, replies with insights</div></div>
-              </div>
-              <div class="flex gap-4">
-                <div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-teal bg-teal/20"></div><div class="timeline-line bg-teal/20"></div></div>
-                <div><div class="font-mono text-xs text-teal mb-1">12:00 PM</div><div class="text-sm text-slate-300 font-medium">Posts a progress update on Indie Hackers + Twitter thread</div><div class="text-xs text-slate-500 mt-0.5">"Week 3 of building [product]: here's what I learned about..."</div></div>
-              </div>
-              <div class="flex gap-4">
-                <div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-teal bg-teal/20"></div><div class="timeline-line bg-teal/20"></div></div>
-                <div><div class="font-mono text-xs text-teal mb-1">3:00 PM</div><div class="text-sm text-slate-300 font-medium">Replies to 5 comments on yesterday's Product Hunt post</div><div class="text-xs text-slate-500 mt-0.5">Each reply adds value — not just "thanks!" but real follow-ups</div></div>
-              </div>
-              <div class="flex gap-4">
-                <div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-teal bg-teal/20"></div></div>
-                <div><div class="font-mono text-xs text-teal mb-1">6:00 PM</div><div class="text-sm text-slate-300 font-medium">Sends 10 connection requests to people in your target market</div><div class="text-xs text-slate-500 mt-0.5">While you're having dinner, your network grows</div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Tech Leader ── -->
-      <div class="persona-content" id="persona-leader" role="tabpanel">
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
-          <div class="lg:col-span-2">
-            <h3 class="text-2xl font-bold mb-3" style="color: #60a5fa">Lead the conversation.<br>Don't just watch it.</h3>
-            <p class="text-sm text-slate-400 leading-relaxed mb-6">Your expertise deserves visibility. Your twin comments on industry debates, shares technical insights, and positions you as a thought leader — consistently, across every platform that matters.</p>
-            <div class="flex flex-wrap gap-2 mb-6">
-              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#0A66C2"></span>LinkedIn</span>
-              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#1DA1F2"></span>Twitter</span>
-              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#3B49DF"></span>Dev.to</span>
-              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#00AB6C"></span>Medium</span>
-            </div>
-            <div class="grid grid-cols-3 gap-3">
-              <div class="text-center p-3 rounded-xl border border-blue-500/15 bg-blue-500/[0.04]"><div class="text-xl font-black text-blue-400">5x</div><div class="text-[10px] text-slate-500 mt-0.5">profile<br>views</div></div>
-              <div class="text-center p-3 rounded-xl border border-blue-500/15 bg-blue-500/[0.04]"><div class="text-xl font-black text-blue-400">200+</div><div class="text-[10px] text-slate-500 mt-0.5">weekly<br>engagements</div></div>
-              <div class="text-center p-3 rounded-xl border border-blue-500/15 bg-blue-500/[0.04]"><div class="text-xl font-black text-blue-400">8</div><div class="text-[10px] text-slate-500 mt-0.5">speaking<br>invites/mo</div></div>
-            </div>
-          </div>
-          <div class="lg:col-span-3 rounded-2xl border border-border-dim bg-panel/30 p-6">
-            <div class="font-mono text-xs uppercase tracking-wider text-blue-400/70 mb-5">A day with your twin</div>
-            <div class="space-y-5">
-              <div class="flex gap-4"><div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-blue-400 bg-blue-400/20"></div><div class="timeline-line bg-blue-400/20"></div></div><div><div class="font-mono text-xs text-blue-400 mb-1">7:00 AM</div><div class="text-sm text-slate-300 font-medium">Pipeline scouts trending topics in AI, DevOps, and platform engineering</div><div class="text-xs text-slate-500 mt-0.5">Finds the conversations worth joining today</div></div></div>
-              <div class="flex gap-4"><div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-blue-400 bg-blue-400/20"></div><div class="timeline-line bg-blue-400/20"></div></div><div><div class="font-mono text-xs text-blue-400 mb-1">9:00 AM</div><div class="text-sm text-slate-300 font-medium">Publishes a short article on Dev.to about your latest architecture decision</div><div class="text-xs text-slate-500 mt-0.5">Auto-adapted from your internal tech brief</div></div></div>
-              <div class="flex gap-4"><div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-blue-400 bg-blue-400/20"></div><div class="timeline-line bg-blue-400/20"></div></div><div><div class="font-mono text-xs text-blue-400 mb-1">11:00 AM</div><div class="text-sm text-slate-300 font-medium">Comments on 6 LinkedIn posts from industry leaders with technical depth</div><div class="text-xs text-slate-500 mt-0.5">"Actually, we solved this differently—" not "Great post!"</div></div></div>
-              <div class="flex gap-4"><div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-blue-400 bg-blue-400/20"></div><div class="timeline-line bg-blue-400/20"></div></div><div><div class="font-mono text-xs text-blue-400 mb-1">2:00 PM</div><div class="text-sm text-slate-300 font-medium">Engages in a Twitter thread about the future of AI agents</div><div class="text-xs text-slate-500 mt-0.5">Your perspective, your experience, your voice — just delivered by AI</div></div></div>
-              <div class="flex gap-4"><div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-blue-400 bg-blue-400/20"></div></div><div><div class="font-mono text-xs text-blue-400 mb-1">5:00 PM</div><div class="text-sm text-slate-300 font-medium">Sends connection requests to speakers from last week's KubeCon talks</div><div class="text-xs text-slate-500 mt-0.5">Growing your network in the circles that matter</div></div></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Job Seeker ── -->
-      <div class="persona-content" id="persona-seeker" role="tabpanel">
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
-          <div class="lg:col-span-2">
-            <h3 class="text-2xl font-bold mb-3" style="color: #fbbf24">Stop applying.<br>Start getting found.</h3>
-            <p class="text-sm text-slate-400 leading-relaxed mb-6">Recruiters hire people they've seen before. Your twin makes you visible in your target industry — commenting on the right posts, connecting with the right people, building the reputation that makes recruiters come to you.</p>
-            <div class="flex flex-wrap gap-2 mb-6">
-              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#0A66C2"></span>LinkedIn</span>
-              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#1DA1F2"></span>Twitter</span>
-              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#3B49DF"></span>Dev.to</span>
-            </div>
-            <div class="grid grid-cols-3 gap-3">
-              <div class="text-center p-3 rounded-xl border border-amber-500/15 bg-amber-500/[0.04]"><div class="text-xl font-black text-amber-400">3x</div><div class="text-[10px] text-slate-500 mt-0.5">recruiter<br>messages</div></div>
-              <div class="text-center p-3 rounded-xl border border-amber-500/15 bg-amber-500/[0.04]"><div class="text-xl font-black text-amber-400">40+</div><div class="text-[10px] text-slate-500 mt-0.5">new connections<br>per week</div></div>
-              <div class="text-center p-3 rounded-xl border border-amber-500/15 bg-amber-500/[0.04]"><div class="text-xl font-black text-amber-400">0</div><div class="text-[10px] text-slate-500 mt-0.5">cold<br>applications</div></div>
-            </div>
-          </div>
-          <div class="lg:col-span-3 rounded-2xl border border-border-dim bg-panel/30 p-6">
-            <div class="font-mono text-xs uppercase tracking-wider text-amber-400/70 mb-5">A day with your twin</div>
-            <div class="space-y-5">
-              <div class="flex gap-4"><div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-amber-400 bg-amber-400/20"></div><div class="timeline-line bg-amber-400/20"></div></div><div><div class="font-mono text-xs text-amber-400 mb-1">8:00 AM</div><div class="text-sm text-slate-300 font-medium">Comments on 4 posts from engineering leaders at your target companies</div><div class="text-xs text-slate-500 mt-0.5">Showing expertise, not desperation — sharing what you've built</div></div></div>
-              <div class="flex gap-4"><div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-amber-400 bg-amber-400/20"></div><div class="timeline-line bg-amber-400/20"></div></div><div><div class="font-mono text-xs text-amber-400 mb-1">10:00 AM</div><div class="text-sm text-slate-300 font-medium">Publishes a LinkedIn post about a problem you recently solved</div><div class="text-xs text-slate-500 mt-0.5">"How I reduced CI build time by 70% — a war story"</div></div></div>
-              <div class="flex gap-4"><div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-amber-400 bg-amber-400/20"></div><div class="timeline-line bg-amber-400/20"></div></div><div><div class="font-mono text-xs text-amber-400 mb-1">1:00 PM</div><div class="text-sm text-slate-300 font-medium">Engages in Dev.to discussions about system design and best practices</div><div class="text-xs text-slate-500 mt-0.5">Building credibility in the communities recruiters watch</div></div></div>
-              <div class="flex gap-4"><div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-amber-400 bg-amber-400/20"></div><div class="timeline-line bg-amber-400/20"></div></div><div><div class="font-mono text-xs text-amber-400 mb-1">4:00 PM</div><div class="text-sm text-slate-300 font-medium">Sends 15 targeted connection requests to hiring managers and engineers</div><div class="text-xs text-slate-500 mt-0.5">Not spray-and-pray — targeted at companies on your shortlist</div></div></div>
-              <div class="flex gap-4"><div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-amber-400 bg-amber-400/20"></div></div><div><div class="font-mono text-xs text-amber-400 mb-1">7:00 PM</div><div class="text-sm text-slate-300 font-medium">You get a recruiter DM: "Saw your post — are you open to opportunities?"</div><div class="text-xs text-slate-500 mt-0.5">That's the goal. Inbound, not outbound.</div></div></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Creator ── -->
-      <div class="persona-content" id="persona-creator" role="tabpanel">
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
-          <div class="lg:col-span-2">
-            <h3 class="text-2xl font-bold mb-3" style="color: #a78bfa">Create once.<br>Reach everywhere.</h3>
-            <p class="text-sm text-slate-400 leading-relaxed mb-6">You write the newsletter or record the video. Your twin distributes it: cross-posts excerpts, engages with readers' comments, recommends related creators, and grows your subscriber base across every channel.</p>
-            <div class="flex flex-wrap gap-2 mb-6">
-              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#FF6719"></span>Substack</span>
-              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#00AB6C"></span>Medium</span>
-              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#888"></span>Threads</span>
-              <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#0085FF"></span>Bluesky</span>
-            </div>
-            <div class="grid grid-cols-3 gap-3">
-              <div class="text-center p-3 rounded-xl border border-purple-500/15 bg-purple-500/[0.04]"><div class="text-xl font-black text-purple-400">4x</div><div class="text-[10px] text-slate-500 mt-0.5">newsletter<br>subscribers</div></div>
-              <div class="text-center p-3 rounded-xl border border-purple-500/15 bg-purple-500/[0.04]"><div class="text-xl font-black text-purple-400">100+</div><div class="text-[10px] text-slate-500 mt-0.5">claps per<br>article</div></div>
-              <div class="text-center p-3 rounded-xl border border-purple-500/15 bg-purple-500/[0.04]"><div class="text-xl font-black text-purple-400">6</div><div class="text-[10px] text-slate-500 mt-0.5">platforms<br>auto-active</div></div>
-            </div>
-          </div>
-          <div class="lg:col-span-3 rounded-2xl border border-border-dim bg-panel/30 p-6">
-            <div class="font-mono text-xs uppercase tracking-wider text-purple-400/70 mb-5">A day with your twin</div>
-            <div class="space-y-5">
-              <div class="flex gap-4"><div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-purple-400 bg-purple-400/20"></div><div class="timeline-line bg-purple-400/20"></div></div><div><div class="font-mono text-xs text-purple-400 mb-1">6:00 AM</div><div class="text-sm text-slate-300 font-medium">Pipeline summarizes your latest newsletter into a Threads post + tweet storm</div><div class="text-xs text-slate-500 mt-0.5">Same ideas, platform-native format — not just copy-paste</div></div></div>
-              <div class="flex gap-4"><div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-purple-400 bg-purple-400/20"></div><div class="timeline-line bg-purple-400/20"></div></div><div><div class="font-mono text-xs text-purple-400 mb-1">9:00 AM</div><div class="text-sm text-slate-300 font-medium">Replies to all comments on your latest Substack and Medium articles</div><div class="text-xs text-slate-500 mt-0.5">Thoughtful replies that make readers feel heard — not canned responses</div></div></div>
-              <div class="flex gap-4"><div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-purple-400 bg-purple-400/20"></div><div class="timeline-line bg-purple-400/20"></div></div><div><div class="font-mono text-xs text-purple-400 mb-1">12:00 PM</div><div class="text-sm text-slate-300 font-medium">Engages with 10 posts from creators in your niche on Bluesky and Threads</div><div class="text-xs text-slate-500 mt-0.5">Building mutual relationships — comments, not just likes</div></div></div>
-              <div class="flex gap-4"><div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-purple-400 bg-purple-400/20"></div><div class="timeline-line bg-purple-400/20"></div></div><div><div class="font-mono text-xs text-purple-400 mb-1">3:00 PM</div><div class="text-sm text-slate-300 font-medium">Recommends 3 related newsletters on Substack to build community goodwill</div><div class="text-xs text-slate-500 mt-0.5">Reciprocity drives the creator economy</div></div></div>
-              <div class="flex gap-4"><div class="flex flex-col items-center shrink-0"><div class="timeline-dot border-purple-400 bg-purple-400/20"></div></div><div><div class="font-mono text-xs text-purple-400 mb-1">8:00 PM</div><div class="text-sm text-slate-300 font-medium">You check the dashboard: 47 new subscribers, 12 claps, 8 new followers</div><div class="text-xs text-slate-500 mt-0.5">All while you were writing tomorrow's piece</div></div></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      </div><!-- /persona-stage -->
-    </div>
-  </section>
-
   <!-- ═══════════ HOW IT WORKS ═══════════ -->
   <section id="how-it-works" class="py-24 border-t border-border-dim">
     <div class="max-w-6xl mx-auto px-6">
@@ -620,99 +665,184 @@
   </section>
 
   <!-- ═══════════ DASHBOARD ═══════════ -->
-  <section class="py-24 border-t border-border-dim">
+  <section id="dashboard" class="py-24 border-t border-border-dim">
     <div class="max-w-6xl mx-auto px-6">
       <div class="text-center mb-16 reveal">
         <div class="font-mono text-xs uppercase tracking-[0.2em] text-teal-dim mb-3">Dashboard</div>
-        <h2 class="text-3xl md:text-4xl font-bold mb-4">Full visibility. Total control.</h2>
-        <p class="text-slate-400 max-w-lg mx-auto">See what every agent is doing, how much it costs, and whether it sounds like you.</p>
+        <h2 class="text-3xl md:text-4xl font-bold">Your command center</h2>
       </div>
 
-      <!-- Mockup -->
-      <div class="max-w-4xl mx-auto reveal">
-        <div class="mockup-shell">
-          <div class="mockup-bar px-4 py-2.5 flex items-center gap-3">
-            <div class="flex gap-1.5"><div class="w-2 h-2 rounded-full bg-red-500/60"></div><div class="w-2 h-2 rounded-full bg-amber-500/60"></div><div class="w-2 h-2 rounded-full bg-green-500/60"></div></div>
-            <div class="font-mono text-[10px] text-slate-500 flex-1 text-center">localhost:3847</div>
-          </div>
-          <div class="p-5 space-y-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2"><div class="w-5 h-5 rounded bg-teal/10 flex items-center justify-center"><span class="font-mono text-[8px] font-bold text-teal">OT</span></div><span class="text-[11px] font-semibold text-slate-300">OPENTWINS</span></div>
-              <div class="flex gap-1.5">
-                <div class="px-2 py-0.5 rounded text-[9px] font-medium bg-teal/10 text-teal border border-teal/20">Command</div>
-                <div class="px-2 py-0.5 rounded text-[9px] text-slate-500">Agents</div>
-                <div class="px-2 py-0.5 rounded text-[9px] text-slate-500">Activity</div>
-                <div class="px-2 py-0.5 rounded text-[9px] text-slate-500">Usage</div>
-                <div class="px-2 py-0.5 rounded text-[9px] text-slate-500">Quality</div>
-                <div class="px-2 py-0.5 rounded text-[9px] text-slate-500">Config</div>
-              </div>
-              <div class="flex gap-1.5">
-                <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-500/10 border border-green-500/20"><div class="w-1 h-1 rounded-full bg-green-400"></div><span class="font-mono text-[7px] text-green-400">OPENCLAW</span></div>
-                <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-500/10 border border-green-500/20"><div class="w-1 h-1 rounded-full bg-green-400"></div><span class="font-mono text-[7px] text-green-400">CLAUDE</span></div>
-              </div>
+      <div class="space-y-6">
+
+        <!-- Card 1: Mission Control -->
+        <div class="reveal card rounded-2xl overflow-hidden">
+          <div class="grid grid-cols-1 md:grid-cols-2">
+            <div class="p-5 md:p-10 flex flex-col justify-center">
+              <div class="font-mono text-xs uppercase tracking-wider text-teal-dim mb-2">Mission Control</div>
+              <h3 class="text-xl font-bold mb-3">Every agent at a glance</h3>
+              <p class="text-sm text-slate-400">Which agents are running, what they've done, when they'll run next.</p>
             </div>
-            <div class="grid grid-cols-4 gap-2">
-              <div class="rounded-lg border border-border-dim p-3 bg-panel/50"><div class="text-[8px] uppercase tracking-wider text-slate-500 mb-1">Agents</div><div class="text-lg font-bold text-teal tabular-nums">4/4</div><div class="text-[8px] text-slate-500">all enabled</div></div>
-              <div class="rounded-lg border border-border-dim p-3 bg-panel/50"><div class="text-[8px] uppercase tracking-wider text-slate-500 mb-1">Runs Today</div><div class="text-lg font-bold text-green-400 tabular-nums">18</div><div class="text-[8px] text-slate-500">14 completed</div></div>
-              <div class="rounded-lg border border-border-dim p-3 bg-panel/50"><div class="text-[8px] uppercase tracking-wider text-slate-500 mb-1">Tool Calls</div><div class="text-lg font-bold text-white tabular-nums">1,247</div><div class="text-[8px] text-slate-500">across sessions</div></div>
-              <div class="rounded-lg border border-border-dim p-3 bg-panel/50"><div class="text-[8px] uppercase tracking-wider text-slate-500 mb-1">Est. Cost</div><div class="text-lg font-bold text-teal tabular-nums">$8.42</div><div class="text-[8px] text-slate-500">avg $0.47/run</div></div>
-            </div>
-            <div class="grid grid-cols-4 gap-2">
-              <div class="rounded-lg border border-border-dim p-2.5 bg-panel/50"><div class="flex items-center gap-1.5 mb-1.5"><div class="w-1.5 h-1.5 rounded-full" style="background:#0A66C2"></div><span class="text-[9px] font-semibold text-white">LinkedIn</span><span class="ml-auto text-[7px] px-1 py-0.5 rounded-full bg-green-500/10 text-green-400">DONE</span></div><div class="text-[8px] text-slate-500">34 actions · 8 comments</div></div>
-              <div class="rounded-lg border border-border-dim p-2.5 bg-panel/50"><div class="flex items-center gap-1.5 mb-1.5"><div class="w-1.5 h-1.5 rounded-full" style="background:#1DA1F2"></div><span class="text-[9px] font-semibold text-white">Twitter</span><span class="ml-auto text-[7px] px-1 py-0.5 rounded-full bg-blue-500/10 text-blue-400">LIVE</span></div><div class="text-[8px] text-slate-500">21 actions · 5 replies</div></div>
-              <div class="rounded-lg border border-border-dim p-2.5 bg-panel/50"><div class="flex items-center gap-1.5 mb-1.5"><div class="w-1.5 h-1.5 rounded-full" style="background:#FF4500"></div><span class="text-[9px] font-semibold text-white">Reddit</span><span class="ml-auto text-[7px] px-1 py-0.5 rounded-full bg-green-500/10 text-green-400">DONE</span></div><div class="text-[8px] text-slate-500">15 actions · 6 comments</div></div>
-              <div class="rounded-lg border border-border-dim p-2.5 bg-panel/50"><div class="flex items-center gap-1.5 mb-1.5"><div class="w-1.5 h-1.5 rounded-full" style="background:#3B49DF"></div><span class="text-[9px] font-semibold text-white">Dev.to</span><span class="ml-auto text-[7px] px-1 py-0.5 rounded-full bg-slate-500/10 text-slate-400">READY</span></div><div class="text-[8px] text-slate-500">next run 14:00</div></div>
+            <div class="p-4 md:p-5 bg-void/50 md:border-l border-t md:border-t-0 border-border-dim">
+              <!-- Mini agent cards mockup -->
+              <div class="space-y-2">
+                <div class="grid grid-cols-3 gap-1.5 md:gap-2">
+                  <div class="rounded-lg border border-border-dim p-3 bg-panel/50">
+                    <div class="flex items-center gap-1.5 mb-2"><div class="w-1.5 h-1.5 rounded-full" style="background:#0A66C2"></div><span class="text-[10px] font-semibold text-white">LinkedIn</span></div>
+                    <div class="text-lg font-bold text-teal tabular-nums">34</div>
+                    <div class="text-[8px] text-slate-500">actions today</div>
+                  </div>
+                  <div class="rounded-lg border border-border-dim p-3 bg-panel/50">
+                    <div class="flex items-center gap-1.5 mb-2"><div class="w-1.5 h-1.5 rounded-full" style="background:#1DA1F2"></div><span class="text-[10px] font-semibold text-white">Twitter</span></div>
+                    <div class="text-lg font-bold text-blue-400 tabular-nums">21</div>
+                    <div class="text-[8px] text-slate-500">actions today</div>
+                  </div>
+                  <div class="rounded-lg border border-border-dim p-3 bg-panel/50">
+                    <div class="flex items-center gap-1.5 mb-2"><div class="w-1.5 h-1.5 rounded-full" style="background:#FF4500"></div><span class="text-[10px] font-semibold text-white">Reddit</span></div>
+                    <div class="text-lg font-bold text-orange-400 tabular-nums">15</div>
+                    <div class="text-[8px] text-slate-500">actions today</div>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between rounded-lg border border-border-dim p-3 bg-panel/50">
+                  <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-green-400 live-dot"></div>
+                    <span class="text-[10px] font-semibold text-white">Automation On</span>
+                  </div>
+                  <span class="text-[9px] text-slate-500">next run: 14:00</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Tab descriptions -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-8 max-w-4xl mx-auto reveal">
-        <div class="text-center p-3 rounded-xl border border-border-dim bg-panel/20"><span class="font-mono text-[10px] text-teal">~</span><div class="text-xs font-semibold mt-1">Command</div><div class="text-[10px] text-slate-500 mt-0.5">Mission control</div></div>
-        <div class="text-center p-3 rounded-xl border border-border-dim bg-panel/20"><span class="font-mono text-[10px] text-teal">%</span><div class="text-xs font-semibold mt-1">Agents</div><div class="text-[10px] text-slate-500 mt-0.5">Per-agent control</div></div>
-        <div class="text-center p-3 rounded-xl border border-border-dim bg-panel/20"><span class="font-mono text-[10px] text-teal">&gt;</span><div class="text-xs font-semibold mt-1">Activity</div><div class="text-[10px] text-slate-500 mt-0.5">Session feeds</div></div>
-        <div class="text-center p-3 rounded-xl border border-border-dim bg-panel/20"><span class="font-mono text-[10px] text-teal">$</span><div class="text-xs font-semibold mt-1">Usage</div><div class="text-[10px] text-slate-500 mt-0.5">Costs &amp; tokens</div></div>
-        <div class="text-center p-3 rounded-xl border border-border-dim bg-panel/20"><span class="font-mono text-[10px] text-teal">#</span><div class="text-xs font-semibold mt-1">Quality</div><div class="text-[10px] text-slate-500 mt-0.5">Voice consistency</div></div>
-        <div class="text-center p-3 rounded-xl border border-border-dim bg-panel/20"><span class="font-mono text-[10px] text-teal">@</span><div class="text-xs font-semibold mt-1">Config</div><div class="text-[10px] text-slate-500 mt-0.5">Settings &amp; identity</div></div>
+        <!-- Card 2: Live Activity -->
+        <div class="reveal reveal-d1 card rounded-2xl overflow-hidden">
+          <div class="grid grid-cols-1 md:grid-cols-2">
+            <div class="p-4 md:p-5 bg-void/50 md:border-r border-t md:border-t-0 border-border-dim order-1 md:order-none">
+              <!-- Mini activity feed mockup -->
+              <div class="space-y-1.5">
+                <div class="flex items-start gap-2 px-2 py-1.5 rounded-lg" style="background:rgba(255,255,255,0.015)">
+                  <div class="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0"></div>
+                  <div>
+                    <div class="text-[11px] text-slate-300">Commented on LinkedIn post about platform engineering</div>
+                    <div class="font-mono text-[9px] text-slate-500 mt-0.5">09:42 · thinking → evaluate → posted</div>
+                  </div>
+                </div>
+                <div class="flex items-start gap-2 px-2 py-1.5 rounded-lg" style="background:rgba(255,255,255,0.015)">
+                  <div class="w-1.5 h-1.5 rounded-full bg-teal mt-1.5 shrink-0"></div>
+                  <div>
+                    <div class="text-[11px] text-slate-300">Searched r/devops — 3 comments, 5 upvotes</div>
+                    <div class="font-mono text-[9px] text-slate-500 mt-0.5">09:38 · 12 tool calls</div>
+                  </div>
+                </div>
+                <div class="hidden md:flex items-start gap-2 px-2 py-1.5 rounded-lg" style="background:rgba(255,255,255,0.015)">
+                  <div class="w-1.5 h-1.5 rounded-full bg-teal mt-1.5 shrink-0"></div>
+                  <div>
+                    <div class="text-[11px] text-slate-300">Published Dev.to article: "AI agents in production"</div>
+                    <div class="font-mono text-[9px] text-slate-500 mt-0.5">09:15 · 847 words</div>
+                  </div>
+                </div>
+                <div class="hidden md:flex items-start gap-2 px-2 py-1.5 rounded-lg" style="background:rgba(255,255,255,0.015)">
+                  <div class="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 shrink-0"></div>
+                  <div>
+                    <div class="text-[11px] text-slate-300">Browser timeout — retried, succeeded</div>
+                    <div class="font-mono text-[9px] text-slate-500 mt-0.5">09:10 · error recovered</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 px-2 py-1.5">
+                  <span class="font-mono text-[9px] text-teal">all</span>
+                  <span class="font-mono text-[9px] text-slate-500">thinking</span>
+                  <span class="font-mono text-[9px] text-slate-500">tool</span>
+                  <span class="font-mono text-[9px] text-slate-500">error</span>
+                </div>
+              </div>
+            </div>
+            <div class="p-5 md:p-10 flex flex-col justify-center">
+              <div class="font-mono text-xs uppercase tracking-wider text-teal-dim mb-2">Activity Feed</div>
+              <h3 class="text-xl font-bold mb-3">Watch agents think and act</h3>
+              <p class="text-sm text-slate-400">Full session replay — every thought, tool call, and error in real time.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Usage & Costs -->
+        <div class="reveal reveal-d2 card rounded-2xl overflow-hidden">
+          <div class="grid grid-cols-1 md:grid-cols-2">
+            <div class="p-5 md:p-10 flex flex-col justify-center">
+              <div class="font-mono text-xs uppercase tracking-wider text-teal-dim mb-2">Usage &amp; Costs</div>
+              <h3 class="text-xl font-bold mb-3">Know where every dollar goes</h3>
+              <p class="text-sm text-slate-400">Per-agent tokens, estimated spend, cache efficiency, and daily trends.</p>
+            </div>
+            <div class="p-4 md:p-5 bg-void/50 md:border-l border-t md:border-t-0 border-border-dim">
+              <!-- Mini cost chart mockup -->
+              <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="rounded-lg border border-border-dim p-3 bg-panel/50">
+                    <div class="text-[8px] uppercase tracking-wider text-slate-500 mb-1">Est. Cost</div>
+                    <div class="text-xl font-bold text-teal tabular-nums">$8.42</div>
+                    <div class="text-[8px] text-slate-500">avg $0.47/run</div>
+                  </div>
+                  <div class="rounded-lg border border-border-dim p-3 bg-panel/50">
+                    <div class="text-[8px] uppercase tracking-wider text-slate-500 mb-1">Cache Hit</div>
+                    <div class="text-xl font-bold text-green-400 tabular-nums">94%</div>
+                    <div class="text-[8px] text-slate-500">3M cached reads</div>
+                  </div>
+                </div>
+                <!-- Mini bar chart -->
+                <div class="rounded-lg border border-border-dim p-3 bg-panel/50">
+                  <div class="text-[8px] uppercase tracking-wider text-slate-500 mb-2">Daily cost · 7d</div>
+                  <div class="flex items-end gap-1.5 h-16">
+                    <div class="flex-1 rounded-t bg-teal/30" style="height:35%"></div>
+                    <div class="flex-1 rounded-t bg-teal/40" style="height:50%"></div>
+                    <div class="flex-1 rounded-t bg-teal/50" style="height:40%"></div>
+                    <div class="flex-1 rounded-t bg-teal/60" style="height:65%"></div>
+                    <div class="flex-1 rounded-t bg-teal/70" style="height:80%"></div>
+                    <div class="flex-1 rounded-t bg-teal/80" style="height:70%"></div>
+                    <div class="flex-1 rounded-t bg-teal" style="height:100%"></div>
+                  </div>
+                  <div class="flex justify-between mt-1.5">
+                    <span class="font-mono text-[7px] text-slate-600">Mon</span>
+                    <span class="font-mono text-[7px] text-slate-600">Today</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </section>
 
-  <!-- ═══════════ FEATURES ═══════════ -->
-  <section id="features" class="py-24 border-t border-border-dim">
-    <div class="max-w-6xl mx-auto px-6">
-      <div class="text-center mb-16 reveal">
-        <div class="font-mono text-xs uppercase tracking-[0.2em] text-teal-dim mb-3">Capabilities</div>
-        <h2 class="text-3xl md:text-4xl font-bold mb-4">Everything under the hood</h2>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 reveal">
-        <div class="card p-6"><h3 class="text-base font-semibold mb-2">🤖 Claude-powered agents</h3><p class="text-sm text-slate-400">Each platform gets a dedicated AI agent that reads context, thinks about what to say, and engages authentically.</p></div>
-        <div class="card p-6"><h3 class="text-base font-semibold mb-2">📊 7-stage content pipeline</h3><p class="text-sm text-slate-400">Daily trend scouting, competitive intel, engagement tracking, amplification, and content generation.</p></div>
-        <div class="card p-6"><h3 class="text-base font-semibold mb-2">🎯 Voice calibration</h3><p class="text-sm text-slate-400">Style mix, disagreement targets, word limits, and brand mention frequency keep your twins sounding like you.</p></div>
-        <div class="card p-6"><h3 class="text-base font-semibold mb-2">📈 Quality monitoring</h3><p class="text-sm text-slate-400">Track style distribution, disagreement rates, word density over 7/14/30 day windows.</p></div>
-        <div class="card p-6"><h3 class="text-base font-semibold mb-2">💰 Cost tracking</h3><p class="text-sm text-slate-400">Per-agent tokens, cache hit rates, estimated spend, daily trends. Know exactly where every dollar goes.</p></div>
-        <div class="card p-6"><h3 class="text-base font-semibold mb-2">🛡️ Safety first</h3><p class="text-sm text-slate-400">Rate limits, active hours, banned phrases. Runs locally on your machine — no third-party access.</p></div>
-      </div>
-
-      <!-- Platforms strip -->
-      <div class="mt-16 text-center reveal">
-        <div class="font-mono text-xs uppercase tracking-[0.2em] text-teal-dim mb-4">10 Platforms</div>
-        <div class="flex flex-wrap items-center justify-center gap-3">
-          <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#0A66C2"></span>LinkedIn</span>
-          <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#1DA1F2"></span>Twitter</span>
-          <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#FF4500"></span>Reddit</span>
-          <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#0085FF"></span>Bluesky</span>
-          <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#888"></span>Threads</span>
-          <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#00AB6C"></span>Medium</span>
-          <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#FF6719"></span>Substack</span>
-          <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#3B49DF"></span>Dev.to</span>
-          <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#DA552F"></span>Product Hunt</span>
-          <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#4F46E5"></span>Indie Hackers</span>
-        </div>
+  <!-- ═══════════ PLATFORMS + POWERED BY ═══════════ -->
+  <div class="py-16 border-t border-border-dim space-y-10">
+    <div class="max-w-6xl mx-auto px-6 text-center reveal">
+      <div class="font-mono text-[11px] uppercase tracking-[0.15em] text-slate-600 mb-5">Works with 10 platforms</div>
+      <div class="flex flex-wrap items-center justify-center gap-2">
+        <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#0A66C2"></span>LinkedIn</span>
+        <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#1DA1F2"></span>Twitter</span>
+        <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#FF4500"></span>Reddit</span>
+        <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#0085FF"></span>Bluesky</span>
+        <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#888"></span>Threads</span>
+        <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#00AB6C"></span>Medium</span>
+        <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#FF6719"></span>Substack</span>
+        <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#3B49DF"></span>Dev.to</span>
+        <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#DA552F"></span>Product Hunt</span>
+        <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-dim bg-panel/30 text-sm"><span class="w-2 h-2 rounded-full" style="background:#4F46E5"></span>Indie Hackers</span>
       </div>
     </div>
-  </section>
+    <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 reveal">
+      <span class="font-mono text-[11px] uppercase tracking-wider text-slate-600">Powered by</span>
+      <div class="flex items-center gap-5 sm:gap-8 flex-wrap justify-center">
+        <span class="flex items-center gap-2 text-sm text-slate-400"><span class="text-base" aria-hidden="true">🧠</span> Claude Code</span>
+        <span class="w-px h-4 bg-border-dim hidden sm:block"></span>
+        <span class="flex items-center gap-2 text-sm text-slate-400"><span class="text-base" aria-hidden="true">🦞</span> OpenClaw</span>
+        <span class="w-px h-4 bg-border-dim hidden sm:block"></span>
+        <span class="flex items-center gap-2 text-sm text-slate-400"><span class="text-base" aria-hidden="true">🗄️</span> SQLite</span>
+        <span class="w-px h-4 bg-border-dim hidden sm:block"></span>
+        <span class="flex items-center gap-2 text-sm text-slate-400"><span class="text-base" aria-hidden="true">📅</span> Bree</span>
+      </div>
+    </div>
+  </div>
 
   <!-- ═══════════ CTA ═══════════ -->
   <section id="get-started" class="py-24 border-t border-border-dim">
@@ -791,6 +921,110 @@
       });
     }
     window.selectPersona = selectPersona;
+
+    // ── Animated counters ──
+    function animateCounter(el, target, suffix, duration) {
+      const start = performance.now();
+      const initial = 0;
+      function tick(now) {
+        const t = Math.min((now - start) / duration, 1);
+        const ease = 1 - Math.pow(1 - t, 3); // ease-out cubic
+        const val = Math.round(initial + (target - initial) * ease);
+        el.textContent = val + (suffix || '');
+        if (t < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+    let commentCount = 0;
+    const commentEl = document.getElementById('counter-comments');
+    // Start counters after a short delay
+    setTimeout(() => {
+      animateCounter(commentEl, 250, '+', 2000);
+      commentCount = 250;
+      animateCounter(document.getElementById('counter-platforms'), 10, '', 1500);
+      animateCounter(document.getElementById('counter-hours'), 12, 'h', 1800);
+    }, 500);
+
+    // ── Live agent feed ──
+    const feedActions = [
+      { icon: '💬', text: 'Commented on LinkedIn post about AI-native delivery', platform: 'LinkedIn', color: '#0A66C2' },
+      { icon: '👍', text: 'Liked 3 posts in r/startups', platform: 'Reddit', color: '#FF4500' },
+      { icon: '📝', text: 'Published Dev.to article: "Why I use AI agents for PM"', platform: 'Dev.to', color: '#3B49DF' },
+      { icon: '🔄', text: 'Reposted trending thread on engineering leadership', platform: 'Twitter', color: '#1DA1F2' },
+      { icon: '💬', text: 'Replied to 4 comments on yesterday\'s Product Hunt launch', platform: 'Product Hunt', color: '#DA552F' },
+      { icon: '🤝', text: 'Sent 8 connection requests to DevOps engineers', platform: 'LinkedIn', color: '#0A66C2' },
+      { icon: '💬', text: 'Commented on Substack newsletter about remote work', platform: 'Substack', color: '#FF6719' },
+      { icon: '📊', text: 'Posted a poll: "What\'s your CI/CD setup?"', platform: 'LinkedIn', color: '#0A66C2' },
+      { icon: '👍', text: 'Liked 5 posts about AI agents on Bluesky', platform: 'Bluesky', color: '#0085FF' },
+      { icon: '💬', text: 'Engaged in Indie Hackers thread about bootstrapping', platform: 'Indie Hackers', color: '#4F46E5' },
+      { icon: '📝', text: 'Published Medium article: "10x engineer is a myth"', platform: 'Medium', color: '#00AB6C' },
+      { icon: '💬', text: 'Replied to recruiter DM with portfolio link', platform: 'LinkedIn', color: '#0A66C2' },
+      { icon: '🔄', text: 'Shared a Threads post about developer productivity', platform: 'Threads', color: '#888' },
+      { icon: '💬', text: 'Left a thoughtful comment on HN front page post', platform: 'Reddit', color: '#FF4500' },
+      { icon: '🤝', text: 'Connected with 3 speakers from re:Invent', platform: 'LinkedIn', color: '#0A66C2' },
+      { icon: '📝', text: 'Wrote a Twitter thread on AI agent accountability', platform: 'Twitter', color: '#1DA1F2' },
+    ];
+
+    const MAX_FEED_ITEMS = 7;
+    let feedIdx = 0;
+    const feedEl = document.getElementById('live-feed');
+    const timeEl = document.getElementById('feed-time');
+
+    function createFeedItem(action, timeLabel) {
+      const div = document.createElement('div');
+      div.className = 'feed-item flex items-start gap-3 px-3 py-2 rounded-lg';
+      div.style.background = 'rgba(255,255,255,0.015)';
+      div.innerHTML = `
+        <span class="text-base mt-0.5">${action.icon}</span>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm text-slate-300">${action.text}</div>
+          <div class="flex items-center gap-1.5 mt-1">
+            <div class="w-1.5 h-1.5 rounded-full" style="background:${action.color}"></div>
+            <span class="font-mono text-[10px] text-slate-500">${action.platform}</span>
+            <span class="text-[10px] text-slate-600 ml-1">${timeLabel}</span>
+          </div>
+        </div>
+      `;
+      return div;
+    }
+
+    function addFeedItem(timeLabel) {
+      const action = feedActions[feedIdx % feedActions.length];
+      const item = createFeedItem(action, timeLabel || 'just now');
+
+      // Fade out oldest if at max, then remove
+      while (feedEl.children.length >= MAX_FEED_ITEMS) {
+        const oldest = feedEl.firstElementChild;
+        oldest.style.opacity = '0';
+        oldest.style.transition = 'opacity 0.2s';
+        setTimeout(() => { if (oldest.parentNode) oldest.remove(); }, 200);
+        // Break to only remove one at a time
+        break;
+      }
+
+      feedEl.appendChild(item);
+      feedIdx++;
+
+      // Increment comment counter when a comment action appears
+      if (action.icon === '💬' && commentCount > 0) {
+        commentCount++;
+        commentEl.textContent = commentCount + '+';
+      }
+    }
+
+    // Initialize with 5 items with staggered timestamps
+    const initialTimes = ['8m ago', '5m ago', '3m ago', '1m ago', 'just now'];
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => addFeedItem(initialTimes[i]), i * 150);
+    }
+    // Then add one every 3.5 seconds
+    setInterval(() => addFeedItem('just now'), 3500);
+
+    // Tick the clock every second
+    setInterval(() => {
+      const now = new Date();
+      timeEl.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    }, 1000);
 
     // Arrow key navigation between tabs
     const tabs = Array.from(document.querySelectorAll('.persona-btn'));
