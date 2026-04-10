@@ -1292,21 +1292,32 @@ function intervalLabel(minutes: number): string {
 
 function IntervalPicker({ value, onSave }: { value: number; onSave: (minutes: number) => void }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
     if (!open) return;
+    // Position dropdown below the button
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4 + window.scrollY, left: rect.left + window.scrollX });
+    }
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (dropRef.current && !dropRef.current.contains(e.target as Node) &&
+          btnRef.current && !btnRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
   return (
-    <div className="relative" ref={ref}>
+    <div>
       <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-1.5" style={{ color: 'var(--c-text-muted)' }}>Run every</div>
       <button
+        ref={btnRef}
         onClick={() => setOpen(!open)}
         className="text-xl font-semibold tabular-nums leading-none flex items-center gap-1.5 transition-colors hover:text-teal"
         style={{ color: 'var(--c-text)' }}
@@ -1317,26 +1328,28 @@ function IntervalPicker({ value, onSave }: { value: number; onSave: (minutes: nu
       <div className="mono text-[12px] mt-1.5" style={{ color: 'var(--c-text-muted)' }}>
         during active hours
       </div>
-      {open && (
+      {open && createPortal(
         <div
-          className="absolute top-full left-0 mt-2 rounded-lg overflow-hidden z-20"
-          style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
+          ref={dropRef}
+          className="fixed rounded-lg overflow-hidden z-50"
+          style={{ top: pos.top, left: pos.left, background: 'var(--c-panel)', border: '1px solid var(--c-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
         >
           {INTERVAL_OPTIONS.map((opt) => (
             <button
               key={opt}
               onClick={() => { onSave(opt); setOpen(false); }}
-              className="block w-full text-left px-4 py-2 text-sm transition-colors hover:bg-white/5"
+              className="block w-full text-left px-5 py-2.5 text-sm transition-colors hover:bg-white/5 whitespace-nowrap"
               style={{
                 color: opt === value ? 'var(--c-teal)' : 'var(--c-text-dim)',
                 fontWeight: opt === value ? 600 : 400,
               }}
             >
               {intervalLabel(opt)}
-              {opt === value && <span className="ml-2 text-[10px]">current</span>}
+              {opt === value && <span className="ml-2 text-[10px]" style={{ color: 'var(--c-text-muted)' }}>current</span>}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
