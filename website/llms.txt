@@ -1,0 +1,60 @@
+# OpenTwins
+
+> AI agents that engage on LinkedIn, Twitter, Reddit and 7 more social platforms - as you, in your voice.
+
+OpenTwins deploys autonomous AI agents ("digital twins") that comment, post, react and build connections across 10 social platforms using your identity, voice and content strategy. It runs locally on your machine - no cloud service, no third-party access to your accounts.
+
+## What it does
+
+- Deploys one AI agent per platform (LinkedIn, Twitter/X, Reddit, Bluesky, Threads, Medium, Substack, Dev.to, Product Hunt, Indie Hackers)
+- Each agent reads posts, thinks about what to say and engages authentically using Claude as the AI brain
+- Agents use a real Chrome browser with your login session - not API abuse or scrapers
+- Daily 7-stage content pipeline: trend scouting, competitive intel, engagement tracking, amplification and content generation
+- Configurable rate limits, active hours, voice style, disagreement targets and banned phrases
+
+## Who it's for
+
+- Founders: build in public, grow launch audience on Product Hunt/Reddit/IH while you ship
+- Tech leaders: thought leadership on LinkedIn/Twitter/Dev.to, conference-speaker level visibility
+- Job seekers: get noticed by recruiters through consistent LinkedIn engagement
+- Creators: distribute content across Substack/Medium/Threads/Bluesky automatically
+
+## Tech stack
+
+- Claude Code (AI brain for all agents)
+- OpenClaw (browser automation via CDP)
+- Bree (in-process job scheduling)
+- SQLite (activity and quality tracking)
+- Node.js 18+
+
+## Dashboard
+
+Web dashboard at localhost:3847 with 6 tabs:
+- Command: mission control with KPI cards, agent status, recent runs
+- Agents: per-agent controls, limits, schedule, live activity feed
+- Activity: session replay with thinking/tool/error events
+- Usage: token consumption, estimated costs, cache hit rates
+- Quality: voice consistency, disagreement rates, word density trends
+- Config: identity, platforms, voice, schedule settings
+
+## How OpenTwins compares to alternatives
+
+- Buffer and Hootsuite are scheduling tools. They post content on a schedule but cannot comment, reply to threads or build connections. OpenTwins agents actively engage in conversations.
+- Expandi and PhantomBuster automate LinkedIn actions via unofficial APIs. Platforms detect and ban these approaches. OpenTwins uses a real Chrome browser with standard login sessions.
+- Taplio and TweetHunter are platform-specific (LinkedIn and Twitter respectively). OpenTwins covers 10 platforms with one tool.
+- Lately AI and Postwise generate content but do not post or engage autonomously. OpenTwins handles the full cycle: content generation, posting, commenting, reacting and connection building.
+- OpenTwins is open source (MIT) and runs entirely on your machine. No cloud service has access to your social media accounts.
+
+## Installation
+
+```
+npm install -g opentwins
+opentwins init
+```
+
+The init command launches a web setup wizard for identity, platforms, voice and schedule configuration.
+
+## Links
+
+- Source: https://github.com/Open-Twin/opentwins
+- License: MIT
