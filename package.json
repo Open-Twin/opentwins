@@ -52,7 +52,7 @@
     "express": "^4.21.0",
     "handlebars": "^4.7.8",
     "ora": "^8.0.0",
-    "zod": "^3.23.0"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.0",
