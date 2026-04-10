@@ -117,7 +117,7 @@
         <div>
           <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-teal/20 bg-teal/5 mb-8">
             <div class="w-1.5 h-1.5 rounded-full bg-teal animate-pulse"></div>
-            <span class="font-mono text-xs uppercase tracking-wider text-teal">Open Source &middot; Runs Locally</span>
+            <span class="font-mono text-xs uppercase tracking-wider text-teal">Open Source &middot; Your data stays on your machine</span>
           </div>
 
           <h1 class="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.08] mb-6">
@@ -125,8 +125,11 @@
             <span class="gradient-text">Not your workload.</span>
           </h1>
 
-          <p class="text-base text-slate-400 mb-10 max-w-md">
-            AI agents that engage on LinkedIn, Twitter, Reddit, and 7 more platforms — as you, in your voice.
+          <p class="text-base text-slate-400 mb-4 max-w-md">
+            AI agents that comment, post, and build connections on LinkedIn, Twitter, Reddit, and 7 more platforms &mdash; as you, in your voice.
+          </p>
+          <p class="text-sm text-slate-500 mb-10 max-w-md">
+            A "twin" is an AI agent assigned to one platform. It reads posts, thinks about what to say, and engages on your behalf &mdash; using your identity and expertise.
           </p>
 
           <!-- Proof counters — above CTA for "proof then action" -->
@@ -150,7 +153,7 @@
           <!-- CTA — full-width on mobile -->
           <div class="flex flex-col sm:flex-row items-stretch sm:items-start gap-3">
             <a href="#get-started" class="px-7 py-3 rounded-lg font-semibold text-sm bg-teal text-void hover:bg-teal/90 transition-all glow-teal-sm whitespace-nowrap text-center">
-              Start Growing Free
+              Get Started
             </a>
             <div class="code-block px-4 py-2.5 flex items-center gap-3">
               <span class="text-slate-500 select-none">$</span>
@@ -647,7 +650,7 @@
             <div class="font-mono text-sm text-slate-300">Agents &rarr; Set up browser</div>
             <div class="font-mono text-sm text-slate-300 mt-1">Log in &rarr; Confirm</div>
           </div>
-          <p class="text-sm text-slate-400">One click launches Chrome. Log in to each platform once &mdash; sessions persist across runs.</p>
+          <p class="text-sm text-slate-400">Agents use a real browser to engage — just like you would. Log in once per platform so the agent has your session. Credentials stay on your machine.</p>
         </div>
         <div>
           <div class="flex items-center gap-4 mb-5">
@@ -844,6 +847,113 @@
     </div>
   </div>
 
+  <!-- ═══════════ SAFETY + FAQ ═══════════ -->
+  <section class="py-24 border-t border-border-dim">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+
+        <!-- Safety -->
+        <div class="reveal">
+          <div class="font-mono text-xs uppercase tracking-[0.2em] text-teal-dim mb-3">Safety &amp; Privacy</div>
+          <h2 class="text-2xl md:text-3xl font-bold mb-6">Built to protect your accounts</h2>
+          <div class="space-y-5">
+            <div class="flex gap-4">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-teal/10 border border-teal/20 shrink-0 text-sm" aria-hidden="true">🛡️</div>
+              <div>
+                <div class="text-sm font-semibold text-white mb-1">Human-like behavior</div>
+                <div class="text-sm text-slate-400">Agents engage at natural pace with configurable rate limits. Daily and weekly caps on comments, posts, reactions, and connections prevent unnatural spikes that trigger platform detection.</div>
+              </div>
+            </div>
+            <div class="flex gap-4">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-teal/10 border border-teal/20 shrink-0 text-sm" aria-hidden="true">⏰</div>
+              <div>
+                <div class="text-sm font-semibold text-white mb-1">Active hours only</div>
+                <div class="text-sm text-slate-400">Agents only run during your configured waking hours (e.g. 8am–11pm). No posting at 3am. Looks exactly like a real person's activity pattern.</div>
+              </div>
+            </div>
+            <div class="flex gap-4">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-teal/10 border border-teal/20 shrink-0 text-sm" aria-hidden="true">🌐</div>
+              <div>
+                <div class="text-sm font-semibold text-white mb-1">Real browser, not API abuse</div>
+                <div class="text-sm text-slate-400">Agents use a real Chrome browser with your login session — the same way you'd browse manually. No scrapers, no unofficial APIs, no detectable automation headers.</div>
+              </div>
+            </div>
+            <div class="flex gap-4">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-teal/10 border border-teal/20 shrink-0 text-sm" aria-hidden="true">🔒</div>
+              <div>
+                <div class="text-sm font-semibold text-white mb-1">100% local</div>
+                <div class="text-sm text-slate-400">Everything runs on your machine. Credentials never leave your computer. No cloud service, no third-party access to your accounts. You can inspect every line of code.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="reveal reveal-d1">
+          <div class="font-mono text-xs uppercase tracking-[0.2em] text-teal-dim mb-3">FAQ</div>
+          <h2 class="text-2xl md:text-3xl font-bold mb-6">Common questions</h2>
+          <div class="space-y-4">
+            <details class="group rounded-xl border border-border-dim bg-panel/30">
+              <summary class="flex items-center justify-between p-4 cursor-pointer text-sm font-semibold text-white hover:text-teal transition-colors">
+                Will my accounts get banned?
+                <span class="text-slate-500 group-open:rotate-45 transition-transform text-lg">+</span>
+              </summary>
+              <div class="px-4 pb-4 text-sm text-slate-400 leading-relaxed">
+                The risk is low but not zero — as with any automation. OpenTwins mitigates this by using a real browser (not API abuse), respecting rate limits, only engaging during natural hours, and producing genuinely unique comments (not templates). You control the pace. Start conservative and increase gradually.
+              </div>
+            </details>
+            <details class="group rounded-xl border border-border-dim bg-panel/30">
+              <summary class="flex items-center justify-between p-4 cursor-pointer text-sm font-semibold text-white hover:text-teal transition-colors">
+                How much does it cost to run?
+                <span class="text-slate-500 group-open:rotate-45 transition-transform text-lg">+</span>
+              </summary>
+              <div class="px-4 pb-4 text-sm text-slate-400 leading-relaxed">
+                OpenTwins itself is free and open source. But agents need Claude to think — so you need either a <strong class="text-slate-300">Claude Code subscription</strong> (~$20/month for Max) or <strong class="text-slate-300">Anthropic API credits</strong> (~$2–5/day depending on how many platforms and how active). The Usage tab in the dashboard tracks costs in real time.
+              </div>
+            </details>
+            <details class="group rounded-xl border border-border-dim bg-panel/30">
+              <summary class="flex items-center justify-between p-4 cursor-pointer text-sm font-semibold text-white hover:text-teal transition-colors">
+                Can I review what my twin posts?
+                <span class="text-slate-500 group-open:rotate-45 transition-transform text-lg">+</span>
+              </summary>
+              <div class="px-4 pb-4 text-sm text-slate-400 leading-relaxed">
+                Yes. The Activity tab shows a full replay of every session — what the agent thought, what it typed, and what it posted. You can also run agents manually (one click) and watch in real time before enabling the auto-scheduler.
+              </div>
+            </details>
+            <details class="group rounded-xl border border-border-dim bg-panel/30">
+              <summary class="flex items-center justify-between p-4 cursor-pointer text-sm font-semibold text-white hover:text-teal transition-colors">
+                What if something goes wrong?
+                <span class="text-slate-500 group-open:rotate-45 transition-transform text-lg">+</span>
+              </summary>
+              <div class="px-4 pb-4 text-sm text-slate-400 leading-relaxed">
+                Every agent run is logged. If an agent hits an error, it stops and reports it in the dashboard. You can set banned phrases to prevent specific content. Rate limits cap daily activity. And you can pause or stop any agent instantly from the dashboard.
+              </div>
+            </details>
+            <details class="group rounded-xl border border-border-dim bg-panel/30">
+              <summary class="flex items-center justify-between p-4 cursor-pointer text-sm font-semibold text-white hover:text-teal transition-colors">
+                Do I need to be a developer?
+                <span class="text-slate-500 group-open:rotate-45 transition-transform text-lg">+</span>
+              </summary>
+              <div class="px-4 pb-4 text-sm text-slate-400 leading-relaxed">
+                You need Node.js installed, but the setup is a web wizard — no config files to edit. If you can run <code class="text-teal bg-teal/5 px-1.5 py-0.5 rounded">npm install</code> in a terminal, you're good. The dashboard handles everything else through a visual UI.
+              </div>
+            </details>
+            <details class="group rounded-xl border border-border-dim bg-panel/30">
+              <summary class="flex items-center justify-between p-4 cursor-pointer text-sm font-semibold text-white hover:text-teal transition-colors">
+                Is this against platform Terms of Service?
+                <span class="text-slate-500 group-open:rotate-45 transition-transform text-lg">+</span>
+              </summary>
+              <div class="px-4 pb-4 text-sm text-slate-400 leading-relaxed">
+                Most platforms prohibit "automated" engagement in their ToS. OpenTwins uses a real browser and produces original, contextual content — not mass-generated spam. It behaves like a very consistent human user. That said, use at your own discretion and start with conservative rate limits.
+              </div>
+            </details>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
   <!-- ═══════════ CTA ═══════════ -->
   <section id="get-started" class="py-24 border-t border-border-dim">
     <div class="max-w-6xl mx-auto px-6">
@@ -852,7 +962,7 @@
         <div class="absolute inset-0 grid-bg opacity-30"></div>
         <div class="relative p-10 md:p-16 text-center">
           <h2 class="text-3xl md:text-4xl font-bold mb-3">Start growing today</h2>
-          <p class="text-slate-400 max-w-md mx-auto mb-8">Free, open source, runs on your machine. Set up in 5 minutes.</p>
+          <p class="text-slate-400 max-w-lg mx-auto mb-8">Open source, runs on your machine. Set up in 5 minutes. Requires a Claude Code subscription or Anthropic API key for the AI brain.</p>
           <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
             <div class="code-block px-5 py-3 flex items-center gap-3">
               <span class="text-slate-500 select-none">$</span>
