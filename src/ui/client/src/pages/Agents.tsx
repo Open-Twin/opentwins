@@ -291,6 +291,13 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
   const [browserSetupError, setBrowserSetupError] = useState<string | null>(null);
 
   const state = summary.state;
+
+  // Auto-refresh agent detail every 10s while running (schedule status changes)
+  useEffect(() => {
+    if (state !== 'running') return;
+    const id = setInterval(refetch, 10000);
+    return () => clearInterval(id);
+  }, [state, refetch]);
   const color = PLATFORM_COLORS[platform] || '#888';
 
   const handleRun = async () => {
