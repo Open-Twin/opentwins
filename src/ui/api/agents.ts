@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
-import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
-import { getPlatformWorkspaceDir, getLockFile, getBrowserProfilesConfigPath, getConfigPath } from '../../util/paths.js';
+import { getPlatformWorkspaceDir, getLockFile, getBrowserProfilesConfigPath, getConfigPath, getLastHeartbeatFile, getLocksDir } from '../../util/paths.js';
 import { PLATFORM_TYPES, PLATFORM_API_KEYS } from '../../util/platform-types.js';
 import { loadConfig, configExists } from '../../config/loader.js';
 import { findLatestSessionFile, extractEventsFromSession } from '../../util/session-parser.js';
@@ -215,6 +215,13 @@ export async function handleRunAgent(req: Request, res: Response): Promise<void>
         completedAt: new Date().toISOString(),
         exitCode: code ?? 1,
       };
+
+      // Write heartbeat completion time so the interval timer starts from now
+      try {
+        const dir = getLocksDir();
+        if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+        writeFileSync(getLastHeartbeatFile(platform), String(Date.now()), 'utf-8');
+      } catch { /* best effort */ }
     });
 
     // Safety timeout

@@ -157,12 +157,12 @@ export function extractEventsFromSession(sessionFile: string): FeedEvent[] {
           }
         }
       }
-    } else if (typ === 'result') {
+    } else if (typ === 'result' || typ === 'last-prompt') {
       events.push({
         ts,
         kind: 'done',
         summary: `✅ Session complete`,
-        detail: String(entry.result || '').slice(0, 500),
+        detail: typ === 'result' ? String(entry.result || '').slice(0, 500) : undefined,
       });
     }
   }
