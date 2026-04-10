@@ -1,0 +1,168 @@
+# OpenTwins - Complete Reference
+
+> Autonomous digital twins for social platform engagement. Open source, runs locally, MIT licensed.
+
+## Overview
+
+OpenTwins is a Node.js CLI tool that deploys AI-powered agents across 10 social media platforms. Each agent uses Claude (via Claude Code CLI) as its AI brain and OpenClaw for browser automation. Agents engage authentically - commenting, posting, reacting and building connections - using the user's configured identity, voice and content strategy.
+
+The tool runs entirely on the user's machine. No cloud service is involved. Credentials and session cookies stay local.
+
+## Supported platforms
+
+1. LinkedIn - comments, posts, articles, polls, connection requests, reactions
+2. Twitter/X - tweets, replies, threads, quote tweets, articles
+3. Reddit - comments, posts, upvotes, karma building
+4. Bluesky - posts, comments, quotes
+5. Threads - posts, comments, quotes
+6. Medium - responses, claps, articles
+7. Substack - comments, notes, newsletters, restacks
+8. Dev.to - articles, comments, reactions
+9. Product Hunt - comments, upvotes, launches
+10. Indie Hackers - posts, comments, discussions
+
+## Architecture
+
+```
+~/.opentwins/
+  config.json          - identity, platforms, voice, schedule settings
+  data.db              - SQLite database for activity tracking and quality metrics
+  workspaces/
+    agent-{platform}/  - per-agent workspace with HEARTBEAT.md, schedule, memory
+  browser-profiles/    - profile markers for configured platforms
+  locks/               - agent run lock files
+```
+
+### Agent execution flow
+
+1. Scheduler triggers agent heartbeat (hourly during active hours)
+2. `runClaudeAgent()` spawns `claude -p` with the agent's HEARTBEAT.md prompt
+3. Claude reads the schedule, picks the current task, and executes it
+4. Browser automation via `openclaw browser` CLI commands (open, navigate, evaluate, click)
+5. Agent writes results to memory files and updates limits.json
+6. Session JSONL is saved to `~/.claude/projects/` for activity tracking
+
+### Content pipeline (7 stages, daily)
+
+1. Trend Scout - predicts trending topics
+2. Competitive Intel - monitors competitor activity
+3. Engagement Tracker - tracks post performance
+4. Network Mapper - maps engagement targets
+5. Amplification - identifies content to amplify
+6. Content Planner - generates daily brief
+7. Content Writer - creates platform-specific content
+
+## Configuration
+
+### Identity fields
+- name, display_name, role, headline, bio, brand_tagline
+- certifications, conference_mentions, experience_hooks
+- content pillars (topics the agent engages on)
+
+### Voice settings
+- formality: casual | balanced | professional
+- style_ratios: questions, statements, reactions, trailing (percentages)
+- disagree_target_pct: target disagreement rate (default 25%)
+- max_word_count: per-comment word limit (default 80)
+- brand_mention_every_n: how often to mention brand (default every 5 comments)
+
+### Safety controls
+- Daily rate limits per action type (comments, reactions, posts)
+- Weekly rate limits (articles, connection requests, polls)
+- Active hours window (default 8:00-23:00)
+- Banned phrases list
+- Platform-specific API keys where required
+
+### Authentication
+- Claude Code subscription (OAuth token via `claude setup-token`)
+- Anthropic API key (from console.anthropic.com)
+
+## Web dashboard
+
+Served at localhost:3847 via `opentwins ui` or `opentwins start --ui`.
+
+### Tabs
+
+**Command** - Mission control
+- KPI cards: agents enabled, runs today, tool calls, automation status
+- Platform agent cards with status, actions, next run time
+- Recent runs table (clickable, links to Activity)
+- Content pipeline flow visualization
+
+**Agents** - Per-agent management
+- Hero panel with run/stop controls, status badge
+- Quick stats: today's actions, tasks done, last run, workspace status
+- Browser setup button (launches Chrome via OpenClaw for login)
+- Limits with progress bars (daily/weekly, editable)
+- Behavior tuning: style mix bars, parameters
+- Today's schedule with task progress
+- Live activity feed from latest Claude session (auto-polls when running)
+
+**Activity** - Session explorer
+- Sessions grouped by run, filterable by platform and date
+- Each session expandable to show full event feed
+- Events: thinking (blue), tool calls (white), errors (red), done (green)
+- Event kind filter chips (all/thinking/tool/error)
+- Clickable from Dashboard recent runs (deep links with auto-expand)
+
+**Usage** - Cost tracking
+- KPI cards: estimated cost, output tokens, cache hit rate, errors
+- Daily cost bar chart
+- Daily output token chart
+- Error trend line chart
+- Cost breakdown by category (output/cache write/cache read/input)
+- Per-platform breakdown table
+- Monthly projection with subscription caveat
+
+**Quality** - Voice monitoring
+- Today's snapshot: comments, avg words, disagree %, em-dash violations
+- Health-colored KPI cards (green/amber/red based on targets)
+- Trend charts over 7/14/30 days: volume, disagreement rate, word density
+- Style distribution pie chart
+- Platform and timeframe filters
+
+**Config** - Settings editor
+- Identity: name, role, headline, bio, tagline
+- Professional context: certifications, conferences, experience hooks (as tag chips)
+- Content pillars: editable card grid
+- Voice: formality segmented control, language
+- Schedule: timezone, active hours with hour pickers, pipeline toggle
+- Saving regenerates all agent template files
+
+### Health monitoring
+- Always-visible status pills in top nav bar
+- OpenClaw gateway: probes localhost health endpoint every 20s
+- Claude status: fetches status.claude.com API, cached 60s server-side
+- When gateway is down: agent actions disabled, warning banner shown
+
+## CLI commands
+
+```
+opentwins init              - launch web setup wizard (default)
+opentwins init --cli        - interactive CLI setup (headless fallback)
+opentwins init --force      - overwrite existing config
+opentwins start             - start agent scheduler
+opentwins start --ui        - start scheduler + web dashboard
+opentwins stop              - stop daemon
+opentwins run <platform>    - run single agent manually
+opentwins run pipeline      - run content pipeline
+opentwins ui                - start dashboard only
+opentwins browser setup <p> - create browser profile + login
+opentwins browser login <p> - re-login to existing profile
+opentwins browser health    - check all browser sessions
+opentwins browser list      - list configured profiles
+opentwins logs <platform>   - view today's activity log
+```
+
+## Dependencies
+
+- Node.js 18+
+- Claude Code CLI (`npm install -g @anthropic-ai/claude-code`)
+- OpenClaw CLI (`npm install -g openclaw`) with gateway running
+- Claude Code subscription or Anthropic API key
+
+## Links
+
+- Repository: https://github.com/Open-Twin/opentwins
+- Issues: https://github.com/Open-Twin/opentwins/issues
+- License: MIT
