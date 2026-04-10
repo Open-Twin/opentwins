@@ -380,7 +380,12 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
     connection_requests: { label: 'Send Connections', icon: '🤝' },
   };
 
-  const scheduleEntries: Array<{ time: string; action: string; desc?: string; status?: string }> = [];
+  // Extract schedule theme
+  const scheduleTheme = agent.schedule && typeof agent.schedule === 'object'
+    ? String((agent.schedule as Record<string, unknown>).metadata && ((agent.schedule as Record<string, unknown>).metadata as Record<string, unknown>)?.theme || '')
+    : '';
+
+  const scheduleEntries: Array<{ time: string; action: string; desc?: string; detail?: string; status?: string }> = [];
   if (agent.schedule && typeof agent.schedule === 'object') {
     const tasks = ((agent.schedule as Record<string, unknown>).tasks || []) as Array<Record<string, unknown>>;
     if (Array.isArray(tasks)) {
@@ -390,20 +395,33 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
         const cfg = (t.config || {}) as Record<string, unknown>;
 
         // Build a short description from config
-        let desc = t.description ? String(t.description) : '';
-        if (!desc) {
-          const parts: string[] = [];
-          if (cfg.max_comments) parts.push(`${cfg.max_comments} comment${Number(cfg.max_comments) > 1 ? 's' : ''}`);
-          if (cfg.max_likes) parts.push(`${cfg.max_likes} likes`);
-          if (cfg.question) parts.push(`"${String(cfg.question).slice(0, 60)}"`);
-          if (cfg.queries && Array.isArray(cfg.queries)) parts.push(`${cfg.queries.length} queries`);
-          if (parts.length) desc = parts.join(', ');
+        const parts: string[] = [];
+        if (cfg.max_comments) parts.push(`${cfg.max_comments} comment${Number(cfg.max_comments) > 1 ? 's' : ''}`);
+        if (cfg.max_likes) parts.push(`${cfg.max_likes} likes`);
+        if (parts.length === 0 && cfg.topic) parts.push(String(cfg.topic).slice(0, 80));
+        if (parts.length === 0 && cfg.question) parts.push(`"${String(cfg.question).slice(0, 80)}"`);
+        const desc = t.description ? String(t.description) : parts.join(', ');
+
+        // Build richer detail for expandable view
+        let detail = '';
+        if (cfg.topic) detail += String(cfg.topic);
+        if (cfg.question) detail += (detail ? '\n' : '') + `Poll: "${String(cfg.question)}"`;
+        if (cfg.options && Array.isArray(cfg.options)) detail += '\nOptions: ' + (cfg.options as string[]).join(' / ');
+        if (cfg.post_text) detail += (detail ? '\n' : '') + String(cfg.post_text).slice(0, 200);
+        if (cfg.queries && Array.isArray(cfg.queries)) detail += (detail ? '\n' : '') + 'Queries: ' + (cfg.queries as string[]).join(', ');
+        if (cfg.priority_targets && Array.isArray(cfg.priority_targets) && (cfg.priority_targets as string[]).length > 0) {
+          detail += (detail ? '\n' : '') + 'Targets: ' + (cfg.priority_targets as string[]).join(', ');
+        }
+        // Show progress for completed tasks
+        if (cfg.comments_done || cfg.likes_done) {
+          detail += (detail ? '\n' : '') + `Done: ${cfg.comments_done || 0} comments, ${cfg.likes_done || 0} likes`;
         }
 
         scheduleEntries.push({
           time: String(t.time || t.time_scheduled || '-'),
           action: meta ? `${meta.icon} ${meta.label}` : typeKey,
           desc,
+          detail: detail || undefined,
           status: t.status ? String(t.status) : undefined,
         });
       }
@@ -816,6 +834,13 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
           <div className="p-4">
             {scheduleEntries.length > 0 ? (
               <>
+                {/* Day theme */}
+                {scheduleTheme && (
+                  <div className="mb-4 px-3 py-2 rounded-lg" style={{ background: 'rgba(45,212,191,0.04)', border: '1px solid rgba(45,212,191,0.1)' }}>
+                    <div className="text-[11px] uppercase tracking-wider font-medium mb-1" style={{ color: 'var(--c-teal-dim)' }}>Today's theme</div>
+                    <div className="text-sm" style={{ color: 'var(--c-text)' }}>{scheduleTheme}</div>
+                  </div>
+                )}
                 {/* Progress bar */}
                 <div className="h-1.5 rounded-full overflow-hidden mb-4" style={{ background: 'var(--c-border-dim)' }}>
                   <div className="h-full rounded-full transition-all duration-500" style={{
@@ -824,34 +849,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
                     opacity: 0.7,
                   }} />
                 </div>
-                <div className="space-y-1">
-                  {scheduleEntries.map((t, i) => {
-                    const statusColor =
-                      t.status === 'completed' ? 'var(--c-green)' :
-                      t.status === 'failed'    ? 'var(--c-red)' :
-                      t.status === 'running'   ? 'var(--c-blue)' :
-                      'var(--c-text-muted)';
-                    return (
-                      <div key={i} className="flex items-start gap-4 py-2.5 px-3 rounded-lg transition-colors hover:bg-white/[0.02]">
-                        <span className="mono text-[13px] shrink-0 w-14 pt-0.5" style={{ color: 'var(--c-teal-dim)' }}>{t.time}</span>
-                        <div className="w-1.5 h-1.5 rounded-full shrink-0 mt-2" style={{ background: statusColor }} />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium" style={{ color: 'var(--c-text)' }}>{t.action}</div>
-                          {t.desc && <div className="mono text-[12px] mt-1 truncate" style={{ color: 'var(--c-text-muted)' }}>{t.desc}</div>}
-                        </div>
-                        {t.status && (
-                          <span className="mono text-[11px] uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0" style={{
-                            color: statusColor,
-                            background: t.status === 'completed' ? 'rgba(52,211,153,0.1)' :
-                                        t.status === 'failed'    ? 'rgba(248,113,113,0.1)' :
-                                        t.status === 'running'   ? 'rgba(96,165,250,0.12)' :
-                                        'rgba(148,163,184,0.08)',
-                          }}>{t.status}</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                <ScheduleTaskList entries={scheduleEntries} color={color} />
               </>
             ) : (
               <Empty text="No schedule yet" hint="Generated on first heartbeat run" />
@@ -1269,6 +1267,67 @@ function BehaviorField({ label, value, suffix, editing, min, max, onChange }: {
         )}
         <span className="mono text-[14px]" style={{ color: 'var(--c-text-muted)' }}>{suffix}</span>
       </div>
+    </div>
+  );
+}
+
+function ScheduleTaskList({ entries, color }: { entries: Array<{ time: string; action: string; desc?: string; detail?: string; status?: string }>; color: string }) {
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const toggle = (i: number) => {
+    const next = new Set(expanded);
+    if (next.has(i)) next.delete(i); else next.add(i);
+    setExpanded(next);
+  };
+
+  return (
+    <div className="space-y-1">
+      {entries.map((t, i) => {
+        const isOpen = expanded.has(i);
+        const hasDetail = !!t.detail;
+        const statusColor =
+          t.status === 'completed' ? 'var(--c-green)' :
+          t.status === 'failed'    ? 'var(--c-red)' :
+          t.status === 'running'   ? 'var(--c-blue)' :
+          'var(--c-text-muted)';
+        return (
+          <div key={i}>
+            <div
+              className={`flex items-start gap-4 py-2.5 px-3 rounded-lg transition-colors ${hasDetail ? 'cursor-pointer hover:bg-white/[0.03]' : ''}`}
+              onClick={hasDetail ? () => toggle(i) : undefined}
+            >
+              <span className="mono text-[13px] shrink-0 w-14 pt-0.5" style={{ color: 'var(--c-teal-dim)' }}>{t.time}</span>
+              <div className="w-1.5 h-1.5 rounded-full shrink-0 mt-2" style={{ background: statusColor }} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium" style={{ color: 'var(--c-text)' }}>{t.action}</span>
+                  {hasDetail && (
+                    <span className="text-[10px] transition-transform" style={{ color: 'var(--c-text-muted)', transform: isOpen ? 'rotate(90deg)' : 'none' }}>▶</span>
+                  )}
+                </div>
+                {t.desc && <div className="mono text-[12px] mt-1 truncate" style={{ color: 'var(--c-text-muted)' }}>{t.desc}</div>}
+              </div>
+              {t.status && (
+                <span className="mono text-[11px] uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0" style={{
+                  color: statusColor,
+                  background: t.status === 'completed' ? 'rgba(52,211,153,0.1)' :
+                              t.status === 'failed'    ? 'rgba(248,113,113,0.1)' :
+                              t.status === 'running'   ? 'rgba(96,165,250,0.12)' :
+                              'rgba(148,163,184,0.08)',
+                }}>{t.status}</span>
+              )}
+            </div>
+            {isOpen && t.detail && (
+              <div className="ml-[74px] mr-3 mb-2 px-3 py-2 rounded-md mono text-[12px] leading-relaxed whitespace-pre-wrap" style={{
+                color: 'var(--c-text-dim)',
+                background: 'var(--c-void)',
+                border: '1px solid var(--c-border-dim)',
+              }}>
+                {t.detail}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
