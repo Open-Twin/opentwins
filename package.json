@@ -59,7 +59,7 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
     "tsup": "^8.0.0",
-    "typescript": "^5.5.0",
+    "typescript": "^6.0.2",
     "vitest": "^2.0.0"
   }
 }
