@@ -22,6 +22,7 @@ interface AgentSummary {
 interface AgentDetail {
   platform: string;
   handle: string;
+  heartbeat_interval_minutes: number;
   enabled: boolean;
   browserConfigured: boolean;
   hasWorkspace: boolean;
@@ -526,11 +527,16 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
               value={agent.lastRun?.startedAt ? new Date(agent.lastRun.startedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
               sub={agent.lastRun?.exitCode !== undefined ? `exit ${agent.lastRun.exitCode}` : 'no runs yet'}
             />
-            <HeroStat
-              label="Workspace"
-              value={agent.browserConfigured ? '✓ ready' : '✗ missing'}
-              sub={agent.browserConfigured ? 'browser configured' : 'run browser setup'}
-              warn={!agent.browserConfigured}
+            <IntervalPicker
+              value={agent.heartbeat_interval_minutes}
+              onSave={async (minutes) => {
+                const result = await saveAgent({ heartbeat_interval_minutes: minutes });
+                if (result) {
+                  setFlash(`Interval updated to ${minutes}m`);
+                  refetch();
+                  setTimeout(() => setFlash(null), 3000);
+                }
+              }}
             />
           </div>
         </div>
@@ -1272,6 +1278,56 @@ function Empty({ text, hint }: { text: string; hint: string }) {
     <div className="py-10 text-center">
       <div className="text-sm" style={{ color: 'var(--c-text-dim)' }}>{text}</div>
       <div className="mono text-[12px] mt-1.5" style={{ color: 'var(--c-text-muted)' }}>{hint}</div>
+    </div>
+  );
+}
+
+const INTERVAL_OPTIONS = [15, 30, 60, 90, 120, 180, 240, 480] as const;
+
+function intervalLabel(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const h = minutes / 60;
+  return h === Math.floor(h) ? `${h}h` : `${Math.floor(h)}h${minutes % 60}m`;
+}
+
+function IntervalPicker({ value, onSave }: { value: number; onSave: (minutes: number) => void }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-1.5" style={{ color: 'var(--c-text-muted)' }}>Run every</div>
+      <button
+        onClick={() => setOpen(!open)}
+        className="text-xl font-semibold tabular-nums leading-none flex items-center gap-1.5 transition-colors hover:text-teal"
+        style={{ color: 'var(--c-text)' }}
+      >
+        {intervalLabel(value)}
+        <span className="text-[10px]" style={{ color: 'var(--c-text-muted)' }}>▼</span>
+      </button>
+      <div className="mono text-[12px] mt-1.5" style={{ color: 'var(--c-text-muted)' }}>
+        during active hours
+      </div>
+      {open && (
+        <div
+          className="absolute top-full left-0 mt-2 rounded-lg overflow-hidden z-20"
+          style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
+        >
+          {INTERVAL_OPTIONS.map((opt) => (
+            <button
+              key={opt}
+              onClick={() => { onSave(opt); setOpen(false); }}
+              className="block w-full text-left px-4 py-2 text-sm transition-colors hover:bg-white/5"
+              style={{
+                color: opt === value ? 'var(--c-teal)' : 'var(--c-text-dim)',
+                fontWeight: opt === value ? 600 : 400,
+              }}
+            >
+              {intervalLabel(opt)}
+              {opt === value && <span className="ml-2 text-[10px]">current</span>}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

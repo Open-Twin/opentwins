@@ -127,6 +127,7 @@ export function handleGetAgent(req: Request, res: Response): void {
   res.json({
     platform,
     handle: platformConfig?.handle || '',
+    heartbeat_interval_minutes: platformConfig?.heartbeat_interval_minutes || 60,
     workspace: dir,
     enabled,
     browserConfigured: browser,
@@ -317,7 +318,26 @@ export async function handleUpdateAgent(req: Request, res: Response): Promise<vo
     return;
   }
 
-  const { limits, queries, behavior } = req.body;
+  const { limits, queries, behavior, heartbeat_interval_minutes } = req.body;
+
+  if (heartbeat_interval_minutes !== undefined) {
+    try {
+      const { saveConfig } = await import('../../config/loader.js');
+      const config = loadConfig();
+      const platformIndex = config.platforms.findIndex((p) => p.platform === platform);
+      if (platformIndex === -1) {
+        res.status(404).json({ error: 'Platform not in config' });
+        return;
+      }
+      const val = Math.max(15, Math.min(480, parseInt(heartbeat_interval_minutes) || 60));
+      config.platforms[platformIndex].heartbeat_interval_minutes = val;
+      saveConfig(config);
+      res.json({ ok: true, heartbeat_interval_minutes: val });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to save interval' });
+    }
+    return;
+  }
 
   if (limits) {
     handleUpdateLimits({ ...req, body: limits } as Request, res);

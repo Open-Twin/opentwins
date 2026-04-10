@@ -26,6 +26,7 @@ const PlatformAccountSchema = z.object({
   enabled: z.boolean().default(true),
   premium: z.boolean().optional(),
   account_age: z.string().optional(),
+  heartbeat_interval_minutes: z.number().int().min(15).max(480).default(60),
   limits: PlatformLimitsSchema,
   // Platform API keys (for platforms that need them)
   api_keys: z.record(z.string(), z.string()).optional(),
