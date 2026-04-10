@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OpenTwins - AI Agents That Grow Your Social Presence</title>
-  <meta name="description" content="Deploy AI agents that engage on LinkedIn, Twitter, Reddit and 7 more platforms - as you, in your voice. For founders, tech leaders, job seekers and creators. Open source.">
+  <meta name="description" content="AI agents that engage on LinkedIn, Twitter, Reddit and 7 more platforms - as you, in your voice. For founders, leaders and creators. Open source.">
   <meta name="keywords" content="AI agents, social media automation, LinkedIn automation, Twitter bot, digital twin, personal branding, thought leadership, open source, Claude AI">
   <meta name="author" content="OpenTwins">
   <meta name="theme-color" content="#2dd4bf">
@@ -29,7 +29,7 @@
   <meta name="twitter:description" content="AI agents that engage on LinkedIn, Twitter, Reddit and 7 more platforms. Open source, runs locally.">
   <meta name="twitter:image" content="https://opentwins.ai/og-image.png">
 
-  <!-- Structured Data -->
+  <!-- Structured Data: SoftwareApplication -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -52,10 +52,94 @@
     }
   }
   </script>
+  <!-- Structured Data: FAQPage -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Will my accounts get banned?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The risk is low but not zero. OpenTwins mitigates this by using a real browser (not API abuse), respecting configurable rate limits, only engaging during natural hours and producing genuinely unique AI-generated comments. Start conservative and increase gradually."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How much does it cost to run?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "OpenTwins is free and open source. Agents need Claude to think, so you need either a Claude Code subscription (~$20/month) or Anthropic API credits (~$2-5/day depending on activity). The dashboard tracks costs in real time."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I review what my twin posts?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. The Activity tab shows a full replay of every session - what the agent thought, what it typed and what it posted. You can run agents manually and watch in real time before enabling automation."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What if something goes wrong?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Every agent run is logged. If an agent hits an error, it stops and reports it in the dashboard. You can set banned phrases, rate limits cap daily activity, and you can pause or stop any agent instantly."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Do I need to be a developer?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "You need Node.js installed, but setup uses a web wizard with no config files to edit. If you can run npm install in a terminal, you can use OpenTwins. The dashboard handles everything through a visual UI."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is this against platform Terms of Service?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Most platforms prohibit automated engagement in their ToS. OpenTwins uses a real browser and produces original, contextual content - not mass-generated spam. It behaves like a very consistent human user. Use at your own discretion and start with conservative rate limits."
+        }
+      }
+    ]
+  }
+  </script>
+  <!-- Structured Data: HowTo -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to set up OpenTwins",
+    "description": "Install and configure OpenTwins to deploy AI agents across social platforms in under 5 minutes.",
+    "step": [
+      {
+        "@type": "HowToStep",
+        "name": "Install and configure",
+        "text": "Run npm install -g opentwins then opentwins init. A web wizard guides you through identity, platforms, voice and schedule."
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Connect platforms",
+        "text": "In the dashboard, go to Agents tab, click Set up browser. Log in to each platform once - sessions persist across agent runs."
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Start your twins",
+        "text": "Run opentwins start --ui to launch the dashboard. Agents auto-run hourly during your active hours."
+      }
+    ]
+  }
+  </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -103,6 +187,13 @@
 </head>
 
 <body class="font-sans">
+  <noscript>
+    <style>
+      .reveal { opacity: 1 !important; transform: none !important; }
+      .persona-content { display: block !important; position: relative !important; opacity: 1 !important; transform: none !important; pointer-events: auto !important; }
+      #live-feed::after { content: 'Enable JavaScript to see the live agent feed preview.'; color: #64748b; font-size: 14px; display: block; padding: 40px; text-align: center; }
+    </style>
+  </noscript>
 
   <!-- ═══════════ NAV ═══════════ -->
   <nav class="fixed top-0 left-0 right-0 z-50 nav-blur border-b border-border-dim">
@@ -118,7 +209,7 @@
         <a href="#dashboard" class="text-sm text-slate-400 hover:text-teal transition-colors">Dashboard</a>
       </div>
       <div class="flex items-center gap-3">
-        <a href="https://github.com/Open-Twin/opentwins" target="_blank" rel="noopener" class="hidden sm:flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors" aria-label="GitHub">
+        <a href="https://github.com/Open-Twin/opentwins" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors" aria-label="GitHub">
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
           GitHub
         </a>
@@ -271,7 +362,7 @@
     <div class="max-w-6xl mx-auto px-6">
       <div class="text-center mb-10 reveal">
         <div class="font-mono text-xs uppercase tracking-[0.2em] text-teal-dim mb-3">Built For You</div>
-        <h2 class="text-3xl md:text-4xl font-bold mb-4">I am a...</h2>
+        <h2 class="text-3xl md:text-4xl font-bold mb-4">Built for founders, tech leaders, job seekers and creators</h2>
         <p class="text-slate-400 max-w-md mx-auto">Pick your role. See how OpenTwins works for you.</p>
       </div>
 
@@ -907,7 +998,7 @@
               <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-teal/10 border border-teal/20 shrink-0 text-sm" aria-hidden="true">⏰</div>
               <div>
                 <div class="text-sm font-semibold text-white mb-1">Active hours only</div>
-                <div class="text-sm text-slate-400">Agents only run during your configured waking hours (e.g. 8am–11pm). No posting at 3am. Looks exactly like a real person's activity pattern.</div>
+                <div class="text-sm text-slate-400">Agents only run during your configured waking hours (e.g. 8am-11pm). No posting at 3am. Looks exactly like a real person's activity pattern.</div>
               </div>
             </div>
             <div class="flex gap-4">
@@ -930,7 +1021,7 @@
         <!-- FAQ -->
         <div class="reveal reveal-d1">
           <div class="font-mono text-xs uppercase tracking-[0.2em] text-teal-dim mb-3">FAQ</div>
-          <h2 class="text-2xl md:text-3xl font-bold mb-6">Common questions</h2>
+          <h2 class="text-2xl md:text-3xl font-bold mb-6">Frequently asked questions</h2>
           <div class="space-y-4">
             <details class="group rounded-xl border border-border-dim bg-panel/30">
               <summary class="flex items-center justify-between p-4 cursor-pointer text-sm font-semibold text-white hover:text-teal transition-colors">
@@ -947,7 +1038,7 @@
                 <span class="text-slate-500 group-open:rotate-45 transition-transform text-lg">+</span>
               </summary>
               <div class="px-4 pb-4 text-sm text-slate-400 leading-relaxed">
-                OpenTwins itself is free and open source. But agents need Claude to think - so you need either a <strong class="text-slate-300">Claude Code subscription</strong> (~$20/month for Max) or <strong class="text-slate-300">Anthropic API credits</strong> (~$2–5/day depending on how many platforms and how active). The Usage tab in the dashboard tracks costs in real time.
+                OpenTwins itself is free and open source. But agents need Claude to think - so you need either a <strong class="text-slate-300">Claude Code subscription</strong> (~$20/month for Max) or <strong class="text-slate-300">Anthropic API credits</strong> (~$2-5/day depending on how many platforms and how active). The Usage tab in the dashboard tracks costs in real time.
               </div>
             </details>
             <details class="group rounded-xl border border-border-dim bg-panel/30">
@@ -1007,7 +1098,7 @@
               <span class="text-slate-500 select-none">$</span>
               <code class="text-sm text-teal">npx opentwins init</code>
             </div>
-            <a href="https://github.com/Open-Twin/opentwins" target="_blank" rel="noopener" class="px-6 py-3 rounded-lg font-semibold text-sm bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all flex items-center gap-2">
+            <a href="https://github.com/Open-Twin/opentwins" target="_blank" rel="noopener noreferrer" class="px-6 py-3 rounded-lg font-semibold text-sm bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all flex items-center gap-2">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
               View on GitHub
             </a>
@@ -1032,9 +1123,9 @@
         <span class="font-mono text-xs text-slate-600">MIT License</span>
       </div>
       <div class="flex items-center gap-6">
-        <a href="https://github.com/Open-Twin/opentwins" target="_blank" rel="noopener" class="text-sm text-slate-500 hover:text-teal transition-colors">GitHub</a>
-        <a href="https://github.com/Open-Twin/opentwins/issues" target="_blank" rel="noopener" class="text-sm text-slate-500 hover:text-teal transition-colors">Issues</a>
-        <a href="https://github.com/Open-Twin/opentwins/blob/main/README.md" target="_blank" rel="noopener" class="text-sm text-slate-500 hover:text-teal transition-colors">Docs</a>
+        <a href="https://github.com/Open-Twin/opentwins" target="_blank" rel="noopener noreferrer" class="text-sm text-slate-500 hover:text-teal transition-colors">GitHub</a>
+        <a href="https://github.com/Open-Twin/opentwins/issues" target="_blank" rel="noopener noreferrer" class="text-sm text-slate-500 hover:text-teal transition-colors">Issues</a>
+        <a href="https://github.com/Open-Twin/opentwins/blob/main/README.md" target="_blank" rel="noopener noreferrer" class="text-sm text-slate-500 hover:text-teal transition-colors">Docs</a>
       </div>
     </div>
   </footer>
