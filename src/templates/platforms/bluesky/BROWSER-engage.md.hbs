@@ -1,0 +1,258 @@
+# BROWSER-engage.md - Search, Comment, Quote & Follow Patterns
+
+## Comment Quality Rules (Lighter — Bluesky voice is already good)
+
+### A. Don't Default to "Agree + Expand" (per-comment check)
+
+Before writing each proactive comment, ask: **"Am I about to agree and expand?"** If yes, consider instead:
+- A **short reaction** ("lol this. the coordination tax is real")
+- A **personal fragment** ("ran into this exact thing last week. the drift is wild")
+- A **disagree** ("idk i think the real issue is...", "hot take but this is fine for most teams")
+
+Pick whichever fits naturally. **Per-batch rule:** If you just wrote an insight, make the next one shorter or different.
+
+### B. Length Variation
+
+- At least 1 in 3 proactive comments MUST be under 10 words
+- NEVER post 3 comments in a row of similar length
+- Replies are already well-varied — this rule is for proactive comments only
+
+### F. Anti-AI Check for Proactive Comments
+
+Before posting any proactive comment:
+1. **Structure check:** If your last 2 comments both follow "agree + insight" — write this one as reaction, tangent, or disagreement
+2. **Opener check:** Don't start by quoting their exact phrase. React in your own words
+3. **"exactly" ban:** Don't use "exactly", "exactly right", "exactly this"
+
+🚨 **NEVER mention company.** No "at my company", "at my org". Frame as individual: "I've seen this", "in my setup", "ran into this myself".
+
+### G. Hard Disagreement Rule (per-batch)
+
+🚨 **In every heartbeat with 3+ comments, at least 1 MUST disagree with the author's point.** Actual pushback, not "I'd add." Check before finishing the batch.
+
+### H. Topic Diversity
+
+🚨 **1 in 5 comments should be on an adjacent topic WITHOUT PM/AI angle.** Dev culture, career, remote work, tooling opinions. React as a person.
+
+### I. Platform Voice (Bluesky-specific)
+
+- **Warmer than Twitter.** Bluesky culture is collaborative, not combative. Disagree gently.
+- **Short comments are normal** — "lol true", "oh nice" are fine here. Don't over-explain.
+- **No hashtags in comments** — only in posts.
+- **Cozy/community tone** — Bluesky rewards genuine warmth over hot takes.
+
+### J. Pre-Post Self-Review (concrete checklist)
+
+Re-read your text before submitting. Check these 4 things:
+1. **Sentence structure:** Do all sentences follow the same grammatical pattern? → rewrite one differently
+2. **Sentence length:** Are all sentences roughly the same length? → shorten or lengthen one
+3. **Originality:** Did you just rephrase what the author already said? → add something new or just react instead
+4. **Natural voice:** Would you send this exact text to a friend? → if too formal or structured, loosen it
+5. **Structure:** Does your comment have intro-body-conclusion? → cut the intro or conclusion. Just start in the middle.
+6. **Dashes:** Replace every `—` and `--` with ` - `. No exceptions.
+7. **Opener dedup:** Does your comment start similarly to `last_snippet` in today_summary.json? → rewrite the opener.
+
+---
+
+## S 3. Search Page Extraction
+
+**Called once per query** (see HEARTBEAT.md S4 for multi-query loop).
+Navigate to `https://bsky.app/search?q={QUERY}`, click "Latest" tab, then extract with 3s embedded wait.
+
+**Important:** Must click "Latest" tab first — default is "Top" which shows old popular posts.
+
+Returns posts with engagement counts parsed from aria-labels. `postId` extracted from URL — use directly for grep pre-check.
+
+**Filters applied inline:**
+- Skips posts with noise keywords: hiring, job seekers, apply now, dm me for, check my link, onlyfans, follow back
+- Skips posts with < 30 chars of real text (link spam / emoji only)
+- Skips posts older than 4h with 0 likes (nobody cared)
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    // Click Latest tab
+    const tabs = Array.from(document.querySelectorAll('div[role="tab"], button[role="tab"]'));
+    const latestTab = tabs.find(t => t.innerText.trim() === 'Latest');
+    if (latestTab) latestTab.click();
+    await new Promise(r => setTimeout(r, 3000));
+
+    const posts = [];
+    const containers = Array.from(document.querySelectorAll('div[role="link"]'));
+    const seen = new Set();
+    const noiseKw = ['hiring', 'job seekers', 'apply now', 'dm me for', 'check my link', 'onlyfans', 'follow back'];
+
+    for (const container of containers) {
+      if (posts.length >= 10) break;
+      const link = container.querySelector('a[href*="/post/"]');
+      if (!link) continue;
+      if (seen.has(link.href)) continue;
+      seen.add(link.href);
+
+      const urlMatch = link.href.match(/\\/profile\\/([^/]+)\\/post\\/([^/?]+)/);
+      if (!urlMatch) continue;
+      const author = urlMatch[1];
+      const postId = urlMatch[2];
+
+      const fullText = container.innerText;
+
+      // Parse counts from aria-labels
+      const replyBtn = container.querySelector('button[aria-label*="repl"], button[aria-label*="Repl"]');
+      const likeBtn = container.querySelector('button[aria-label*="like"], button[aria-label*="Like"]');
+      const replyLabel = replyBtn ? replyBtn.getAttribute('aria-label') : '';
+      const likeLabel = likeBtn ? likeBtn.getAttribute('aria-label') : '';
+      const replies = parseInt((replyLabel.match(/(\\d+)\\s*repl/i) || [])[1]) || 0;
+      const likes = parseInt((likeLabel.match(/(\\d+)\\s*like/i) || [])[1]) || 0;
+
+      // Parse timestamp
+      const tsMatch = fullText.match(/·\\s*(\\d+[smhdw])/);
+      const timeStr = tsMatch ? tsMatch[1] : '';
+      let ageHours = 0;
+      const tsParsed = timeStr.match(/^(\\d+)([smhdw])$/);
+      if (tsParsed) {
+        const n = parseInt(tsParsed[1]), u = tsParsed[2];
+        if (u === 's') ageHours = n / 3600;
+        else if (u === 'm') ageHours = n / 60;
+        else if (u === 'h') ageHours = n;
+        else if (u === 'd') ageHours = n * 24;
+        else if (u === 'w') ageHours = n * 168;
+      }
+
+      // Extract post text (after timestamp marker)
+      const afterTs = fullText.replace(/^.*?·\\s*\\d+[smhdw]\\s*/, '');
+      const text = afterTs.replace(/\\d+$/, '').trim().slice(0, 300);
+
+      // Noise filter
+      const textLower = text.toLowerCase();
+      if (noiseKw.some(kw => textLower.includes(kw))) continue;
+      if (text.replace(/\\s/g, '').length < 30) continue;
+      if (ageHours > 4 && likes === 0) continue;
+      // Skip replies (they show "Replied to" — navigating to them has no Compose button)
+      if (fullText.includes('Replied to')) continue;
+
+      // Media detection — can't see images, meme posts get wrong-tone replies
+      var hasMedia = container.querySelectorAll('img[src*="cdn.bsky.app/img/feed_"]').length > 0;
+      var isMemeLikely = hasMedia && text.length < 80;
+
+      posts.push({ author, postId, url: link.href, text: text.slice(0, 60), likes, replies, ageHours, timeStr, hasMedia, isMemeLikely });
+    }
+    return posts;
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+---
+
+## S 4a. Duplicate Check + Post Text (combined, on post page)
+
+After navigating to post. Combines 3s wait + DOM duplicate check + post text read into ONE evaluate.
+
+**Duplicate check:** Look for our profile link inside thread **reply** containers (role="link"), skipping the first one (the OP post itself). When we're the OP, our profile appears in the first container — that's not a duplicate comment.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    const mainContent = document.querySelector('main') || document.body;
+    const threadContainers = Array.from(mainContent.querySelectorAll('div[role="link"]'));
+    // Skip the first container (the OP post) - only check replies below it
+    const replyContainers = threadContainers.slice(1);
+    const inReplyLinks = replyContainers.flatMap(c => Array.from(c.querySelectorAll('a[href*="/profile/{{handle}}"]')));
+    const alreadyCommented = inReplyLinks.length > 0;
+    // Depth check: count posts above compose button (parent chain)
+    var composeBtn = document.querySelector('button[aria-label="Compose reply"]');
+    var composeY = composeBtn ? composeBtn.getBoundingClientRect().y : 9999;
+    var parentChainLen = threadContainers.filter(c => c.getBoundingClientRect().y < composeY).length;
+    var tooDeep = parentChainLen >= 4;
+    const postText = mainContent.innerText.slice(0, 500);
+    return { alreadyCommented, tooDeep, parentChainLen, text: postText };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If `alreadyCommented: true` → backfill to `memory/commented_posts.txt`, skip to next candidate.
+If `tooDeep: true` (parentChainLen >= 4) → skip (deep thread, no visibility).
+
+## S 4b. Click Reply Button (for post pages)
+
+Use when commenting on posts. Clicks "Compose reply" which opens the reply dialog.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    const composeBtn = document.querySelector('button[aria-label="Compose reply"]');
+    if (!composeBtn) return { error: 'no_compose_button' };
+    composeBtn.click();
+    return { clicked: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+After clicking, the 1.5s wait is embedded in S 5 (Reply/Comment Flow).
+
+---
+
+## S 6. Click Quote
+
+**Step 1:** Click repost button:
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    const repostBtn = document.querySelector('button[aria-label="Repost or quote post"]');
+    if (!repostBtn) return { clicked: false, error: 'no_repost_btn' };
+    repostBtn.click();
+    return { clicked: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+**Step 2:** Click "Quote post" menu item (with 1s embedded wait):
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 1000));
+    const menuItems = Array.from(document.querySelectorAll('div[role="menuitem"]'));
+    const quoteItem = menuItems.find(m => m.innerText.trim() === 'Quote post');
+    if (quoteItem) { quoteItem.click(); return { clicked: true }; }
+    return { clicked: false };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+**Step 3:** Use BROWSER-core.md S 5 but with `button[aria-label="Publish post"]` as submit button (NOT "Publish reply").
+
+---
+
+## S 7. Follow User (from post page — no navigation needed)
+
+🚨 **MANDATORY after every comment and quote.** Every engagement = follow. No limit. No profile navigation. Follow button on post page → click → changes to "Following".
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 500));
+    var btns = Array.from(document.querySelectorAll('button'));
+    var followBtn = btns.find(b => b.innerText.trim() === 'Follow');
+    if (!followBtn) {
+      var followingBtn = btns.find(b => b.innerText.trim() === 'Following');
+      return { alreadyFollowing: !!followingBtn };
+    }
+    followBtn.click();
+    return { followed: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If `alreadyFollowing`: skip silently. If error: skip follow, proceed with comment.

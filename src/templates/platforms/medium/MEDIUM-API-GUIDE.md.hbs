@@ -1,0 +1,136 @@
+# Medium API Publishing Guide
+
+## Summary
+
+After researching similar cases online, I found that **Medium's API still works** despite being officially deprecated. This completely bypasses browser automation issues.
+
+## The Problem
+
+Browser automation on Medium fails because:
+1. **Anti-bot detection** - Medium detects automated interactions in contenteditable fields
+2. **React state management** - Complex editor requires specific event sequences
+3. **"Something is wrong" error** - Common when automation is detected
+
+## The Solution: Use Medium API
+
+Medium's REST API is "deprecated" but **still fully functional** for posting articles.
+
+### Step 1: Get Your Integration Token
+
+1. Go to https://medium.com/me/settings
+2. Scroll to "Integration tokens" section
+3. Enter a description: "OpenClaw Agent"
+4. Click "Get token"
+5. Copy the token (it looks like: `2dbc7c2b4e74c3b58e8d24b1f3a6e9c8d7b6a5c4`)
+
+⚠️ **Important**: Store this securely. It never expires (unless revoked).
+
+### Step 2: Set Environment Variable
+
+```bash
+export MEDIUM_TOKEN="your_token_here"
+```
+
+Or add to your shell profile (~/.zshrc or ~/.bashrc):
+```bash
+echo 'export MEDIUM_TOKEN="your_token_here"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+### Step 3: Use One of the Scripts
+
+#### Option A: Node.js Script (Recommended)
+
+```bash
+node /tmp/medium-api-post.js
+```
+
+#### Option B: Bash Script (Requires jq)
+
+```bash
+bash /tmp/medium-api-post.sh
+```
+
+## API Endpoint Details
+
+### Authentication
+```
+GET https://api.medium.com/v1/me
+Authorization: Bearer YOUR_TOKEN
+```
+
+Returns user info including `userId` needed for posting.
+
+### Create Post
+```
+POST https://api.medium.com/v1/users/{userId}/posts
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "title": "Article Title",
+  "contentFormat": "markdown",  // or "html"
+  "content": "# Your content here...",
+  "tags": ["tag1", "tag2", "tag3"],
+  "publishStatus": "public"  // or "draft", "unlisted"
+}
+```
+
+### Response (201 Created)
+```json
+{
+  "data": {
+    "id": "abc123",
+    "title": "Article Title",
+    "authorId": "...",
+    "url": "https://medium.com/@{{handle_slug}}/article-title-abc123",
+    "publishStatus": "public",
+    "publishedAt": 1234567890,
+    "tags": ["tag1", "tag2", "tag3"]
+  }
+}
+```
+
+## Integration with Agent
+
+### Update TOOLS.md to include API method:
+
+```markdown
+## Article Publishing Methods
+
+### Method 1: API (Recommended)
+- Requires: MEDIUM_TOKEN environment variable
+- Pro: Reliable, fast, no browser issues
+- Con: Requires one-time token setup
+- Script: Use medium-api-post.js template
+
+### Method 2: Browser (Fallback)
+- Use only if API fails
+- Subject to anti-bot detection
+- Slower and less reliable
+```
+
+### Update schedule.json tasks:
+
+```json
+{
+  "action": "publish_article",
+  "config": {
+    "method": "api",  // or "browser" as fallback
+    "article_ref": "article-1"
+  }
+}
+```
+
+## References
+
+- [Medium API Docs](https://github.com/Medium/medium-api-docs) (deprecated but working)
+- [Medium SDK NodeJS](https://github.com/Medium/medium-sdk-nodejs) (reference implementation)
+- Similar issues found in: Stack Overflow, GitHub Issues, Reddit r/programming
+
+## Next Steps
+
+1. Get integration token from Medium settings
+2. Test posting with provided scripts
+3. Integrate API method into heartbeat workflow
+4. Keep browser automation as fallback (for reading/engagement only)

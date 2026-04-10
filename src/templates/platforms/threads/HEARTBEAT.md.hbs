@@ -1,0 +1,226 @@
+# HEARTBEAT.md - Threads Agent
+
+**Read every heartbeat:** `limits.json`, `schedule.json`, `BROWSER-core.md`
+
+**File loading:** BROWSER-core.md is ALWAYS read. Other BROWSER-*.md files are read ON-DEMAND only when needed.
+
+**CLI syntax:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
+- **evaluate:** `exec openclaw browser --browser-profile {{browser_profile}} evaluate --fn 'async () => { ... }' 2>&1` (JS goes after `--fn`)
+- **open/navigate/close:** `exec openclaw browser --browser-profile {{browser_profile}} open "URL" 2>&1`
+- 🚨 **Tab reuse:** Use `open` ONLY for the FIRST page. Use `navigate` for ALL subsequent pages. Opening new tabs wastes resources and causes close errors.
+- 🚨 Embed waits at START of evaluate fn. NEVER `sessions_spawn` or sub-sessions.
+
+---
+
+## Decision Tree
+
+```
+Heartbeat
+-> Read limits.json + schedule.json + BROWSER-core.md (global rules/shared patterns)
+-> Browser startup (retry if CDP fails)
+-> Reply check (activity/replies) -> reply loop
+   (🚨 Read BROWSER-replies.md BEFORE extracting posts)
+-> Schedule check -> execute pending tasks
+   (Read BROWSER-engage.md for engagement/quote/follow tasks)
+-> Update limits/schedule (ONCE at end)
+-> Slack report -> Close browser -> HEARTBEAT_OK
+```
+
+🚨 **ALL steps mandatory every heartbeat.** Browser + notifications MUST run even if no tasks are due.
+
+## 0. Morning Schedule Check
+
+If `schedule.json` missing or `metadata.for_date != today`:
+1. Generate INSIGHTS.md (PLAYBOOK.md - Memory Update)
+2. Generate today's schedule (PLAYBOOK.md - Generate Schedule)
+
+🚨 **NEVER generate a schedule for tomorrow.** Only generate for TODAY. Schedule generation happens once per day in the morning. If all today's tasks are done, return HEARTBEAT_OK — do NOT create a new schedule.
+
+## 1. Read Limits
+
+Read `limits.json`:
+- Reset daily counters if `last_reset != today`
+- Reset weekly counters if Monday AND `last_reset` before today
+
+## 1b. Read Today Summary
+
+Read `memory/today_summary.json`. Use tallies to inform comment decisions:
+- `disagreements` < {{behavior.disagree_target_pct}}% of `comments` AND `comments >= 4` → next MUST disagree (Threads is warmer than Twitter)
+- `last_style` was insight → next must be short/personal/pushback
+- Any style is 60%+ of total → MUST use a different style
+- `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question
+- `avg_words` above platform cap → next comment MUST be under 20 words
+
+If file doesn't exist or `date != today`, initialize:
+```bash
+exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+```
+
+## 2. Browser Startup (with retry)
+
+1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://www.threads.net/activity/replies" 2>&1`
+2. If CDP error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
+
+## 3. Reply Check (MANDATORY FIRST)
+
+**Read BROWSER-replies.md first.**
+
+🚨 **NEVER navigate to post URLs during reply check.** On post pages, `icons[0]` targets the original post (not the thread). Always use activity page popup. If `no_dialog` → retry once from activity page or skip.
+
+### 3a. Extract unreplied posts
+
+1. Navigate `https://www.threads.net/activity/replies`
+2. Run BROWSER-replies.md S 1 (has 3s embedded wait — NO separate wait step)
+
+### 3b. Grep pre-check against tracking file
+
+For each unreplied post, extract post_id from URL (the code after `/post/`, e.g. `DUqc1LaCtOk`):
+```bash
+exec printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/replied_posts.txt || true
+```
+🚨 **Interpreting the result:** Lines printed = NEW (not yet replied). **Empty output = ALL already tracked → skip to § 4.** NEVER `cat` or `read` the tracking file to verify — the grep result is authoritative. NEVER use `|| echo "all new"` as fallback.
+
+### 3b2. Depth check — skip deep back-and-forth
+
+The activity page extraction (S 1) returns `author` per post. Before replying, count how many posts from the same author appear on the activity page. If the same author has 3+ posts on the activity page → we're in a deep back-and-forth, skip the reply (append postId to tracking, move to next). Deep conversations on Threads have zero visibility to anyone else.
+
+### 3c. Reply loop
+
+Loop until no new unreplied posts:
+1. Run BROWSER-replies.md S 2 with `allowedIds` from step 3b → if `clicked=false`, stop
+2. Run BROWSER-core.md S 5 (Reply/Comment Flow — ONE evaluate: wait + type + submit)
+3. **If S 5 returns `no_dialog`:** Run BROWSER-replies.md S 3 (Retry — re-navigate to activity/replies and retry S 2 + S 5 once). If retry also fails → **skip this post** (remove from `allowedIds`, do NOT track as replied), move to next.
+4. **After successful reply:** `exec printf '%s\n' '{postId}' >> memory/replied_posts.txt` + remove from `allowedIds`
+5. Loop back to step 1 (S 5 already has 0.5s post-submit wait built in)
+
+Rules:
+- Do NOT follow users during reply loop (only during engagement)
+- Do NOT verify replies (reliable; verification false-negatives on activity page)
+- 🚨 **Replies do NOT update limits.json** — replies are unlimited, only proactive comments (§ 4) count toward `daily.comments`
+- Log: Type = "Reply" (unlimited). Log skipped replies as "Reply (skipped — popup failed)"
+- **Deeper in thread = shorter replies** — see SOUL.md § Reply Length Rules
+
+## 4. Schedule Check
+
+Filter `schedule.json`: `status="pending"` AND `time <= now`
+
+### Engagement task
+
+**Read BROWSER-engage.md first.**
+
+2. **Multi-query candidate pool** — run S 3 for EACH query in `config.search_queries` (task has 2-3 assigned):
+   - Navigate `https://www.threads.com/search?q={QUERY}&serp_type=default&filter=recent`
+   - Run BROWSER-engage.md S 3 (3s embedded wait — NO separate wait step)
+   - Collect results into a shared `allCandidates[]` array, deduping by `postId`
+   - After all queries: sort by score = `likes * 2 + replies` descending, take top 10
+3. Filter candidates: prefer 1-20 likes, <10 replies. Bio signal: deprioritize bios with "brand", "official", "news", "media" — prioritize bios mentioning PM, AI, dev, tech, manager, engineer
+   - 🚨 **Skip `isMemeLikely: true` posts** (image/video + text < 80 chars). These are memes/screenshots — you can't see the image and will reply with wrong tone.
+4. 🚨 **MANDATORY: Batch grep pre-check** — check ALL candidate post IDs at once:
+   ```bash
+   exec printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/commented_posts.txt || true
+   ```
+   Only IDs NOT in file pass. Empty = all commented across ALL queries → skip task, mark done.
+6. Per candidate post:
+   - Navigate to post URL
+   - 🚨 **MANDATORY: Run BROWSER-engage.md S 4a** (has 3s embedded wait — duplicate check + post text in ONE evaluate)
+     If `alreadyCommented: true` → append post_id to `memory/commented_posts.txt` (backfill), skip to next candidate.
+   - 🚨 **MANDATORY: Follow FIRST** — Run BROWSER-engage.md S 7 (from post page, no navigation needed). Every engagement = follow.
+   - 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/E/F) — check if defaulting to agree+expand, check length variation across batch, apply anti-AI checks, use short-and-punchy style for high-engagement posts
+   - Run BROWSER-engage.md S 4b (Click Reply Button)
+   - Run BROWSER-core.md S 5 (ONE evaluate: 1.5s wait + type + 0.5s wait + submit)
+   - Language: ALWAYS English (Ukrainian only if post is Ukrainian, per SOUL.md)
+7. **After each successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
+8. Log: Type = "Comment", increment `comments_done` in memory
+9. Completion: `comments_done >= config.max_comments` -> mark "done". If `comments_done < max_comments` AND candidates remain unprocessed → keep "pending". If ALL candidates exhausted (all queries searched, all results either commented or filtered) → mark "done" with actual count.
+
+### Quote post task
+
+**Read BROWSER-engage.md first** (if not already read for engagement task above).
+
+1. If `weekly.quotes.current >= limit` -> mark done, skip
+2. Multi-query search + filter (same as engagement steps 2-4 — run all assigned queries, merge candidates)
+3. Navigate to post, wait 3s
+4. 🚨 **MANDATORY: Follow FIRST** — Run BROWSER-engage.md S 7 (from post page, no navigation needed)
+5. Run BROWSER-engage.md S 6 (Click Quote)
+6. 🚨 **MANDATORY: Apply Quote Post Quality Rules** (PLAYBOOK.md §C) — must include personal experience, specific detail, or strong opinion. NO abstract reframes.
+7. Run BROWSER-core.md **S 5b** (multiline paste flow) -- use SOUL.md voice, 1-2 sentences + hashtags. Use `\n\n` between text and hashtags.
+8. Log: Type = "Quote", increment `weekly.quotes.current`, mark done
+
+### Content-Ready Override (publish tasks only)
+
+Before executing any `original_post` task:
+
+1. Read the file at `config.content_source`
+2. Find the first post with `status: pending`
+3. Use that content for publishing
+4. After verified publish → update the file: change `status: pending` to `status: published` for that post
+
+🚨 Does NOT apply to `quote_post` — those always use their own reactive content.
+
+### Original post task
+
+Compose dialog is identical to reply/quote dialog. Same `[role="dialog"]`, same `[role="textbox"]`, same "Post" button.
+
+1. If `weekly.posts.current >= limit` -> mark done, skip
+2. Draft post text using TOOLS.md "Original Post Strategy" templates + SOUL.md voice. Read INSIGHTS.md for what resonates. 1-3 sentences + 3-5 hashtags (read from `queries.json → hashtags` array). Use `\n\n` between paragraphs for line breaks.
+3. Navigate to `https://www.threads.net` (home page — Create button is in left nav)
+4. Run BROWSER-engage.md S 8 (opens compose dialog)
+5. Run BROWSER-core.md **S 5b** (multiline paste flow — NOT S 5 which collapses newlines)
+6. Log: Type = "Post", content snippet. Increment `weekly.posts.current`
+7. Mark done
+
+### Other tasks
+
+- **update_memory:** PLAYBOOK.md - Memory Update
+
+---
+
+## 5. Log & Update
+
+**Daily log:** Append with `cat >> memory/{today}.md <<'EOF'` (NEVER use edit/read tool)
+
+🚨 **MANDATORY: Log full comment/reply text.** Every Comment, Reply, and Quote entry MUST include the actual text posted (first 120 chars min). Topic summaries are NOT acceptable.
+
+**Log format for comments/replies:**
+```
+## Heartbeat — {time}
+- Type: Comment | Post: {postId} | Author: {author} | Style: {insight|short|personal|disagree} | Text: "{full text}"
+```
+
+**Update limits.json ONCE at end:**
+- 🚨 **Only PROACTIVE comments (§ 4) update limits** — replies (§ 3) do NOT touch limits.json
+- Comment: `daily.comments.current += N`, append `commented_users`
+- Post/Quote: `weekly.{type}.current += 1`
+- Do NOT read+write limits.json per comment -- batch in memory, write once
+
+🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
+
+**🚨 MANDATORY Slack report** — output as text (gateway routes automatically):
+```
+Threads Heartbeat
+- Replies: {count} posted
+- Comments: {current}/{limit}
+- Follows: {count} (auto — every engagement = follow)
+- Tasks: {pending_count} pending, next at {time}
+- Errors: {error_count or "none"}
+```
+ALWAYS send even when 0 actions. Outputting HEARTBEAT_OK without Slack report = INCOMPLETE heartbeat.
+
+## 6. Error Handling
+
+Browser timeout: close tab, reopen URL, retry once. Still fails → skip browser tasks.
+NEVER `browser.stop()` (kills Chrome).
+
+## 7. Close & Exit
+
+**MANDATORY ORDER before closing browser:**
+1. Update `limits.json` (all counter changes)
+2. Update `schedule.json` (mark completed tasks "done")
+3. Append `memory/{today}.md` daily log
+4. Output Slack summary
+5. Close browser: `exec openclaw browser --browser-profile {{browser_profile}} close 2>&1`
+   🚨 NEVER use `navigate "about:blank"` — use `close` to properly release the tab.
+
+NEVER close browser first -- timeout = limits/schedule not saved.
+
+**HEARTBEAT_OK when:** No unreplied posts AND no pending tasks due.

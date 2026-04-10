@@ -1,0 +1,266 @@
+# BROWSER-engage.md - PH Upvote, Comment, Follow & Streak Patterns
+
+## Comment Quality Rules
+
+### A. Don't Default to "Agree + Expand" (per-comment check — this agent needs this most)
+
+Before writing each comment on a launch, ask: **"Am I about to agree with the product premise and expand with a PM angle?"** If yes, consider instead:
+- A **short reaction + question** ("love this approach. how does it handle failures mid-workflow?")
+- A **personal experience** ("ngl I hit this problem last week - the billing surprise was brutal")
+- A **disagree** ("bold claim. curious where it actually breaks - every autonomous system I've run hits exceptions fast")
+
+Pick whichever fits the launch naturally. Not every comment needs to be a governance essay.
+
+**Per-batch rule:** If you just wrote an insight, make the next comment in this heartbeat shorter or structurally different.
+
+### B. Hard Length Cap
+
+- **Max 40 words per first comment.** Current average is 60-77 words — cut in half.
+- At least 1 in 3 comments should be under 20 words.
+- Thread replies should be shorter — max 25 words at depth 2+.
+
+### C. Ban "Quote Their Framing" Opener
+
+🚨 **NEVER start a comment by naming the launch's specific concept/framing.** Banned patterns:
+- "the [concept] framing is interesting/smart/bold"
+- "the [angle] is the interesting part for me"
+- "the [problem] is too real"
+
+React in your own words. "this is the visibility gap that kills agent workflows" NOT "the state observability framing is the missing piece."
+
+### D. Ban "exactly" / "exactly right"
+
+Don't use "exactly", "exactly right", "exactly this", "that's exactly" as agreement. Replace with: "spot on", "yeah", "this", "fair", or skip agreement entirely.
+
+### E. Company Mention Ban
+
+🚨 **NEVER mention company.** No "at my company", "a large company", "at my org", "at my company we handle this by". Frame as individual: "I've seen this", "in my setup", "I handle this by...".
+
+### F. Anti-AI Check + Angle Rotation
+
+Before posting any comment:
+1. **Length check:** Over 40 words? → cut ruthlessly
+2. **Opener check:** Does it start by naming their framing? → rewrite (Rule C)
+3. **Structure check:** If your last 2-3 comments all follow "agree + expand + question" → write as short reaction, personal fragment, or pushback
+4. **Angle rotation:** 🚨 **Do NOT use the same thematic angle on 3+ comments in one session.** If you've already used "governance" / "audit trail" / "accountability" twice, use a different angle: architecture, UX, pricing, failure recovery, adoption, or just ask a product question.
+
+### G. Hard Disagreement Rule (per-batch)
+
+🚨 **In every heartbeat with 3+ comments, at least 1 MUST challenge the product's premise or approach.** Not "great product, I'd add..." — actual skepticism: "bold claim - curious where this actually breaks", "the fully autonomous framing worries me - in practice you need gates." Check before finishing the batch.
+
+### H. Topic Diversity
+
+🚨 **1 in 5 comments should be on an adjacent topic WITHOUT PM/AI angle.** Developer experience, pricing models, UX decisions, launch strategy, growth mechanics. React as a maker, not as "{{brand_tagline}}."
+
+### I. Platform Voice (PH-specific)
+
+- **Maker-to-maker tone.** You're evaluating a product, not writing an essay. Technical questions about architecture and failure modes get maker replies.
+- **Questions win on PH** — makers respond to genuine product questions more than to insights.
+- **Short is better than thorough** — a sharp 15-word question outperforms a 40-word analysis.
+- **Don't sound like LinkedIn** — no "thought leadership", no "framing." Ask about the product. How does it work? Where does it break?
+
+### J. Pre-Post Self-Review (concrete checklist)
+
+Re-read your text before submitting. Check these 4 things:
+1. **Sentence structure:** Do all sentences follow the same grammatical pattern? → rewrite one differently
+2. **Sentence length:** Are all sentences roughly the same length? → shorten or lengthen one
+3. **Originality:** Did you just rephrase what the maker already said? → add something new or just ask a question
+4. **Natural voice:** Would you say this to a maker at a coffee chat? → if too essay-like, make it conversational
+5. **Structure:** Does your comment have intro-body-conclusion? → cut the intro or conclusion. Just start in the middle.
+6. **Dashes:** Replace every `—` and `--` with ` - `. No exceptions.
+7. **Opener dedup:** Does your comment start similarly to `last_snippet` in today_summary.json? → rewrite the opener.
+
+---
+
+## S3. Upvote on Launch Page
+
+🚨 **CDP click broken** — aria snapshot resolves "Upvote" text and matches comment upvote buttons too (6+ elements). JS `.click()` on the button itself does nothing (React event binding). **Click the inner SVG/span element instead** — this triggers React's bubbling handler.
+
+**ONE evaluate — check + click + verify:**
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 2000));
+    var btn = document.querySelector('button[data-test="vote-button"].w-full');
+    if (!btn) return { error: 'no main vote button' };
+    if (btn.innerText.trim().includes('Upvoted')) return { alreadyUpvoted: true };
+    btn.scrollIntoView({ block: 'center' });
+    await new Promise(r => setTimeout(r, 500));
+    var inner = btn.querySelector('svg') || btn.querySelector('span') || btn.firstElementChild;
+    if (!inner) return { error: 'no inner element' };
+    inner.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+    await new Promise(r => setTimeout(r, 2000));
+    var upvoted = btn.innerText.trim().includes('Upvoted');
+    return { upvoted: upvoted };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+Only increment `daily.upvotes.current` if `upvoted: true`.
+
+## S4. Extract Maker Username
+
+🚨 **Prefer using S7 Step 3 combined evaluate instead** — it returns `makerUsername` along with comment verification. Only use S4 standalone if you need maker BEFORE commenting.
+
+```javascript
+() => {
+  const links = Array.from(document.querySelectorAll('a'));
+  // Find /@username link whose parent contains "Maker" badge
+  const makerLink = links.find(a => {
+    const href = a.href || '';
+    if (!href.includes('/@')) return false;
+    const parent = a.parentElement;
+    return parent && parent.innerText && parent.innerText.includes('Maker');
+  });
+  const makerUsername = makerLink ? makerLink.href.match(/@([^/?]+)/)?.[1] : null;
+  return { makerUsername };
+}
+```
+
+## S5. Check Follow Button State
+
+```javascript
+() => {
+  const btns = Array.from(document.querySelectorAll('button'));
+  const followBtn = btns.find(b => b.innerText.trim() === 'Follow');
+  const alreadyFollowing = btns.some(b => b.innerText.trim() === 'Following');
+  return { followBtn: !!followBtn, alreadyFollowing };
+}
+```
+
+Follow button snapshot selector: `"button:has-text('Follow')"`
+
+## S6. Streak Keeper (Homepage Upvote)
+
+Homepage vote buttons work with JS `.click()` (unlike launch pages).
+
+**Click:**
+```javascript
+() => {
+  const btn = document.querySelector('button[data-test="vote-button"]');
+  if (!btn) return { error: 'vote_btn_not_found' };
+  const filledDiv = btn.querySelector('[data-filled]');
+  if (filledDiv && filledDiv.getAttribute('data-filled') === 'true') return { skipped: true, reason: 'already_upvoted' };
+  btn.click();
+  return { clicked: true };
+}
+```
+
+**Verify (1.5s wait embedded — NO separate sleep step):**
+```javascript
+async () => {
+  await new Promise(r => setTimeout(r, 1500));
+  const btn = document.querySelector('button[data-test="vote-button"]');
+  const filledDiv = btn ? btn.querySelector('[data-filled]') : null;
+  const filled = filledDiv ? filledDiv.getAttribute('data-filled') : 'none';
+  return { verified: filled === 'true', text: btn ? btn.innerText.trim() : 'N/A' };
+}
+```
+
+## S7. Comment on a Launch
+
+50+ buttons have `type="submit"` on PH pages. NEVER match by type. ALWAYS match `b.innerText.trim() === "Comment"`.
+
+❌ **Do NOT add a separate scroll step** — `document.querySelector('.tiptap.ProseMirror')` finds the editor regardless of viewport scroll. Scroll wastes 1 step per product.
+
+**Step 1 — Set text (1.5s wait embedded — NO separate sleep step):**
+```javascript
+async () => {
+  await new Promise(r => setTimeout(r, 1500));
+  const editor = document.querySelector(".tiptap.ProseMirror");
+  if (!editor) return { error: "editor_not_found" };
+  editor.focus();
+  document.execCommand("selectAll", false, null);
+  document.execCommand("delete", false, null);
+  document.execCommand("insertText", false, "${commentText}");
+  return { set: true, text: editor.textContent.slice(0, 50) };
+}
+```
+
+**Step 2 — Click Comment (1.5s wait embedded — NO separate sleep step):**
+```javascript
+async () => {
+  await new Promise(r => setTimeout(r, 1500));
+  const buttons = Array.from(document.querySelectorAll("button"));
+  const submitBtn = buttons.find(b => b.innerText.trim() === "Comment");
+  if (!submitBtn) return { error: "comment_btn_not_found", available: buttons.map(b => b.innerText.trim()).filter(t => t.length > 0 && t.length < 20).slice(0, 15) };
+  if (submitBtn.disabled) return { error: "comment_btn_disabled" };
+  submitBtn.click();
+  return { clicked: true, buttonText: submitBtn.innerText.trim() };
+}
+```
+
+**Step 3 — Verify + Extract maker (3s wait — ONE evaluate, NO separate steps):**
+```javascript
+async () => {
+  await new Promise(r => setTimeout(r, 3000));
+  const editor = document.querySelector(".tiptap.ProseMirror");
+  const editorText = editor ? editor.textContent.trim() : "";
+  const editorEmpty = editorText.length < 5;
+  const url = window.location.href;
+  // Extract maker in SAME evaluate — do NOT waste a separate step
+  // Find /@username link whose parent contains "Maker" badge (not our own profile)
+  const links = Array.from(document.querySelectorAll('a'));
+  const makerLink = links.find(a => {
+    const href = a.href || '';
+    if (!href.includes('/@')) return false;
+    const parent = a.parentElement;
+    return parent && parent.innerText && parent.innerText.includes('Maker');
+  });
+  const m = makerLink ? makerLink.href.match(/@([^/?]+)/) : null;
+  return {
+    submitted: editorEmpty,
+    editorText: editorText.slice(0, 60),
+    url: url,
+    urlChanged: !url.includes("producthunt.com/products/") && !url.includes("producthunt.com/posts/"),
+    makerUsername: m ? m[1] : null
+  };
+}
+```
+
+- `submitted: false` → retry steps 2-3 once
+- `urlChanged: true` → wrong button clicked, navigate back, retry from step 1
+- Max 2 total attempts. Fail → log Error, skip.
+- Use `makerUsername` from this result directly — do NOT call S4 separately.
+
+## S9. Batch Upvote on Homepage
+
+Homepage vote buttons work with JS `.click()`.
+
+**Single evaluate — count before, click, wait, count after (ONE step, NO separate sleep):**
+```javascript
+async () => {
+  const btns = document.querySelectorAll('button[data-test="vote-button"]');
+  // Count BEFORE
+  let votedBefore = 0;
+  for (const btn of btns) {
+    const filled = btn.querySelector('[data-filled]');
+    if (filled && filled.getAttribute('data-filled') === 'true') votedBefore++;
+  }
+  // Click unvoted
+  const maxUpvotes = ${Math.min(2, availableUpvotes)};
+  let clicked = 0;
+  for (const btn of btns) {
+    if (clicked >= maxUpvotes) break;
+    const filled = btn.querySelector('[data-filled]');
+    if (filled && filled.getAttribute('data-filled') === 'true') continue;
+    btn.click();
+    clicked++;
+  }
+  // Wait for UI update
+  await new Promise(r => setTimeout(r, 1500));
+  // Count AFTER
+  let votedAfter = 0;
+  for (const btn of btns) {
+    const filled = btn.querySelector('[data-filled]');
+    if (filled && filled.getAttribute('data-filled') === 'true') votedAfter++;
+  }
+  const delta = votedAfter - votedBefore;
+  return { clicked, votedBefore, votedAfter, delta, verified: delta === clicked };
+}
+```
+
+Update `daily.upvotes.current` by adding `delta` (NOT `clicked` — delta is the verified count).

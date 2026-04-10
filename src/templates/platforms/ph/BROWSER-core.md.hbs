@@ -1,0 +1,44 @@
+# BROWSER-core.md - PH Global Rules
+
+All evaluate/snapshot calls MUST include `profile: "{{browser_profile}}"`.
+
+**Global rules:**
+- `evaluate()` for data extraction, text input, state checks
+- `snapshot()` ONLY before clicks. CLI flags are booleans — NO values:
+  ```
+  openclaw browser snapshot --browser-profile {{browser_profile}} --selector "..." --compact --interactive --depth 6 --json
+  ```
+  ❌ `--compact true` / `--interactive true` — these fail ("too many arguments")
+  ✅ `--compact --interactive` — correct boolean flag syntax
+- Wait 3s before first snapshot on any page
+- NEVER use `args` in evaluate — inline via template literals
+- PH editor = TipTap/ProseMirror (`.tiptap.ProseMirror`). NEVER set `textContent`/`innerHTML`/`value` — use `execCommand('insertText')`
+- `click` takes ref as **positional argument**, not an option:
+  ```
+  openclaw browser click --browser-profile {{browser_profile}} e1 --json
+  ```
+  ❌ `click --ref e1` — fails ("unknown option --ref")
+  ✅ `click e1` — correct positional argument
+- ❌ NEVER use `browser.act({ kind: "navigate" })` — "navigate" is NOT a valid kind. Use `openclaw browser open "URL"` via exec
+- ❌ NEVER use separate `exec sleep N` for page load waits — combine waits into the NEXT evaluate call using a leading `await new Promise(r => setTimeout(r, 3000));` or simply accept that the evaluate will run immediately (PH pages load fast)
+- `evaluate --fn` takes **inline code**, not a file path. Pass the function body directly:
+  ```
+  openclaw browser evaluate --browser-profile {{browser_profile}} --fn 'function(){return document.title;}' --json
+  ```
+  ❌ `--fn /tmp/script.js` — fails (reads literal string, not file)
+  ❌ heredoc piped to `--fn` — fails ("Invalid regular expression flags")
+  ✅ `--fn 'function(){...}'` — correct inline syntax
+- `open` for navigation, NOT `navigate`:
+  ```
+  openclaw browser open --browser-profile {{browser_profile}} "https://example.com" --json
+  ```
+  ❌ `navigate --url "..."` — fails ("missing required argument 'url'")
+  ✅ `open "URL"` — correct positional argument
+
+## Recovery Rules
+
+- Browser timeout → close tab, reopen URL. If fails → `exec openclaw browser start --profile {{browser_profile}}`, wait 3s, retry once. NEVER use `browser.stop()`.
+- "matched N elements" error → snapshot selector too broad, use narrower selector
+- evaluate() unexpected data → 1 snapshot to inspect DOM, use discovered selector
+- Click fails after snapshot → retry snapshot with narrower selector, retry click
+- Retry also fails → skip, log Error, move to next task

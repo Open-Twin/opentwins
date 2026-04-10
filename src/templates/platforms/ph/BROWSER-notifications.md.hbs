@@ -1,0 +1,188 @@
+# BROWSER-notifications.md - PH Notification & Reply Patterns
+
+## S1. Extract Notifications
+
+PH notifications = `<section>` elements. NOT `[data-test="notification-item"]` (returns 0).
+
+```javascript
+async () => {
+  await new Promise(r => setTimeout(r, 3000)); // wait for page load — NO separate sleep step
+  const sections = document.querySelectorAll("section");
+  const notifications = [];
+  sections.forEach(s => {
+    const text = (s.innerText || "").trim();
+    if (text.length < 20) return;
+    let type = "unknown";
+    if (text.includes("replied to you")) type = "reply";
+    else if (text.includes("mentioned you")) type = "mention";
+    else if (text.includes("upvoted your")) type = "upvote";
+    else if (text.includes("hunted")) type = "hunt";
+    else if (text.includes("started a thread")) type = "thread";
+    else if (text.includes("awarded")) type = "badge";
+    const links = Array.from(s.querySelectorAll("a"));
+    let threadUrl = null;
+    let replyUrl = null;
+    let commentId = null;
+    links.forEach(a => {
+      const h = a.href || "";
+      if (h.includes("/posts/") || h.includes("/products/") || h.includes("/p/")) {
+        if (h.includes("comment=")) {
+          replyUrl = h;
+          const match = h.match(/comment=(\d+)/);
+          if (match) commentId = match[1];
+        }
+        else if (!threadUrl) threadUrl = h;
+      }
+    });
+    if (type === "reply" || type === "mention") {
+      notifications.push({ type, preview: text.slice(0, 200), threadUrl, replyUrl, commentId });
+    }
+  });
+  return notifications;
+}
+```
+
+## S2. Check Our Comment on Page
+
+```javascript
+() => {
+  const body = document.body.innerText;
+  const hasOurComment = body.includes('{{name}}') || body.includes('{{handle_slug}}');
+  const commentEl = document.getElementById('comment-' + commentId);
+  return { hasOurComment, hasCommentEl: !!commentEl, url: window.location.href };
+}
+```
+
+## S8. Reply to a Comment
+
+TWO editors on page when reply open: `editors[0]` = top-level, `editors[last]` = reply. MUST use LAST editor. Reply submit button text = "Reply" (NOT "Comment").
+
+🚨 **PH has `div#comment-{commentId}` elements.** ALWAYS use the commentId from the notification URL (`?comment=XXXXX`) to find the exact comment element and its Reply button. NEVER pick the last Reply button on the page — that replies to the wrong thread.
+
+**Step 1 — Click Reply button for target comment (by commentId):**
+```javascript
+() => {
+  var commentId = "${commentId}";
+  var commentEl = document.getElementById('comment-' + commentId);
+  if (!commentEl) return { error: 'comment_element_not_found', commentId: commentId };
+  var replyBtn = Array.from(commentEl.querySelectorAll('button')).find(b => b.innerText.trim() === 'Reply');
+  if (!replyBtn) return { error: 'no_reply_btn_in_comment', commentId: commentId };
+  replyBtn.click();
+  return { clicked: true, totalReplyBtns: document.querySelectorAll('button').length };
+}
+```
+
+**Step 2 — Set reply text (1.5s wait embedded — NO separate sleep step):**
+```javascript
+async () => {
+  await new Promise(r => setTimeout(r, 1500));
+  const editors = document.querySelectorAll(".tiptap.ProseMirror");
+  if (editors.length < 2) return { error: "reply_editor_not_found", editorsCount: editors.length };
+  const replyEditor = editors[editors.length - 1];
+  replyEditor.focus();
+  document.execCommand("selectAll", false, null);
+  document.execCommand("delete", false, null);
+  document.execCommand("insertText", false, "${replyText}");
+  return { set: true, text: replyEditor.textContent.slice(0, 50), editorsCount: editors.length };
+}
+```
+
+**Step 3 — Click Reply submit (1.5s wait embedded — NO separate sleep step):**
+```javascript
+async () => {
+  await new Promise(r => setTimeout(r, 1500));
+  const buttons = Array.from(document.querySelectorAll("button"));
+  const cancelBtns = buttons.filter(b => b.innerText.trim() === 'Cancel');
+  if (cancelBtns.length === 0) return { error: "no_cancel_btn_found" };
+  const lastCancel = cancelBtns[cancelBtns.length - 1];
+  const parent = lastCancel.parentElement;
+  const siblings = parent ? Array.from(parent.querySelectorAll('button')) : [];
+  const replySubmit = siblings.find(b => b.innerText.trim() === 'Reply' && b.type === 'submit');
+  if (!replySubmit) return { error: "reply_submit_not_found", siblings: siblings.map(b => b.innerText.trim()) };
+  replySubmit.click();
+  return { clicked: true, buttonText: replySubmit.innerText.trim() };
+}
+```
+
+**Step 4 — Verify (3s wait embedded — NO separate sleep step):**
+```javascript
+async () => {
+  await new Promise(r => setTimeout(r, 3000));
+  const editors = document.querySelectorAll(".tiptap.ProseMirror");
+  const snippet = "${replyText.slice(0, 40)}";
+  const bodyText = document.body.innerText;
+  return {
+    submitted: editors.length <= 1,
+    textOnPage: bodyText.includes(snippet),
+    editorsCount: editors.length,
+    url: window.location.href
+  };
+}
+```
+
+- `submitted: false` → retry steps 3-4 once. Still fails → return failure.
+
+## S10. Forum Thread — Combined Check (ONE evaluate per page)
+
+Page count + our comment detection + new reply extraction in a SINGLE evaluate.
+
+🚨 **Old S10 was broken:** `timeEl.closest('div')` is too narrow — profile links are 4-8 levels up from `<time>`. The new approach walks UP from `<time>` to find the comment container with the profile link.
+
+🚨 **Nav header has our profile link** — MUST exclude `a.closest('header')` to avoid false positives.
+
+```javascript
+async () => {
+  await new Promise(r => setTimeout(r, 3000)); // wait for page load — NO separate sleep step
+  const cutoff = new Date("${lastReplyAt}");
+
+  // 1. Page count
+  const pageLinks = Array.from(document.querySelectorAll('a[href*="?page="]'));
+  const pageNums = pageLinks.map(a => {
+    const m = a.href.match(/page=(\d+)/);
+    return m ? parseInt(m[1]) : 0;
+  }).filter(n => n > 0);
+  const pageCount = pageNums.length > 0 ? Math.max(...pageNums) : 1;
+
+  // 2. Find all comments: walk UP from <time> to find container with profile link
+  const timeEls = Array.from(document.querySelectorAll('time'));
+  const comments = timeEls.map((t, idx) => {
+    const dt = t.getAttribute('datetime');
+    let el = t;
+    let author = null;
+    for (let i = 0; i < 8 && el; i++) {
+      el = el.parentElement;
+      if (!el) break;
+      const profileLink = el.querySelector('a[href*="/@"]');
+      if (profileLink && !el.closest('header') && (el.innerText || '').length > 50) {
+        author = profileLink.href.match(/@([^/?]+)/)?.[1] || null;
+        break;
+      }
+    }
+    return { idx, dt, author };
+  });
+
+  // 3. Find our comments (exclude header nav link match)
+  const ourComments = comments.filter(c => c.author === '{{handle_slug}}');
+  const hasOurComment = ourComments.length > 0;
+  const lastOurIdx = hasOurComment ? ourComments[ourComments.length - 1].idx : -1;
+
+  // 4. New replies: after our last comment AND after cutoff
+  const newReplies = comments.filter(c =>
+    c.idx > lastOurIdx &&
+    c.dt && new Date(c.dt) > cutoff &&
+    c.author !== '{{handle_slug}}'
+  ).map(c => ({ author: c.author, time: c.dt }));
+
+  return { pageCount, hasOurComment, lastOurIdx, newReplies, url: window.location.href };
+}
+```
+
+**Returns:**
+- `pageCount` — for multi-page navigation
+- `hasOurComment` — if false and `pageCount > 1`, navigate to last page
+- `lastOurIdx` — position of our most recent comment
+- `newReplies` — replies after our comment and after cutoff (with author + time)
+
+🚨 **NEVER use `[data-test="comment"]`** — PH forums return 0 elements.
+🚨 **NEVER use `body.includes('{{name}}')`** — use profile link selectors.
+🚨 **NEVER use `timeEl.closest('div')` to find profile links** — too narrow, profile link is 4-8 levels up.

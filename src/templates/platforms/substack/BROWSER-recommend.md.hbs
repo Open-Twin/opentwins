@@ -1,0 +1,198 @@
+# BROWSER-recommend.md - Substack Publication Recommendation Patterns
+
+**Profile: `{{browser_profile}}`** — pass on EVERY browser call.
+
+## Overview
+
+Recommendations are outgoing endorsements of other Substack publications. They appear on your profile and in recommendation digests to subscribers. When you recommend someone, they get notified and may reciprocate — this is the #1 organic subscriber growth mechanism on Substack.
+
+**Dashboard URL:** `https://{{handle}}.substack.com/publish/recommendations`
+
+---
+
+## SS 1. Check Existing Recommendations
+
+Navigate to the recommendations dashboard to see what's already recommended.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    // Extract outgoing recommendations list
+    var text = document.body.innerText;
+    var hasOutgoing = text.includes('Outgoing recommendations');
+    // Find all recommendation rows - they appear between "Outgoing recommendations" and "Suggested"
+    var rows = [];
+    var allBtns = Array.from(document.querySelectorAll('button'));
+    var activeBtns = allBtns.filter(b => b.innerText.trim() === 'Active');
+    // Each Active button corresponds to one recommendation
+    for (var btn of activeBtns) {
+      var row = btn.closest('[class*=row]') || btn.parentElement.parentElement;
+      if (row) {
+        var rowText = row.innerText.replace(/\\n/g, ' | ').slice(0, 100);
+        rows.push(rowText);
+      }
+    }
+    // Also get suggested publications
+    var recBtns = allBtns.filter(b => b.innerText.trim() === 'Recommend');
+    var suggested = recBtns.map(b => {
+      var parent = b.parentElement;
+      return parent ? parent.innerText.replace(/\\n/g, ' ').slice(0, 80) : '';
+    });
+    return { existing: rows, suggestedCount: suggested.length, suggested: suggested };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+---
+
+## SS 2. Add Recommendation (Search + Reason + Submit)
+
+🚨 **Verified 2026-03-28:** The "Add recommendation" button opens an inline form with:
+- `input[type="search"]` — headlessui combobox, placeholder "Search for a person or publication..."
+- `textarea` — placeholder "Tell your subscribers why they'll love this Substack"
+- `button` "Add recommendation" — submit
+
+**Step 0 — Navigate to recommendations dashboard:**
+```
+exec openclaw browser --browser-profile {{browser_profile}} navigate "https://{{handle}}.substack.com/publish/recommendations" 2>&1
+```
+
+**Step 1 — Open the form:**
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 2000));
+    var btns = Array.from(document.querySelectorAll('button'));
+    var addBtn = btns.find(b => b.innerText.includes('Add recommendation'));
+    if (!addBtn) return { error: 'no Add recommendation button' };
+    addBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await new Promise(r => setTimeout(r, 1500));
+    var input = document.querySelector('input[type=search]');
+    var textarea = document.querySelector('textarea');
+    return { formOpen: !!(input && textarea) };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+**Step 2 — Search for publication and select from autocomplete:**
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 500));
+    var input = document.querySelector('input[type=search]');
+    if (!input) return { error: 'no search input' };
+    input.focus();
+    input.value = ${JSON.stringify(publicationName)};
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 2000));
+    // Find matching option in autocomplete
+    var options = Array.from(document.querySelectorAll('[role=option]'));
+    var target = options.find(o => {
+      var t = o.innerText.toLowerCase();
+      return t.includes(${JSON.stringify(publicationName.toLowerCase())});
+    });
+    if (!target) return { error: 'publication not found in autocomplete', options: options.map(o => o.innerText.slice(0, 60)) };
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await new Promise(r => setTimeout(r, 1000));
+    return { selected: true, value: input.value };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+**Step 3 — Fill reason and submit:**
+
+🚨 **Reason guidelines:** Write from your PM perspective. Explain WHY this publication matters for your audience (PMs navigating AI adoption). Keep it 1-2 sentences, specific, not generic praise. Mention what makes them unique.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 500));
+    var textarea = document.querySelector('textarea');
+    if (!textarea) return { error: 'no reason textarea' };
+    textarea.focus();
+    textarea.value = ${JSON.stringify(reasonText)};
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    textarea.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 500));
+    // Find submit button - last "Add recommendation" button on page
+    var btns = Array.from(document.querySelectorAll('button'));
+    var submitBtns = btns.filter(b => b.innerText.trim() === 'Add recommendation');
+    var submitBtn = submitBtns[submitBtns.length - 1];
+    if (!submitBtn) return { error: 'no submit button' };
+    submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await new Promise(r => setTimeout(r, 3000));
+    // Verify - check for "Recommendation added" or the publication in outgoing list
+    var pageText = document.body.innerText;
+    var verified = pageText.includes('Recommendation added') || pageText.includes('Active');
+    return { submitted: true, verified: verified };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+---
+
+## SS 3. Recommend from Suggested List
+
+Simpler flow — click the "Recommend" button next to a suggested publication. No search needed, but no reason/blurb is added.
+
+🚨 **Prefer SS 2 (Add recommendation) over SS 3** — the reason/blurb adds credibility and shows up for subscribers. Only use SS 3 as fallback if SS 2 search fails to find the publication.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 2000));
+    var btns = Array.from(document.querySelectorAll('button'));
+    var recBtns = btns.filter(b => b.innerText.trim() === 'Recommend');
+    // Match by nearby text (publication name in parent)
+    var target = recBtns.find(b => {
+      var parent = b.parentElement;
+      return parent && parent.innerText.toLowerCase().includes(${JSON.stringify(publicationName.toLowerCase())});
+    });
+    if (!target) return { error: 'publication not in suggested list' };
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await new Promise(r => setTimeout(r, 2000));
+    var pageText = document.body.innerText;
+    var verified = pageText.includes('Recommendation added');
+    return { submitted: true, verified: verified };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+---
+
+## Tracking
+
+After each successful recommendation, append to tracking file:
+
+```bash
+exec printf '%s\n' '{publication_name}|{publication_url}|{reason_snippet_30chars}|{ISO_TIMESTAMP}' >> memory/recommended_publications.txt
+```
+
+**Dedup check before recommending:**
+```bash
+exec grep -qF "{publication_name}" memory/recommended_publications.txt && echo "SKIP" || echo "OK"
+```
+
+---
+
+## Candidate Selection
+
+When choosing who to recommend, prioritize:
+1. **Writers we've had comment exchanges with** (reciprocal relationship exists)
+2. **Publications relevant to our audience** (AI, PM, engineering leadership, agent orchestration)
+3. **Active writers** (posted in last 14 days — dormant publications don't reciprocate)
+4. **Quality signal** (multiple posts with engagement, not empty/abandoned Substacks)
+
+Check `memory/commented_posts.txt` and recent `memory/{date}.md` logs for writers we've engaged with. Cross-reference with `queries.json` topics for relevance.

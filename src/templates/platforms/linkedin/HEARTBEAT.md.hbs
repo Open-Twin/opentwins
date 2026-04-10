@@ -1,0 +1,334 @@
+# HEARTBEAT.md - LinkedIn Agent
+
+## Critical Rules (read once, apply everywhere)
+
+**CLI syntax:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
+- **evaluate:** `... evaluate --fn 'async () => { ... }' 2>&1` (JS after `--fn`)
+- **open/navigate/close:** `... open "URL" 2>&1` / `... navigate "URL" 2>&1` / `... close 2>&1`
+- **NEVER** use `args` param in evaluate — inline via template literals
+- **evaluate()** for data extraction, clicks, typing. **snapshot()** only as last resort for clicks evaluate can't handle
+- **NEVER** `snapshot({ selector: "button" })` — always matches 20+ elements → strict mode violation. Use evaluate to find buttons by text
+- **NEVER** use `kind: "fill"` — this action does not exist and will error. Use evaluate or click+type
+- **Wait pattern (embedded):** All waits MUST be `await new Promise(r => setTimeout(r, N))` INSIDE async evaluate. NEVER use separate `browser.act({ kind: "wait" })` — each adds ~5s overhead. NEVER `networkidle` (20s timeout)
+- **NEVER** `browser.stop()` — kills Chrome. Use `browser.close()` for tabs only
+- **Tab reuse:** Use `browser.open()` ONLY for the FIRST page. For all subsequent navigations, use `browser.navigate()` to reuse the existing tab. Opening new tabs wastes resources (3 tabs = 2 close errors at end).
+- **After closing a tab:** ALWAYS use `browser.open()` for the next URL. NEVER `browser.navigate()` on a closed targetId — it errors "Target page has been closed"
+- **Like buttons:** ONLY Type A (`aria-label="Reaction button state: no reaction"`). NEVER Type B (`Open reactions menu`)
+- **NEVER** snapshot for search/feed extraction (27k token bloat). Use evaluate only
+
+**File loading:** BROWSER-core.md is ALWAYS read. Other BROWSER-*.md files are read ON-DEMAND only when needed:
+- BROWSER-notifications.md → notification/reply tasks
+- BROWSER-engage.md → search/feed/comment/like/article tasks
+- BROWSER-post.md → poll/post/repost creation tasks (shadow DOM)
+
+Steps in order: § 0 Morning Schedule Check → § 1 Limits → § 2 Browser → § 3 Notifications (FIRST) → § 4 Schedule → § 5 End-of-day → § 6 Log → § 7 Close → § 8 HEARTBEAT_OK. All mandatory.
+🚨 **ALL steps mandatory every heartbeat.** Browser + notifications MUST run even if no tasks are due.
+🚨 **NEVER use `sessions_spawn` or sub-sessions.** Execute ALL commands directly — no child sessions.
+
+## 0. Morning Schedule Check
+
+If `schedule.json` (FLAT FILE at root, not subdirectory!) missing OR `metadata.for_date != today`:
+1. Generate INSIGHTS.md from yesterday (PLAYBOOK.md SS Memory Update)
+2. Generate today's schedule (PLAYBOOK.md SS Generate Schedule)
+3. Write `schedule.json` (FLAT FILE!)
+4. Proceed
+
+🚨 **NEVER generate a schedule for tomorrow.** Only generate for TODAY. Schedule generation happens once per day in the morning. If all today's tasks are done, return HEARTBEAT_OK — do NOT create a new schedule.
+
+## 1. Read Limits
+
+Read `limits.json`, apply resets:
+- Daily: `last_reset != today` -> reset to 0
+- Weekly: Monday AND `last_reset` before today -> reset to 0
+- Calculate: `available = limit - current`
+
+## 1b. Read Today Summary
+
+Read `memory/today_summary.json`. Use tallies to inform comment decisions:
+- `disagreements` < {{behavior.disagree_target_pct}}% of `comments` AND `comments >= 3` → next MUST disagree (LinkedIn tolerates professional pushback)
+- `last_style` was insight → next must be short/personal/pushback
+- Any style is 60%+ of total → MUST use a different style
+- `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question
+- `avg_words` above platform cap → next comment MUST be under 20 words
+
+If file doesn't exist or `date != today`, initialize:
+```bash
+exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+```
+
+## 2. Browser Startup (with retry)
+
+1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://www.linkedin.com/notifications/" 2>&1`
+2. If CDP error:
+   - Wait 3s, retry once
+   - Still fails: skip browser tasks, log error, return HEARTBEAT_OK
+
+## 3. Notification Check (DO FIRST)
+
+**Read BROWSER-notifications.md first.**
+
+1. Navigate `https://www.linkedin.com/notifications/`
+2. Extract notifications using BROWSER-notifications.md SS 1 (has embedded 3s wait — NO separate wait needed)
+4. **Dedup — filter out known notifications:**
+   - Skip if: our account ({{handle_slug}}), same user in `limits.json` history today
+   - 🚨 **MANDATORY: Grep pre-check** — for each notification, build key `{username}|{baseUrl}` (use `baseUrl` without query params, NOT the full `postUrl`):
+     ```bash
+     exec grep -qF "{username}|{baseUrl}" memory/replied_notifications_linkedin.txt && echo "SKIP" || echo "OK"
+     ```
+     If "SKIP" → exclude (already replied, skip navigation entirely)
+   - For navigation: use the full `postUrl` (includes `commentUrn`/`dashReplyUrn` params that scroll to the correct comment)
+5. **For each new notification:**
+   - 🚨 `browser.navigate()` to post URL (reuse existing tab, do NOT `browser.open()`)
+   - 🚨 **Do NOT use page-level `alreadyReplied` check** (looking for our profile link on page) — false positives because our ORIGINAL comment is always present on notification pages. The tracking file grep is the authoritative dedup.
+   - 🚨 **Consecutive reply limit** (check BEFORE replying): Count our comments on this post page:
+     ```javascript
+     var comments = Array.from(document.querySelectorAll('article[class*="comment"]'));
+     var ourReplies = comments.filter(function(c) {
+       return c.innerText.includes('{{name}}') || c.innerText.includes('{{handle_slug}}');
+     }).length;
+     if (ourReplies >= 2) return { skipped: true, reason: 'too_many_replies_on_post', count: ourReplies };
+     ```
+     - `ourReplies >= 2` → skip reply, append tracking key, log `Type=Reply Skipped, Reason=too_many_replies_on_post, count={N}`
+   - 🚨 **MUST use threaded reply flow:** BROWSER-notifications.md SS 5 Step 0 (click Reply on target comment) → Step 1 (type in "Add a reply..." editor) → Step 2 (submit). Do NOT use top-level "Add a comment..." box — that creates a new top-level comment instead of a threaded reply.
+   - 🚨 **ALWAYS @mention the person** you're replying to at the start of your reply text (e.g. `@Ofir Shentzer good point about...`). LinkedIn threads are flat — @mention makes it clear who you're addressing and triggers a notification to them.
+   - Language: ALWAYS English (Ukrainian only if comment is Ukrainian, per SOUL.md)
+   - Log: `Type=Reply, User, URL, text (100 chars), Style: {insight|short|personal|disagree}`
+   - **After successful reply:** `exec printf '%s\n' '{username}|{postUrl}' >> memory/replied_notifications_linkedin.txt`
+   - **Send connection request with note** if ALL pass:
+     - `weekly.connection_requests.current < limit`
+     - 🚨 `browser.navigate()` to profile URL (do NOT use `browser.open()` — reuse existing tab)
+     - BROWSER-notifications.md SS 7: safety checks → navigate to `/preload/custom-invite/?vanityName={vanity}` → click "Add a note" → type personalized note (300 chars max) → click "Send" → verify Pending
+     - 🚨 **ALWAYS add a note** — personalize based on headline/post context
+     - If any fail: log `Type=Connection Skipped, User, Reason`
+
+**Rules:** Notifications persist after reply — tracking file (`memory/replied_notifications_linkedin.txt`) is primary dedup, browser thread view is secondary. Replies don't count toward spacing. 🚨 **Replies do NOT update limits.json** — replies are unlimited, only proactive comments (§ 4) count. Finish ALL replies before schedule.
+
+## 4. Schedule Check
+
+**Read BROWSER-engage.md first** (for search/feed/comment/like tasks).
+
+Filter `schedule.json`: `status=pending` AND `time <= now`. Sort earliest first.
+
+**No spacing rule.** Execute tasks back-to-back when due.
+
+### Content-Ready Override (publish tasks only)
+
+Before executing any `publish_post` or `publish_article` task:
+
+1. Read the file at `config.content_source`
+2. Find the first post with `status: pending`
+3. Use that content for publishing
+4. 🚨 **LinkedIn post formatting:** Each line becomes its own `<p>` tag. Empty lines (paragraph breaks) use `<p><br></p>`. This is how LinkedIn's Quill editor natively stores content:
+   ```javascript
+   // Split on \n, wrap each line in <p>, empty lines become <p><br></p>
+   var lines = postText.split('\n');
+   var html = lines.map(function(line) {
+     return '<p>' + (line.trim() === '' ? '<br>' : line) + '</p>';
+   }).join('');
+   editor.innerHTML = html;
+   editor.dispatchEvent(new Event('input', { bubbles: true }));
+   ```
+   🚨 **Shell quoting:** HTML angle brackets break shell quoting. Write the JS function to a temp file first, then evaluate from file.
+5. After verified publish → update the file: change `status: pending` to `status: published` for that post
+
+### search_and_comment
+
+ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
+
+1. **Priority targets first** (if `config.priority_targets` exists):
+   - Grep pre-check on activity ID/slug before navigating
+   - Navigate to target URL, then **age check + page dedup in ONE evaluate:**
+   ```javascript
+   async () => {
+     await new Promise(r => setTimeout(r, 3000));
+     var timeEl = document.querySelector('time');
+     var age = timeEl ? timeEl.innerText.trim() : '';
+     var tooOld = /\d+\s*(mo|yr)/.test(age) || (/(\d+)w/.test(age) && parseInt(age) > 1);
+     var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle_slug}}"]'));
+     var alreadyCommented = ourLinks.filter(a => !a.href.includes('sidebar_menu')).length > 0;
+     return { age: age, tooOld: tooOld, alreadyCommented: alreadyCommented };
+   }
+   ```
+   If `tooOld` → skip immediately. If `alreadyCommented` → **backfill tracking** (`exec grep -qF "{trackId}" memory/commented_posts.txt || echo "{trackId}" >> memory/commented_posts.txt`), then skip.
+   If page shows "Something went wrong" → URL is invalid, skip immediately.
+2. Pick query from `queries.json` — `high_engagement` first, then product-specific
+3. Navigate: `https://www.linkedin.com/search/results/content/?keywords={QUERY}&datePosted=%22past-week%22&sortBy=%22relevance%22`
+4. Extract using BROWSER-engage.md SS 2 (has embedded 3s wait — NO separate wait needed). SS 2 now returns `postUrl`, `trackId`, `username`, `isPulse` per result.
+5. Filter: prefer 20+ reactions. If none, highest with >5. Skip authors in today's `limits.json` history
+6. 🚨 **MANDATORY: Grep pre-check against tracking file** — use `trackId` from SS 2 (numeric ID for feed posts, slug for Pulse):
+   ```bash
+   exec grep -qF "{trackId}" memory/commented_posts.txt && echo "SKIP" || echo "OK"
+   ```
+   🚨 Use `-qF` (fixed string, substring match) — NOT `-q "^...$"` (exact line match). The tracking file has mixed formats (URNs, slugs, IDs). Substring match catches all.
+   If "SKIP" → exclude (already commented).
+   🚨 **If `trackId` is empty** (some feed posts don't expose URLs in search DOM): grep cannot pre-check. Navigate to the post first, then page-level dedup catches it. After navigating, extract trackId from URL: `window.location.href.match(/(\d{16,20})/)?.[1]` for feed posts, or slug for Pulse.
+7. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) — check if defaulting to agree+expand, enforce 35-word cap, don't quote their framing, don't use "exactly", no company mentions, run anti-AI check
+8. **Comment — three paths based on post type:**
+   - **Feed posts with `postUrl` (`isPulse: false`, `trackId` exists):** Comment INLINE using SS 4 (do NOT navigate). 🚨 Use the `content` field from SS 2 extraction to inform your comment — your comment MUST directly address the post's topic. Step 1 + Step 2.
+   - **Feed posts WITHOUT `postUrl` (`trackId` empty):** These posts have no URL in search DOM. Click into the post from search results (evaluate: `items[idx].querySelector('span').click()` or similar), wait 3s, then 🚨 **MANDATORY: Read post content** (BROWSER-engage.md SS 3c — your comment MUST directly address the returned `text`), then extract trackId + page-level dedup in ONE evaluate:
+     ```javascript
+     async () => {
+       await new Promise(r => setTimeout(r, 3000));
+       var url = window.location.href;
+       var m = url.match(/(\d{16,20})/);
+       var trackId = m ? m[1] : '';
+       var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle_slug}}"]'));
+       var alreadyCommented = ourLinks.filter(a => !a.href.includes('sidebar_menu')).length > 0;
+       return { trackId: trackId, alreadyCommented: alreadyCommented, url: url };
+     }
+     ```
+     If `alreadyCommented` → backfill trackId, skip. Otherwise comment using TipTap editor on the post page.
+   - **Pulse articles (`isPulse: true`):** Navigate to `postUrl` directly. Then run ONE evaluate for dedup + content read:
+     ```javascript
+     async () => {
+       await new Promise(r => setTimeout(r, 3000));
+       var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle_slug}}"]'));
+       var alreadyCommented = ourLinks.filter(a => !a.href.includes('sidebar_menu')).length > 0;
+       if (alreadyCommented) return { alreadyCommented: true };
+       var article = document.querySelector('article') || document.querySelector('.reader-article-content');
+       var content = article ? article.innerText.slice(0, 1200) : document.body.innerText.slice(0, 1200);
+       var title = (document.querySelector('h1') || {}).innerText || '';
+       return { alreadyCommented: false, title: title, content: content };
+     }
+     ```
+     🚨 **If `alreadyCommented: true` → MUST backfill tracking file immediately** (previous heartbeat may have commented but got cut off before tracking):
+     ```bash
+     exec grep -qF "{trackId}" memory/commented_posts.txt || echo "{trackId}" >> memory/commented_posts.txt
+     ```
+     Then skip to next candidate.
+     Otherwise use `title` + `content` to write a contextual comment. 🚨 **Pulse uses QUILL editor — MUST use BROWSER-engage.md SS 4b (Quill path). Do NOT use SS 4 (TipTap path) — it silently fails on Pulse.** SS 4b uses `quillInstance.setText()` to properly update Delta state, then verifies by searching for our comment in the rendered list (not by checking editor emptiness).
+9. **After each successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
+10. 🚨 **MANDATORY: Send connection request to post author** — use `username` from SS 2. Run BROWSER-notifications.md SS 7 (navigate to profile → safety checks → custom-invite → personalized note → send). Skip silently if: already connected, pending, recruiter headline, or `weekly.connection_requests.current >= limit`. 🚨 **Connection notes: NEVER mention company** — use individual framing only.
+11. If no qualifying posts, try up to 2 more queries from different categories
+12. **Task completion:** Mark "completed" only when `comments_done >= config.max_comments`. If 0 posted, stays "pending"
+
+### browse_and_engage
+
+1. Navigate `https://www.linkedin.com/feed/`
+2. Extract using BROWSER-engage.md SS 3 (has embedded 3s wait — NO separate wait needed)
+3. Like + verify using BROWSER-engage.md SS 6 (ONE evaluate: batch like + 2s wait + verify)
+4. **Get post URLs for comment candidates** — for each post with `postUrl: null`, run BROWSER-engage.md SS 3b (overflow menu → "Copy link to post" → clipboard → extract postId). This is 1 evaluate per post instead of 4-6 steps navigating to author profiles.
+5. 🚨 **MANDATORY: Batch grep pre-check** — check ALL postIds at once:
+   ```bash
+   exec printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/commented_posts.txt || true
+   ```
+   Only navigate to posts NOT in tracking file.
+6. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) before writing comment. 🚨 Use the `content` field from SS 3 extraction to inform your comment — your comment MUST directly address the post's topic.
+7. Navigate to unchecked post URL, 🚨 **MANDATORY: Read post content** (BROWSER-engage.md SS 3c), then use BROWSER-notifications.md SS 5 for comment. After success: `exec echo "{post_id}" >> memory/commented_posts.txt`
+8. 🚨 **MANDATORY: Send connection request to post author** after commenting — BROWSER-notifications.md SS 7 (safety checks + personalized note). Skip if already connected/pending/recruiter. 🚨 **Connection notes: NEVER mention company.**
+
+### publish_article
+
+**Read BROWSER-engage.md SS 7 first.**
+
+1. Generate article HTML content (1000-2000 words). Use `<p>` and `<strong>` tags
+2. **MANDATORY: Include product link** — if config.include_product exists, add `<a href="URL">ProductName</a>` at least once in body. Product URLs are in BROWSER-engage.md SS 7
+3. Navigate `https://www.linkedin.com/article/new/`, wait 3s
+4. Set title using BROWSER-engage.md SS 7 Step 1
+5. Set body using BROWSER-engage.md SS 7 Step 2, wait 1s
+6. Click "Next" using SS 7 Step 3, wait 2s
+7. Add share text + 3-5 hashtags using SS 7 Step 4 (pick from queries.json `hashtags`, match topic, always include `#buildinpublic`)
+8. Click "Publish" using SS 7 Step 5, wait 5s
+9. Verify using SS 7 Step 6 — URL contains `published=t` or `/pulse/`
+10. Log: Article Published, title, URL, word count
+
+### create_poll
+
+**Read BROWSER-post.md first** (SS 9 — shadow DOM selectors).
+
+1. Navigate to `https://www.linkedin.com/feed/`
+2. Click "Start a post" in **main DOM** (NOT shadow DOM). Wait 3s.
+3. Click "More" (`aria-label="More"`) in shadow DOM, then "Create a poll" (`aria-label="Create a poll"`) — SS 9 Step 2. Wait 2s.
+4. Fill question using SS 9 Step 3
+5. Fill options 1-2 using SS 9 Step 4
+6. Add option 3: SS 9 Step 5 (click "Add option", wait 1s, fill)
+7. Add option 4: SS 9 Step 6 (click "Add option", wait 1s, fill)
+8. Click "Done" using SS 9 Step 7, wait 2s
+9. Add post text using SS 9 Step 8, wait 1s
+10. Click "Post" using SS 9 Step 9, wait 4s
+11. Dismiss verification + get URL using SS 9 Steps 10-11
+12. **MANDATORY: Follow-up comment** — if config has `follow_up_product`:
+    - Navigate to poll post URL (use `browser.open()` — NOT `navigate` on the closed tab)
+    - Wait 3s
+    - Comment using BROWSER-notifications.md SS 5 (main DOM TipTap/ProseMirror editor, NOT shadow DOM)
+    - Verify comment posted
+13. Update `weekly.polls.current += 1` in limits.json
+
+**Rules:**
+- 4 options required (1 should be lighthearted)
+- 🚨 **Poll options: 30 characters MAX.** Always `.slice(0, 30)` before setting. `nativeSetter` bypasses input truncation — exceeding 30 chars silently disables Done button with no error message.
+- NO product mention in the poll question or options
+- Product mention goes ONLY in follow-up comment
+- 🚨 **"Create a poll" is under the "More" button** — click More first, then poll button
+- 🚨 **"Start a post" is in main DOM** — shadow DOM contains messaging overlay that looks like the modal but isn't
+- Total steps: ~15 (NOT 47). If you exceed 25 steps, something is wrong — check BROWSER-post.md
+
+### Other task types
+
+- **publish_post:** Read BROWSER-post.md SS 10, POST-TEMPLATES.md, select unused template, self-review, peak hours, log template used
+- **repost_with_commentary:** Read BROWSER-post.md SS 11. 🚨 **Browse the home feed** (`/feed/`) to find repostable posts — do NOT search (search returns Pulse articles). Click Repost directly on the feed post → "Repost with your thoughts" → type 2-4 sentences in shadow DOM editor → Post. Self-review before posting.
+- **publish_newsletter:** "Weekend Builder" digest
+
+**General rules:** Like before commenting (Type A buttons). Type -> submit -> verify appeared. Don't log until confirmed. Update `comments_done`, `likes_done`. Mark "done" when `>= config.max_*`, else "pending".
+🚨 **Comment Submit:** ALWAYS use `button[data-view-name="comment-post"]`. NEVER iterate buttons by text "Comment" — the toggle (`feed-comment-button`) matches first and does NOT submit!
+🚨 **Comment Verify:** ALWAYS check editor is EMPTY (`editor.textContent.trim().length === 0` AND `innerText.indexOf(snippet) > -1`). NEVER check only `innerText` — text in editor gives false positive!
+
+## 5. End-of-Day Tasks
+
+- `update_memory` -> PLAYBOOK.md SS Update Memory
+- `publish_post` -> POST-TEMPLATES.md
+
+## 6. Log & Update Limits
+
+1. Append `memory/{today}.md` via exec:
+   ```bash
+   cat >> memory/$(date +%Y-%m-%d).md <<'EOF'
+   ## 2026-02-08 10:15 - Comment
+   - User: Name
+   - Post: URL
+   - Style: insight
+   - Our comment: "text..."
+   EOF
+   ```
+   🚨 **Style field MANDATORY** for all Comment entries — track which style was used (insight|short|personal|disagree). Enables quality audits.
+   Types: Heartbeat, Comment, Reply, Reaction, Post Published, Article Published, Poll, Repost, Newsletter, Connection Request, Error, Alert
+
+2. Update `limits.json` after each action:
+   - Comment: `daily.comments.current += 1`, append history
+   - Reaction: `daily.reactions.current += 1`
+   - Connection Request: `weekly.connection_requests.current += 1`, append history
+   - Post/Article/Poll/Newsletter/Repost: weekly counter += 1
+
+3. 🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
+
+4. 🚨 **MANDATORY Slack report** (every heartbeat, even if nothing done).
+   Output as text (gateway routes to Slack automatically). Do NOT use `message` tool with `target` parameter — it will error.
+   ```
+   LinkedIn HB{N}: {actions_summary}
+   Comments: {current}/{limit} | Reactions: {current}/{limit}
+   Replies: {count} (unlimited)
+   Next: {next_task_time or "nothing scheduled"}
+   ```
+
+## 7. Close Browser (MANDATORY)
+
+1. `exec openclaw browser --browser-profile {{browser_profile}} close 2>&1`
+2. If close fails → retry once.
+
+Never leave browser open.
+
+## 8. HEARTBEAT_OK
+
+Reply when ALL true: no replies pending, no tasks due, 23:00-08:00 OR checked <30min ago.
+
+## Error Handling
+
+- Browser fails -> log Error, continue file steps
+- JSON corrupted -> regenerate from template
+- Rate limit / login expired -> log Alert, return HEARTBEAT_OK immediately
+- Post failed -> don't log, retry next
+- Partial -> log what completed
+- Browser timeout -> close tab, reopen. If fails -> restart profile, retry once. Still fails -> skip browser tasks
+- "matched N elements" / strict mode -> use evaluate() instead of snapshot
+- evaluate() unexpected data -> 1 snapshot to inspect, use discovered selector for rest
+- Click fails after snapshot -> retry evaluate-based click. Still fails -> skip, log Error, next task

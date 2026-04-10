@@ -1,0 +1,147 @@
+# PLAYBOOK.md - Reddit Agent End-of-Day & On-Demand Tasks
+
+**This file contains tasks that run ONCE per day or on-demand only. Do NOT load this file on routine heartbeats.**
+
+---
+
+## Generate Schedule
+
+**When:**
+- Morning Schedule Check (HEARTBEAT.md § 0) - generates TODAY's schedule
+- Scheduled daily - generates TODAY's schedule
+
+1. **Read inputs for schedule generation:**
+   - **Content brief:** `{{pipeline_workspace}}/content-briefs/{target_date}.md` — provides today's theme, subreddit targets, discussion angles. Adapt to Reddit style — authentic, not promotional.
+   - **INSIGHTS.md** — provides what's been working: subreddit performance, karma trends, comment timing, removed comments to avoid.
+   - **How they work together:** Content brief sets the THEME (what to talk about). INSIGHTS.md sets the STRATEGY (which subs work, when to post, what gets upvotes). If no content brief exists, use INSIGHTS.md alone.
+
+2. **Extract patterns (conservative):**
+   - Subreddit performance: Which subs got upvotes/replies?
+   - Comment timing: Which time slots worked best?
+   - Karma trend: Are we building or stalling?
+   - Removed comments: Any subs to avoid?
+
+3. **Load base template** for today's day of week:
+   - **Weekdays (Mon-Fri)**: 5 sessions (brand-heavy, karma supplemental)
+     - Morning (09:00): karma_building, max_comments: 2, target: r/AskReddit /new (safe karma, no factual risk)
+     - Late morning (11:00): browse_and_engage, max_comments: 2, target: r/projectmanagement + r/artificial
+     - Afternoon (14:00): browse_and_engage, max_comments: 2, target: r/ExperiencedDevs + r/agile
+     - Evening (17:00): browse_and_engage, max_comments: 2, target: r/ProductManagement + r/MachineLearning
+     - Night (20:00): karma_building, max_comments: 2, target: r/AskReddit + r/mildlyinteresting
+     - 🚨 **Wednesday**: add post_original_content at 10:00 (before late morning engage)
+     - **Total: 10 comments** (4 karma + 6 brand). Update daily.comments.limit to 10.
+   - **Saturday**: Post original content + brand-heavy (high weekend traffic)
+     - Morning (10:00): 🚨 post_original_content (MANDATORY)
+     - Midday (12:00): browse_and_engage, max_comments: 2, target: r/projectmanagement + r/artificial
+     - Afternoon (15:00): browse_and_engage, max_comments: 2, target: r/ExperiencedDevs + r/productivity
+     - Evening (18:00): karma_building, max_comments: 2, target: r/AskReddit + r/mildlyinteresting
+     - Night (20:00): browse_and_engage, max_comments: 2, target: r/agile + r/MachineLearning
+     - Late (21:30): karma_building, max_comments: 2, target: r/AskReddit + r/technology
+     - **Total: 10 comments** (4 karma + 6 brand)
+   - **Sunday**: Brand-heavy (highest traffic day)
+     - Morning (11:00): karma_building, max_comments: 2, target: r/AskReddit + r/mildlyinteresting
+     - Afternoon (14:00): browse_and_engage, max_comments: 2, target: r/artificial + r/productivity
+     - Evening (17:00): browse_and_engage, max_comments: 2, target: r/projectmanagement + r/ExperiencedDevs
+     - Night (20:00): browse_and_engage, max_comments: 2, target: r/agile + r/MachineLearning
+     - Late (21:30): karma_building, max_comments: 2, target: r/AskReddit + r/technology
+     - **Total: 10 comments** (4 karma + 6 brand)
+
+   🚨 **Original posts: MANDATORY 2/week.** Wednesday + Saturday. Always include in schedule — do NOT skip. If `weekly.posts.current >= limit` → skip the task but keep other tasks.
+   - 🚨 MUST include `content_source` in `post_original_content` config:
+     ```json
+     "config": {
+       "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/reddit-post.md",
+       ...
+     }
+     ```
+
+   🚨 **MANDATORY end-of-day tasks (EVERY day, ALL templates):**
+   - **22:00** update_memory (PLAYBOOK.md § Memory Update)
+
+4. **Apply conservative adjustments** (only if pattern seen 2+ times):
+   - Prioritize subs where comments got upvotes
+   - Avoid subs where comments were removed
+   - Spread tasks more evenly if hit limits early
+
+   **Capacity matching (MANDATORY):** The sum of `max_comments` across ALL engagement/karma tasks MUST equal `daily.comments.limit` from limits.json (10).
+   **Weekly posts MUST NOT exceed `weekly.posts.limit` (2).**
+
+   **Quality over volume:** Prioritize being early on rising posts over hitting max daily limit. Better to post 8 high-quality, well-positioned comments than 12 mediocre ones.
+
+5. **Apply jitter** (±30 minutes), anti-collision (10min spacing), active hours (08:00-23:00)
+
+6. **Write:** `schedule.json` with metadata.for_date = target date (TODAY), all tasks
+
+**Note:** `update_memory` at 22:00 is MANDATORY in every schedule — never skip it.
+
+---
+
+## Memory Update
+
+**When:** task action = "update_memory" (scheduled at ~22:00 daily)
+
+🚨 **GRACEFUL DEGRADATION:** Steps 1-3 use browser/API. If ANY step fails (timeout, error), **skip it and continue** to the next step. Step 4 (INSIGHTS.md update) is MANDATORY and does NOT require browser — it reads local memory files. Never skip step 4 because an earlier step failed.
+
+---
+
+### Step 1: Check karma (API — no browser needed)
+
+Use `exec` to call the Reddit JSON API:
+```bash
+curl -s -L "https://www.reddit.com/user/{{handle_slug}}/about.json" -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+```
+
+Extract from response JSON → `data.total_karma`, `data.link_karma`, `data.comment_karma`.
+
+Log to daily memory:
+```
+Karma check: total=XXXX (post=XXX, comment=XXXX)
+```
+
+If curl fails or returns error → log "Karma check: API unavailable" and **continue to step 2**.
+
+### Step 2: Check comment performance (API — no browser needed)
+
+Use `exec` to fetch recent comments:
+```bash
+curl -s -L "https://www.reddit.com/user/{{handle_slug}}/comments.json?limit=10&sort=new" -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+```
+
+Extract from `data.children[].data`: `score`, `subreddit`, `body` (first 80 chars).
+
+Log top performers (score > 1) and note which subreddits got engagement.
+
+If curl fails → log "Comment performance: API unavailable" and **continue to step 3**.
+
+### Step 3: Weekly flair check (Sundays only — requires browser)
+
+Visit each active subreddit, check if flair is set:
+- r/productivity → "{{brand_tagline}} | Building PM tools"
+- r/cursor → "{{brand_tagline}} | {{role}}"
+- r/projectmanagement → "{{role}} | {{certifications}}"
+- r/PMPExam → "{{certifications}} | {{role}}"
+- r/Entrepreneur → "PM Tools Builder"
+- If missing → set flair → log Type = "Flair"
+
+If browser fails → log "Flair check: browser unavailable" and **continue to step 4**.
+
+### Step 4: Update `INSIGHTS.md` (MANDATORY — no browser needed)
+
+🚨 **This step MUST always run**, even if steps 1-3 all failed. It reads LOCAL files only.
+
+**Read inputs:**
+- `memory/{today}.md` — today's activities and outcomes
+- `memory/{yesterday}.md` — recent patterns (if exists)
+- Karma data from step 1 (if available) or last known value from INSIGHTS.md
+- Comment performance from step 2 (if available)
+
+**Update `INSIGHTS.md`** with:
+- **Karma Tracking**: current total + weekly delta (use API data or "unchanged — API unavailable")
+- **What Works**: subreddits with best engagement, comment styles that got upvotes/replies, "first comment on rising post" wins (track these!)
+- **What Doesn't Work**: subreddits that downvoted/ignored, approaches that felt promotional
+- **Key Relationships**: users who replied back (reciprocal engagement)
+- **Saved Posts Library**: high-value posts saved for reference
+- **Early Positioning Wins**: Track when we were first/early commenter on posts that blew up
+- **Strategy Adjustments**: changes worth remembering
+
+Keep INSIGHTS.md under 100 lines. Replace outdated insights rather than appending forever.

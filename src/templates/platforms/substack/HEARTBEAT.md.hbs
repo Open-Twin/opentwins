@@ -1,0 +1,327 @@
+# HEARTBEAT.md - Substack Agent
+
+## Rules
+
+- **CLI:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
+- **evaluate:** `... evaluate --fn 'async () => { ... }' 2>&1` (JS after `--fn`)
+- **open/navigate/close:** `... open "URL" 2>&1` / `... navigate "URL" 2>&1` / `... close 2>&1`
+- 🚨 **Tab reuse:** Use `open` ONLY for the FIRST page. Use `navigate` for ALL subsequent pages.
+- **Waits:** Embed in evaluate fn: `async () => { await new Promise(r => setTimeout(r, 3000)); ... }`
+- **Clicks:** `dispatchEvent(new MouseEvent('click', { bubbles: true }))` — NOT `.click()`
+- **Comments:** Navigate to `{post_url}/comments` — do NOT click "Comments" button (destroys context)
+- **File loading:** BROWSER-core.md always. Other BROWSER-*.md on-demand per task type.
+
+## Decision Tree
+
+```
+Heartbeat
+  -> Morning schedule check (SS 0)
+  -> Read limits.json + schedule.json + BROWSER-core.md
+  -> Browser startup with retry (SS 2)
+  -> Notifications — reply all (SS 3) [FIRST]
+     (🚨 Read BROWSER-notifications.md BEFORE extracting notifications)
+  -> Schedule tasks (SS 5)
+     (Read BROWSER-engage.md for like/search/subscribe tasks)
+  -> Log + update limits (SS 6)
+  -> Close browser (SS 7)
+  -> HEARTBEAT_OK (SS 8)
+```
+
+Required order: All replies FIRST, then schedule tasks.
+🚨 **ALL steps mandatory every heartbeat.** Browser + notifications MUST run even if no tasks are due.
+🚨 **NEVER use `sessions_spawn` or sub-sessions.** Execute ALL commands directly — no child sessions.
+
+### Step Budget (MANDATORY)
+- **Target: <50 steps.** 95 = runaway. Budget: ~10 setup/notifications + ~8 per comment + ~5 per restack.
+- **NEVER navigate to a post without grep pre-check first** — including priority targets from `config`.
+- **Paywall detection: 1 step max.** Check in the SAME evaluate as content read. If paywall → skip immediately, do NOT try /comments.
+- **Restack: max 5 steps.** If button not found after 2 attempts → skip restack, do NOT hunt across multiple pages.
+
+---
+
+## SS 0. Morning Schedule Check
+
+If `schedule.json` missing OR `metadata.for_date != today`:
+1. Generate INSIGHTS.md from yesterday (PLAYBOOK.md SS Memory Update)
+2. Generate today's schedule (PLAYBOOK.md SS Generate Schedule)
+3. Proceed
+
+🚨 **NEVER generate a schedule for tomorrow.** Only generate for TODAY. Schedule generation happens once per day in the morning. If all today's tasks are done, return HEARTBEAT_OK — do NOT create a new schedule.
+
+---
+
+## SS 1. Read Limits & Pre-load Tracking
+
+```
+if limits.daily.*.last_reset != today: current=0, last_reset=today
+available = limit - current
+```
+
+Pre-load tracking (single exec):
+```bash
+exec cat memory/replied_notifications_substack.txt memory/commented_posts.txt 2>/dev/null || echo "(empty)"
+```
+
+---
+
+## SS 1b. Read Today Summary
+
+Read `memory/today_summary.json`. Use tallies to inform comment decisions:
+- `disagreements` < {{behavior.disagree_target_pct}}% of `comments` AND `comments >= 3` → next MUST disagree (Substack writers respect measured pushback)
+- `last_style` was insight → next must be short/personal/pushback
+- Any style is 60%+ of total → MUST use a different style
+- `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question
+- `avg_words` above platform cap → next comment MUST be under 20 words
+
+If file doesn't exist or `date != today`, initialize:
+```bash
+exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+```
+
+## SS 2. Browser Startup (with retry)
+
+1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://substack.com/activity" 2>&1`
+2. If error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK.
+
+---
+
+## SS 3. Notifications (MANDATORY FIRST — process ALL)
+
+**Read BROWSER-notifications.md first.**
+
+1. Navigate `https://substack.com/activity`
+2. Extract notifications — BROWSER-notifications.md SS 1
+3. Filter: process comment replies and mentions only
+4. **MANDATORY batch grep pre-check** — for each notification, grep using `{url}|{first 15 chars of snippet}` (shorter match = tolerant of length variations):
+   ```bash
+   exec printf '%s\n' "{url1}|{snippet1_15chars}" "{url2}|{snippet2_15chars}" ... | while read line; do grep -qF "$line" memory/replied_notifications_substack.txt && echo "SKIP: $line" || echo "NEW: $line"; done
+   ```
+   Only process lines prefixed with "NEW:".
+   🚨 **snippet = first 30 chars of reply body** (from extraction). Same URL can have multiple replies — snippet makes each unique. Grep uses first 15 chars for fuzzy tolerance.
+   🚨 **Items with `needsClick: true`** (no URL — "replied to your note" notifications): grep using just `{snippet_15chars}` (snippet is unique enough). If tracking file contains this snippet, it's SKIP. Otherwise NEW.
+5. 🚨 **Loop through ALL new notifications** — do NOT stop after the first one:
+   For each NEW notification:
+   - **If `needsClick: true`:** navigate back to `/activity`, click Replies tab, click the notification row by index (BROWSER-notifications.md SS 1b), read URL from `window.location.href`. Then proceed with reply on that page.
+   - **If URL exists:** Navigate to notification URL
+   - 🚨 **Page-level dedup (post pages only):** On `/p/` URLs (article pages), check for `a[href*="/@{{handle}}"]` — if found, already replied.
+     On `/note/` URLs — **SKIP page-level check.** Our profile link always appears as note author → false positive. The grep pre-check (step 4) is authoritative for notes. Proceed directly to reply.
+   - 🚨 **Consecutive reply limit** (check BEFORE replying): Count our name on the page:
+     ```javascript
+     var bodyText = document.body.innerText;
+     var ourReplies = (bodyText.match(/{{name}}/g) || []).length;
+     if (ourReplies >= 3) return { skipped: true, reason: 'too_many_replies_in_thread', count: ourReplies };
+     ```
+     - `ourReplies >= 3` → skip reply, append tracking key, log `Type=Reply Skipped, Reason=too_many_replies_in_thread, count={N}`
+   - **Choose reply method by URL pattern:**
+     - URL contains `/note/c-` (comment-thread view): use **SS 3B** ("Leave a reply..." button). This replies to the thread correctly.
+     - URL contains `/note/p-` (post note view): use **SS 3C** (find replier's per-comment Comment button). If SS 3C fails to find the button → fall back to SS 3B.
+   - After verified success: append to tracking (include snippet for dedup):
+     ```bash
+     exec printf '%s\n' '{type}|{author}|{postUrl}|{snippet}|{ISO_TIMESTAMP}' >> memory/replied_notifications_substack.txt
+     ```
+   - Log: Type=Reply, Author, Post URL, Response (100 chars)
+   - Update limits: `comments.current++`
+6. Process ALL notifications regardless of timing.
+
+---
+
+## SS 5. Schedule Tasks
+
+**Read BROWSER-engage.md first** (for like/search/subscribe tasks).
+
+Filter: `status="pending" AND time<=now`, sort by time.
+**No spacing rule.** Execute tasks back-to-back when due.
+
+### Content-Ready Override (publish tasks only)
+
+Before executing any `publish_newsletter` or `publish_note` task:
+
+1. Read the file at `config.content_source`
+2. For notes: Find the first post with `status: pending`, use that content
+3. For newsletters: Use the full newsletter content
+4. After verified publish → update the file: change `status: pending` to `status: published` for that post
+
+**Task types:**
+
+- **browse_and_engage** -> Optimized workflow:
+  🚨 **Prefer Notes over article comments.** Notes engagement on `substack.com` is reliable. Article comments on custom domains (`*.org`, `*.com`, `*.io`) are often inaccessible (iframe/embed issues). If article comments fail once → switch to Notes feed immediately, do NOT retry.
+  1. **Search/browse** — Start with Substack Notes feed (`substack.com` home) or search. MAX 2 search queries per heartbeat.
+  2. **Extract posts** — BROWSER-engage.md SS 5. Filter: recent posts (< 14 days), has engagement.
+  3. **🚨 MANDATORY batch grep pre-check BEFORE navigating** — check ALL candidate URLs at once:
+     ```bash
+     exec printf '%s\n' "slug1" "slug2" "slug3" | while read line; do grep -qF "$line" memory/commented_posts.txt && echo "SKIP: $line" || echo "OK: $line"; done
+     ```
+     Only navigate to "OK:" posts.
+  4. Per selected post (grep returned "OK"): Navigate to `{post_url}/comments` directly. Then **paywall probe + dedup check (ONE evaluate):**
+     ```javascript
+     async () => {
+       await new Promise(r => setTimeout(r, 5000));
+       var textarea = document.querySelector('textarea[name="body"]');
+       if (!textarea) return { canComment: false, paywall: true };
+       // Probe: type a char to trigger paid-only popup (Substack shows textarea but blocks on submit)
+       textarea.focus();
+       textarea.value = 'x';
+       textarea.dispatchEvent(new Event('input', { bubbles: true }));
+       await new Promise(r => setTimeout(r, 1500));
+       var paidPopup = document.body.innerText.includes('Only paid subscribers can comment');
+       if (paidPopup) return { canComment: false, paywall: true, reason: 'paid_subscribers_only' };
+       // Clear probe text
+       textarea.value = '';
+       textarea.dispatchEvent(new Event('input', { bubbles: true }));
+       // Dedup check (post pages only - skip on /note/ URLs)
+       var url = window.location.href;
+       var hasOwnComment = false;
+       if (!url.includes('/note/')) {
+         hasOwnComment = Array.from(document.querySelectorAll('a')).some(a => (a.href || '').includes('/@{{handle}}'));
+       }
+       return { canComment: true, paywall: false, alreadyCommented: hasOwnComment };
+     }
+     ```
+     If `paywall: true` → skip immediately. If `alreadyCommented: true` → backfill tracking, skip.
+     Otherwise: Like post (BROWSER-engage.md SS 4, scroll up) -> 🚨 **Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) -> comment (BROWSER-core.md SS 3, textarea already visible) -> **after commenting: subscribe** if not already subscribed and `daily.subscribes.current < limit` (BROWSER-engage.md SS 6) -> restack with a note if high-quality and `daily.restacks.current < limit` (BROWSER-restack.md SS 10)
+  4b. **🚨 Restack at least 1 post per browse_and_engage task** if restack limit not reached. Pick the best post from the batch. A restack with a quote note puts your take into the original author's audience feed — free visibility.
+  4c. **🚨 Subscribe is tied to commenting.** Every time you comment on a post, subscribe to that author's publication (if not already subscribed and limit not reached). The author sees both notifications — comment + subscribe — which signals genuine engagement.
+  5. 🚨 **ONLY append to `commented_posts.txt` AFTER a verified posted comment.**
+     ```bash
+     exec printf '%s\n' '{post_url}' >> memory/commented_posts.txt
+     ```
+  6. Log: Type=Like, Type=Comment, Type=Subscribe, Type=Restack
+  7. Completion: increment `comments_done`, `likes_done`, `restacks_done`. If limits reached -> mark "done". Else "pending".
+
+- **notes_engagement** -> Browse Substack Notes feed, like and reply to relevant notes. Short, punchy replies. Log Type=Note.
+
+- **publish_note** -> Write and publish a short-form note to the Substack feed. Workflow:
+  1. Read queries.json topics, INSIGHTS.md for what resonates
+  2. Draft note (100-500 chars, punchy, conversational - NOT article-length). Add 3-5 hashtags at end (read from `queries.json → hashtags` array — refreshed daily).
+  3. Self-review (TOOLS.md SS Self-Review Gate)
+  4. Click "New post" button in nav (opens Notes composer, NOT article editor)
+  5. Type into `div[contenteditable="true"]` (paste approach)
+  6. Verify "Anyone can reply" is set (button visible in composer)
+  7. Click "Post" button (enabled after content typed)
+  8. Verify: composer closes, note visible in feed
+  9. Log Type=Note, content snippet, URL
+  10. Update `limits.json -> daily.notes_posted.current++`
+  🚨 **"New post" button opens Notes composer.** Dashboard "Create post" opens article editor. Different flows.
+  🚨 **Notes composer uses contenteditable** (same as note replies). Paste approach.
+  🚨 **Post button is disabled until content is typed.** Dispatch InputEvent after paste.
+
+- **publish_newsletter** -> Write and publish a newsletter post. Workflow:
+  1. Read queries.json topics, INSIGHTS.md for what resonates
+  2. Pick topic from content pillars (SOUL.md), draft article (1000-2000 words)
+  3. **Format body as HTML** — use `<h2>` for headings, `<strong>` for bold, `<em>` for italic, `<a href="https://substack.com/@handle">Name</a>` for writer references, `<ul><li>` for lists, `<blockquote>` for quotes. See BROWSER-publish.md Step 3 for full list.
+  4. Self-review (TOOLS.md SS Self-Review Gate)
+  5. Navigate to `{{handle}}.substack.com/publish/post` (creates new draft)
+  6. Fill: `textarea[placeholder="Title"]`, `textarea[placeholder*="subtitle"]`, body via `div[contenteditable="true"]` (HTML paste approach)
+  7. Wait for auto-save ("Saved" button)
+  8. Click "Continue" -> set Audience: Everyone, Comments: Everyone (second radio group `value="everyone"`)
+  9. Click "Send to everyone now"
+  10. Verify: page navigates to share-center with "Your post is live!"
+  11. Log Type=Article, title, URL
+  12. Update `limits.json -> weekly.newsletters.current++`
+  🚨 **Both Audience AND Comments default to "only_paid"** — MUST set BOTH radio groups to `value="everyone"`.
+  🚨 **Editor uses HTML paste:** `dt.setData('text/html', html)` for rich formatting. See BROWSER-publish.md Step 3.
+  🚨 **Title/subtitle use textarea:** Set `.value` + dispatch `input` + `change` events.
+  🚨 **Navigate to `{{handle}}.substack.com/publish/post`** (no ID) to create a new draft. Do NOT use "New post" nav button (opens Notes composer).
+
+- **restack** -> Restack (retweet) relevant notes/posts with a quote note. Workflow:
+  1. During browse_and_engage or notes_engagement, identify high-quality content worth restacking
+  2. Click "Restack" button on the note/post -> menu appears with "Restack" (simple) and "Restack with a note" (quote)
+  3. Prefer "Restack with a note" (menuitem) - adds our perspective, builds brand
+  4. Notes composer opens with original embedded -> type quote text + 3-5 hashtags from `queries.json → hashtags` into `div[contenteditable="true"]` (paste approach)
+  5. Click "Post" button
+  6. Verify: composer closes
+  7. Log Type=Restack, original author, our note snippet
+  8. Update `limits.json -> daily.restacks.current++`
+  🚨 **Restack button opens a dropdown menu** with two menuitems: "Restack" and "Restack with a note". Use snapshot to find refs.
+  🚨 **Quote composer is identical to Notes composer** - same contenteditable + Post button.
+  🚨 **Prefer "Restack with a note"** over plain restack - adds value and visibility.
+
+- **recommend** -> Recommend a relevant publication. Workflow:
+  1. Read BROWSER-recommend.md
+  2. Read `memory/recommended_publications.txt` for already-recommended publications
+  3. Choose candidate: check recent `memory/{date}.md` for writers we've engaged with, cross-reference `queries.json` topics. Prefer writers with reciprocal comment exchanges, active posting, and audience-relevant content.
+  4. Dedup check: `grep -qF "{publication_name}" memory/recommended_publications.txt`
+  5. Navigate to recommendations dashboard (BROWSER-recommend.md SS 2 Step 0)
+  6. Add recommendation with search + reason (BROWSER-recommend.md SS 2 Steps 1-3)
+  7. After verified success: append to tracking file
+  8. Log: Type=Recommend, Publication, Reason (100 chars)
+  9. Update limits: `recommendations.current++`
+  🚨 **Reason must be specific and relevant** — explain why your PM/AI audience will benefit. Not generic praise.
+  🚨 **Read BROWSER-recommend.md ON-DEMAND** only when a `recommend` task is due.
+
+- **update_memory** -> PLAYBOOK.md SS Memory Update
+
+**MANDATORY: Task stays "pending" until ALL configured limits reached.**
+
+---
+
+## SS 6. Log & Update
+
+Append memory:
+```bash
+exec cat >> memory/YYYY-MM-DD.md <<'EOF'
+## YYYY-MM-DD HH:MM - Comment
+- Post: URL
+- Writer: @name
+- Style: insight
+- Our comment: "text..."
+
+EOF
+```
+🚨 **Style field MANDATORY** for all Comment entries — track which style was used (insight|short|personal|disagree). Enables quality audits.
+
+Update limits.json:
+- Comment -> `comments.current++`
+- Like -> `likes.current++`
+- Subscribe -> `subscribes.current++`
+- Note reply -> `note_replies.current++`
+
+🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
+
+**MANDATORY Slack Report** — output as text (gateway routes to Slack):
+```
+Substack Heartbeat
+- Actions: {summary or "No tasks due"}
+- Comments: {current}/{limit}
+- Likes: {current}/{limit}
+- Subscribes: {current}/{limit}
+- Note replies: {current}/{limit}
+- Next task: {next pending time + action, or "none today"}
+```
+ALWAYS send even when 0 actions.
+
+---
+
+## SS 7. Close Browser
+
+`browser.close({ profile: "{{browser_profile}}" })`. If fails → retry once. NEVER `browser.stop()` or pkill.
+
+---
+
+## SS 8. HEARTBEAT_OK
+
+Before returning verify: Slack sent, browser closed, limits.json updated.
+Return when: no pending notifications AND no due tasks AND Slack sent.
+
+---
+
+## Errors
+
+| Type | Action |
+|------|--------|
+| Browser crash | Log Type=Error, continue file steps |
+| JSON corrupt | Regenerate, log warning |
+| Rate limit | Stop, log Type=Alert, wait |
+| Submit fail | NO log, retry next |
+| Partial done | Log completed only |
+
+---
+
+## Reference
+
+- Profile: {{profile_url}}
+- Activity (notifications): /activity
+- Inbox: /inbox
+- Dashboard: button "Dashboard" in nav
+- Search: /search/{query}
+- Home (Notes feed): https://substack.com

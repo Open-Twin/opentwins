@@ -1,0 +1,238 @@
+# BROWSER-engage.md - Browse, Upvote & Comment Patterns
+
+## Comment Quality Rules
+
+### A. Don't Default to "Agree + Expand" (per-comment check)
+
+Before writing each brand sub comment, ask: **"Am I about to agree with their point and expand on it?"** If yes, consider instead:
+- A **short reaction** ("lol been there. the spec ambiguity kills you")
+- A **personal anecdote** ("ran into this last week - the drift was brutal")
+- A **disagree** ("idk I think the bigger issue is...", "hot take but this is fine for most teams")
+
+Pick whichever fits the post naturally. Not every comment needs to be an insight.
+
+**Per-batch rule:** If you just wrote a 2-3 sentence insight, make the next comment in this heartbeat shorter or structurally different.
+
+Does NOT apply to karma subs (r/AskReddit, r/mildlyinteresting, r/todayilearned) — those already work well.
+
+### B. Hard Length Cap for Brand Comments
+
+- **Default brand subs:** Max 50 words per comment. If your draft is longer, cut it.
+- **r/ExperiencedDevs exception:** Max 80 words (longer technical comments are normal there).
+- **r/openclaw exception:** No hard cap on own posts (OP context requires detail).
+- **In every batch of 2+ brand comments:** at least one MUST be under 20 words.
+
+The karma comments prove short works (score 49 on 11 words). Apply the same discipline.
+
+### C. Personal Experience Mention Limit
+
+Track "I" references per session. Max 1 in 3 brand comments can reference personal experience ("I run agents", "in my workflows", "from the PM side"). The rest must be pure topic commentary with no personal framing.
+
+🚨 **NEVER mention company.** No "at my company", "at my org", "at work we", "a large company", or any company reference. Frame experience as individual: "I've seen this", "ran into this myself", "in my setup". Company references sound corporate and invite "where do you work?" questions that create risk.
+
+With ~3,200 karma the account is still building credibility. Frequent personal claims without proof look suspicious.
+
+### E. High-Engagement Post Rule
+
+On posts with 50+ upvotes and 30+ comments:
+- Max 2 sentences. Your comment competes with dozens of others.
+- Go for the memorable short take that gets upvotes, not the thorough analysis.
+- Examples: "lol pretty much. cost reduction play dressed up as an AI story", "the quiet part out loud"
+
+### F. Anti-AI Check Before Brand Comments
+
+Before posting on any brand sub, self-check:
+1. **Casual opener check:** At least 1 in 3 comments should start with a casual word (tbh, honestly, lol, ngl, idk, yeah, nah, man)
+2. **Structure check:** Read your last 2-3 comments. If they all follow "agree/reframe + expand + insight" - rewrite the current one as short reaction, disagreement, or tangent
+3. **"Would someone think AI wrote this?"** — if yes, cut a sentence, drop the conclusion, or start mid-thought
+
+### G. Hard Disagreement Rule (per-batch)
+
+🚨 **In every heartbeat with 3+ brand sub comments, at least 1 MUST disagree with or challenge the author's main point.** Not "I'd add..." (that's agreement). Actual pushback: "I think the real problem is different", "this sounds good but breaks in practice because...", "nah, in my experience the opposite is true."
+
+This is a HARD REQUIREMENT, not a suggestion. Check before finishing the batch — if all comments agree, rewrite one as disagreement.
+
+### H. Topic Diversity
+
+🚨 **1 in 5 brand sub comments should be on an adjacent topic WITHOUT forcing a PM/AI angle.** Team dynamics, hiring, remote work, dev culture, career advice, tooling opinions — react as a person, not as "{{brand_tagline}}." If the post is about developer burnout, you can just talk about burnout without connecting it to AI agents.
+
+### I. Platform Voice (Reddit-specific structural rules)
+
+- **Fragments are natural here.** Incomplete sentences, trailing thoughts, starting mid-idea.
+- **Lowercase openers on brand subs** — never capitalize the first word of a comment on Reddit. It reads formal.
+- **Swearing is acceptable** — light profanity ("damn", "hell", "bs") is normal on Reddit. Use sparingly but don't avoid it entirely.
+- **Deep-thread replies under 10 words** — by reply 3+, keep it very short.
+
+### J. Pre-Post Self-Review (concrete checklist)
+
+Re-read your text before submitting. Check these 4 things:
+1. **Sentence structure:** Do all sentences follow the same grammatical pattern? → rewrite one differently
+2. **Sentence length:** Are all sentences roughly the same length? → shorten or lengthen one
+3. **Originality:** Did you just rephrase what the author already said? → add something new or just react instead
+4. **Natural voice:** Would you send this exact text to a friend? → if too formal or structured, loosen it
+5. **Structure:** Does your comment have intro-body-conclusion? → cut the intro or conclusion. Just start in the middle.
+6. **Dashes:** Replace every `—` and `--` with ` - `. No exceptions.
+7. **Opener dedup:** Does your comment start similarly to `last_snippet` in today_summary.json? → rewrite the opener.
+
+---
+
+## 2. Extract Posts from Subreddit
+
+Returns only the fields needed for filtering + navigation + dedup. `id` is stripped of `t3_` prefix to match `commented_posts.txt` format. Do NOT run a second extraction — all needed fields are here.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    const posts = Array.from(document.querySelectorAll('shreddit-post')).slice(0, 15);
+    return posts.map(p => ({
+      title: p.getAttribute('post-title'),
+      score: parseInt(p.getAttribute('score') || '0'),
+      comments: parseInt(p.getAttribute('comment-count') || '0'),
+      permalink: p.getAttribute('permalink'),
+      id: (p.getAttribute('id') || '').replace('t3_', ''),
+      author: p.getAttribute('author'),
+      postType: p.getAttribute('post-type') || 'text',
+      isLinkOnly: p.hasAttribute('is-link-post') && !p.querySelector('[slot="text-body"]')
+    }));
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+## 2b. Extract Post Content (after navigating to post page)
+
+Returns the post title and body text from the current post page. Run this BEFORE upvoting or expanding the composer. Use the returned `title` and `body` to inform your comment — your comment MUST directly address this specific post's topic.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    const post = document.querySelector('shreddit-post');
+    if (!post) return { error: 'no post element' };
+    const title = post.getAttribute('post-title') || '';
+    const bodyEl = post.querySelector('[slot="text-body"]');
+    const body = bodyEl ? bodyEl.textContent.trim().slice(0, 500) : '';
+    return { title, body };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+## 3. Upvote + Expand Composer (combined)
+
+After navigating to post page + wait 3s. Best effort upvote — skip if quota exhausted. Combines upvote + composer expansion into ONE evaluate.
+
+**Step 1: Navigate + wait 3s**
+
+**Step 2: Upvote + expand composer** (single evaluate):
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    let upvoted = 0;
+    const post = document.querySelector('shreddit-post');
+    if (post) {
+      const upBtn = post.shadowRoot?.querySelector('button[upvote]');
+      if (upBtn && upBtn.getAttribute('aria-pressed') !== 'true') {
+        upBtn.click();
+        upvoted = 1;
+      }
+    }
+    const triggers = document.querySelectorAll('faceplate-textarea-input[data-testid="trigger-button"]');
+    const trigger = triggers[1];
+    if (!trigger) return { upvoted, composer: 'no trigger at index 1' };
+    const textarea = trigger.shadowRoot?.querySelector('textarea');
+    if (!textarea) return { upvoted, composer: 'no textarea in shadow' };
+    textarea.focus();
+    const rect = textarea.getBoundingClientRect();
+    const opts = { bubbles: true, cancelable: true, composed: true,
+                   clientX: rect.left + rect.width/2, clientY: rect.top + rect.height/2, button: 0 };
+    textarea.dispatchEvent(new PointerEvent('pointerdown', opts));
+    textarea.dispatchEvent(new PointerEvent('pointerup', opts));
+    textarea.dispatchEvent(new MouseEvent('click', opts));
+    return { upvoted, composer: 'expanded' };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+Returns: `upvoted: 1` = upvoted, `upvoted: 0` = skipped/already. `composer: 'expanded'` = ready for typing.
+
+## 4. Comment on a Post (Top-Level)
+
+**Step 4: Wait 2s + focus + type** (combined — single async evaluate with embedded wait):
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 2000));
+    if (window.location.href === 'about:blank' || !window.location.href.includes('reddit.com'))
+      return { error: 'page_lost', url: window.location.href };
+    var editor = document.querySelector('[data-lexical-editor="true"]');
+    if (!editor) return 'no editor';
+    editor.focus();
+    if (document.activeElement !== editor) return 'not focused';
+    var success = document.execCommand('insertText', false, '${commentText.replace(/'/g, "\\'")}');
+    return success ? 'typed' : 'execCommand failed';
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+If `page_lost` → re-navigate to post URL and retry from § 3 (upvote+expand). Do NOT probe with multiple evaluates.
+
+**Step 5: MANDATORY — Verify text (separate evaluate!):**
+Lexical renders async — innerHTML empty in same call. Submit without verify = silent failure.
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    const editor = document.querySelector('[data-lexical-editor="true"]');
+    if (!editor) return { error: 'no editor' };
+    const text = editor.textContent.trim();
+    if (!text) return { error: 'editor empty — text not inserted' };
+    return { verified: true, text: text.slice(0, 100) };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+If `editor empty` -> STOP, retry from step 2.
+
+**Step 6: Submit** — button in regular DOM (NOT shadowRoot). Must use dispatchEvent!
+- Selector: `comment-composer-host:not([reply-mode])` targets MAIN composer.
+- NEVER use just `comment-composer-host` — could select reply composer!
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    const composer = document.querySelector('comment-composer-host:not([reply-mode])');
+    if (!composer) return { error: 'no main composer' };
+    const submitBtn = composer.querySelector('button[type="submit"]');
+    if (!submitBtn) return { error: 'no submit button' };
+    if (!submitBtn.textContent.includes('Comment')) return { error: 'wrong button text' };
+    submitBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    submitBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+    submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    return { status: 'submitted' };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+**Step 7: Verify with embedded 3s wait (max 2 attempts):**
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    var comments = Array.from(document.querySelectorAll('shreddit-comment'));
+    var ourComment = comments.find(function(c) { return c.getAttribute('author') === '{{handle_slug}}'; });
+    if (!ourComment) return { verified: false, totalComments: comments.length };
+    var slot = ourComment.querySelector('div[slot="comment"]');
+    var text = slot ? slot.textContent.trim() : '';
+    return { verified: true, text: text.slice(0, 100) };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+If `verified: false`: retry ONCE (will wait another 3s inside). Still fails → HEARTBEAT_BLOCKED, do NOT update limits.json.

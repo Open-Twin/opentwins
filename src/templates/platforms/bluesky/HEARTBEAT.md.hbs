@@ -1,0 +1,245 @@
+# HEARTBEAT.md - Bluesky Agent
+
+Read every heartbeat: `limits.json`, `schedule.json`, `BROWSER-core.md`. Other BROWSER-*.md on-demand per task.
+
+**CLI syntax:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
+- **evaluate:** `... evaluate --fn 'async () => { ... }' 2>&1` (JS goes after `--fn`)
+- **open/navigate/close:** `... open "URL" 2>&1` / `... navigate "URL" 2>&1` / `... close 2>&1`
+- 🚨 **Tab reuse:** Use `open` ONLY for the FIRST page. Use `navigate` for ALL subsequent pages.
+
+Steps: § 0 Morning Schedule Check → § 1 Limits → § 2 Browser → § 3 Replies (FIRST) → § 4 Schedule → § 5 Log → § 6 Errors → § 7 Close → HEARTBEAT_OK
+🚨 **ALL steps mandatory every heartbeat.** Browser + notifications MUST run even if no tasks are due.
+🚨 **NEVER use `sessions_spawn` or sub-sessions.** Execute ALL commands directly — no child sessions.
+
+## 0. Morning Schedule Check
+
+If `schedule.json` missing or `metadata.for_date != today`:
+1. Generate INSIGHTS.md (PLAYBOOK.md - Memory Update)
+2. Generate today's schedule (PLAYBOOK.md - Generate Schedule)
+
+🚨 **NEVER generate a schedule for tomorrow.** Only generate for TODAY. Schedule generation happens once per day in the morning. If all today's tasks are done, return HEARTBEAT_OK — do NOT create a new schedule.
+
+## 1. Read Limits
+
+Read `limits.json`:
+- Reset daily counters if `last_reset != today`
+- Reset weekly counters if Monday AND `last_reset` before today
+
+## 1b. Read Today Summary
+
+Read `memory/today_summary.json`. Use tallies to inform comment decisions:
+- `disagreements` < {{behavior.disagree_target_pct}}% of `comments` AND `comments >= 4` → next MUST disagree (Bluesky is a cozy community — keep pushback gentle)
+- `last_style` was insight → next must be short/personal/pushback
+- Any style is 60%+ of total → MUST use a different style
+- `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question
+- `avg_words` above platform cap → next comment MUST be under 20 words
+
+If file doesn't exist or `date != today`, initialize:
+```bash
+exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+```
+
+## 2. Browser Startup (with retry)
+
+1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://bsky.app/notifications" 2>&1`
+2. If CDP error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
+
+## 3. Reply Check (MANDATORY FIRST)
+
+**Read BROWSER-replies.md first.**
+
+### 3a. Extract unreplied posts
+
+1. Navigate to `https://bsky.app/notifications`
+2. Run BROWSER-replies.md S 1 (has 3s embedded wait - NO separate wait step)
+
+### 3b. Grep pre-check against tracking file
+
+For each unreplied post, extract post_id from URL:
+```bash
+exec printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/replied_posts.txt || true
+```
+🚨 Empty output = ALL already tracked → skip. Lines printed = NEW. NEVER cat/read the tracking file to verify — grep is authoritative.
+Only IDs NOT in file are new -> store as `allowedIds` array. If empty -> skip to S 4.
+
+### 3c. Reply loop
+
+For each unreplied post in `allowedIds`:
+1. Navigate to the post URL (Bluesky requires navigating to post page for replies)
+2. Run BROWSER-engage.md S 4b (click "Compose reply" button)
+3. Run BROWSER-core.md S 5 (Reply/Comment Flow - ONE evaluate: wait + type + submit)
+4. **After successful reply:** `exec printf '%s\n' '{postId}' >> memory/replied_posts.txt` + remove from `allowedIds`
+5. Navigate back to `https://bsky.app/notifications` for next post
+
+Rules:
+- Do NOT follow users during reply loop (only during engagement)
+- Do NOT verify replies (reliable; verification false-negatives on notifications page)
+- **Replies do NOT update limits.json** - replies are unlimited, only proactive comments (S 4) count toward `daily.comments`
+- Log: Type = "Reply" (unlimited)
+- **Deeper in thread = shorter replies** - see SOUL.md Reply Length Rules
+
+## 4. Schedule Check
+
+Filter `schedule.json`: `status="pending"` AND `time <= now`
+
+### Engagement task
+
+**Read BROWSER-engage.md first.**
+
+1. **Multi-query candidate pool** — run S 3 for EACH query in `config.search_queries` (task has 2-3 assigned):
+   - Navigate to Bluesky search with query
+   - Run BROWSER-engage.md S 3 (3s embedded wait — NO separate wait step)
+   - Collect results into a shared `allCandidates[]` array, deduping by `postId`
+   - After all queries: sort by score = `likes * 2 + replies` descending, take top 10
+2. Filter candidates: prefer 1-20 likes, <10 replies. Bio signal: deprioritize bios with "brand", "official", "news", "media" — prioritize bios mentioning PM, AI, dev, tech, manager, engineer
+   - 🚨 **Skip `isMemeLikely: true` posts** (image + text < 80 chars). These are memes/screenshots — you can't see the image and will reply with wrong tone.
+3. **MANDATORY: Batch grep pre-check** — check ALL candidate post IDs at once:
+   ```bash
+   exec printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/commented_posts.txt || true
+   ```
+   🚨 Empty output = ALL already tracked → skip. Lines printed = NEW. NEVER cat/read the tracking file to verify — grep is authoritative.
+   Only IDs NOT in file pass. Empty = all commented across ALL queries → skip task, mark done.
+4. Per candidate post:
+   - Navigate to post URL
+   - **MANDATORY: Run BROWSER-engage.md S 4a** (has 3s embedded wait — duplicate check + post text in ONE evaluate)
+     If `alreadyCommented: true` → append post_id to `memory/commented_posts.txt` (backfill), skip to next candidate.
+     If `tooDeep: true` (parentChainLen >= 4) → skip to next candidate (deep thread, no visibility).
+   - 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/F) — check if defaulting to agree+expand, check length variation, run anti-AI check, no company mentions
+   - Run BROWSER-engage.md S 4b (Click "Compose reply" button)
+     If `error: 'no_compose_button'` → replies disabled on this post, skip to next candidate.
+   - Run BROWSER-core.md S 5 (ONE evaluate: 1.5s wait + type + 0.5s wait + submit — auto-detects "Publish reply" or "Publish post")
+   - Language: ALWAYS English (Ukrainian only if post is Ukrainian, per SOUL.md)
+5. **After each successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
+6. 🚨 **MANDATORY: Follow post author from post page** — BROWSER-engage.md S 7 (no navigation needed). Every comment = follow.
+7. Log: Type = "Comment", increment `comments_done` in memory
+8. Completion: `comments_done >= config.max_comments` → mark "done". If `comments_done == 0` AND all candidates exhausted → keep "pending" for retry with different queries next heartbeat.
+
+### Quote post task
+
+**Read BROWSER-engage.md first** (if not already read for engagement task above).
+
+1. If `weekly.quotes.current >= limit` -> mark done, skip
+2. Multi-query search + filter (same as engagement steps 2-4 - run all assigned queries, merge candidates)
+3. Navigate to post, wait 3s
+4. 🚨 **MANDATORY: Follow post author from post page** — BROWSER-engage.md S 7 (no navigation needed). Every quote = follow.
+5. Run BROWSER-engage.md S 6 (Click Quote)
+6. Run BROWSER-core.md S 5 (Reply/Comment Flow) -- use SOUL.md voice, 1-2 sentences, add 3-5 hashtags (read from `queries.json → hashtags` array — refreshed daily by content planner)
+7. Log: Type = "Quote", increment `weekly.quotes.current`, mark done
+
+### Content-Ready Override (publish tasks only)
+
+Before executing any `original_post` task:
+
+1. Read the file at `config.content_source`
+2. Find the first post with `status: pending`
+3. Use that content for publishing
+4. After verified publish → update the file: change `status: pending` to `status: published` for that post
+
+🚨 Does NOT apply to `quote_post` — those always use their own reactive content.
+
+### Original post task
+
+1. If `weekly.posts.current >= limit` -> mark done, skip
+2. Draft post using TOOLS.md "Original Post Strategy" + SOUL.md voice. 1-3 sentences + 3-5 hashtags (read from `queries.json → hashtags` array).
+3. Click compose button: `button[aria-label="Compose new post"]` (text: "New Post")
+4. 🚨 **300 character limit.** Bluesky disables publish above 300 chars. Verify post text is under 300 before typing.
+5. Type in dialog textbox using **char-by-char with keyboard events** (React requires this — bulk `execCommand` does NOT enable the publish button):
+   ```javascript
+   var dialog = document.querySelector('[role="dialog"]');
+   var textbox = dialog.querySelector('[role="textbox"][contenteditable="true"]');
+   textbox.focus();
+   for (var i = 0; i < text.length; i++) {
+     var c = text[i];
+     if (c === '\n') {
+       textbox.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+       document.execCommand('insertLineBreak');
+       textbox.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
+     } else {
+       textbox.dispatchEvent(new KeyboardEvent('keydown', { key: c, bubbles: true }));
+       document.execCommand('insertText', false, c);
+       textbox.dispatchEvent(new KeyboardEvent('keyup', { key: c, bubbles: true }));
+     }
+   }
+   ```
+6. Wait 1.5s, then check publish button is enabled:
+   ```javascript
+   var publishBtn = document.querySelector('[data-testid="composerPublishBtn"]');
+   if (publishBtn.disabled) return { error: 'publish_button_still_disabled', textLen: textbox.innerText.length };
+   publishBtn.click();
+   await new Promise(r => setTimeout(r, 5000));
+   var dialogGone = !document.querySelector('[role="dialog"]');
+   return { clicked: true, dialogClosed: dialogGone };
+   ```
+   If `publish_button_still_disabled` → text is likely over 300 chars. Shorten and retry.
+6. 🚨 **Post-publish verification (MANDATORY):** Wait 5s, then navigate to profile and check:
+   ```javascript
+   // Navigate to {{profile_url}}
+   // Wait 4s for page load
+   var firstPost = document.querySelector('[data-testid="postText"]');
+   if (!firstPost) return { verified: false, reason: 'no_posts_on_profile' };
+   var snippet = postText.slice(0, 30); // first 30 chars of what we typed
+   var verified = firstPost.innerText.includes(snippet);
+   return { verified: verified, firstPostPreview: firstPost.innerText.slice(0, 100) };
+   ```
+   - `verified: true` → post confirmed live. Proceed to log + update.
+   - `verified: false` → post failed silently. Do NOT mark as published. Do NOT update limits. Log `Type=Post Failed, Reason=not_on_profile`. Mark task pending for retry.
+7. Log: Type = "Post". Increment `weekly.posts.current`
+8. Mark done
+
+### Other tasks
+
+- **update_memory:** PLAYBOOK.md - Memory Update
+
+---
+
+## 5. Log & Update
+
+**Daily log:** Append with `cat >> memory/{today}.md <<'EOF'` (NEVER use edit/read tool)
+
+🚨 **MANDATORY: Log full comment/reply text.** Every Comment, Reply, and Quote entry MUST include the actual text posted (first 120 chars min). Topic summaries are NOT acceptable - they make quality audits impossible.
+
+**Log format for comments/replies:**
+```
+## {date} {time} - Comment
+- Post: {url}
+- Author: {author}
+- Style: {insight|reaction|personal|disagree}
+- Our comment: "{full text of what was posted}"
+```
+
+**Update limits.json ONCE at end:**
+- **Only PROACTIVE comments (S 4) update limits** - replies (S 3) do NOT touch limits.json
+- Comment: `daily.comments.current += N`, append `commented_users`
+- Post/Quote: `weekly.{type}.current += 1`
+- Do NOT read+write limits.json per comment -- batch in memory, write once
+
+🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
+
+**MANDATORY Slack report** - output as text (gateway routes automatically):
+```
+Bluesky Heartbeat
+- Replies: {count} posted
+- Comments: {current}/{limit}
+- Follows: {count} (auto - every engagement = follow)
+- Tasks: {pending_count} pending, next at {time}
+- Errors: {error_count or "none"}
+```
+ALWAYS send even when 0 actions. Outputting HEARTBEAT_OK without Slack report = INCOMPLETE heartbeat.
+
+## 6. Error Handling
+
+Browser timeout: close tab, reopen URL, retry once. Still fails → skip browser tasks.
+NEVER `browser.stop()` (kills Chrome).
+
+## 7. Close & Exit
+
+**MANDATORY ORDER before closing browser:**
+1. Update `limits.json` (all counter changes)
+2. Update `schedule.json` (mark completed tasks "done")
+3. Append `memory/{today}.md` daily log
+4. Output Slack summary
+5. Close browser: `profile: "{{browser_profile}}"`
+
+NEVER close browser first -- timeout = limits/schedule not saved.
+
+**HEARTBEAT_OK when:** No unreplied posts AND no pending tasks due.

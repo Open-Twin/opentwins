@@ -1,0 +1,155 @@
+# TOOLS.md - Reddit Agent
+
+## Local Files
+
+### schedule.json
+Daily tasks with jitter timing. Read every heartbeat. Last task generates tomorrow's.
+
+### limits.json
+**Source of truth for counts & timing.** Read every heartbeat.
+- Structure: `daily.comments`, `daily.upvotes`, `weekly.posts`
+- Resets: daily at midnight, weekly after 7 days
+- Increment `current` on each action. Comment/Upvote = limited daily. Reply = unlimited. Post = limited weekly (2).
+- Do NOT re-count from memory files.
+
+### queries.json
+Fields: subreddits[] (name, strategy), karma_subreddits[] (name, strategy). Pick 2-3 per session. Generated daily by content planner.
+
+### memory/{date}.md
+Append-only activity log. Types: Heartbeat, Comment, Reply, Post, Upvote, Save, Karma Comment, Flair, Error, Alert
+**WRITE-ONLY during routine heartbeats.** Only read when generating schedule or debugging.
+
+---
+
+## Post Quality Filter
+
+Before commenting, verify:
+1. Post < 24h old
+2. 5+ upvotes OR 3+ comments
+3. Active sub from queries.json
+4. < 200 comments (not buried)
+5. 5-50 comments ideal (sweet spot)
+6. Not same sub twice in one session
+
+---
+
+## Post Strategy
+
+**See limits.json for weekly post limit.**
+
+Types: Guide/Resource, Experience report, Question/Discussion, Tool comparison
+
+Rules:
+- **NEVER mention product in post body** — only in comments if asked
+- Post to most relevant sub (not biggest)
+- Best time: Saturday morning Kyiv (Friday evening US)
+
+Subs: r/productivity (workflow), r/cursor (AI/dev tools), r/SaaS (build-in-public), r/projectmanagement (PM craft), r/PMPExam (PM community)
+
+Checklist:
+- [ ] Title honest, not clickbait
+- [ ] Value without product mention
+- [ ] Follows sub rules
+- [ ] Self-review: "upvoted even without products?"
+
+---
+
+## Browser Rules
+
+**CRITICAL: `profile: "{{browser_profile}}"` on EVERY browser call.** If omitted, wrong browser opens.
+
+- **Always www.reddit.com** (never old.reddit.com)
+- Navigate: `www.reddit.com/r/{sub}/hot` or `/new`
+- Notifications: `www.reddit.com/notifications`
+
+---
+
+## Self-Review Gate
+
+Before posting:
+1. Re-read draft
+2. "Would I think AI wrote this?"
+3. Check: parallel structure, clean grammar, bullets, hedging, intro-body-conclusion
+4. Reddit: SHORT and punchy?
+5. If doubt → rewrite messier
+
+---
+
+## Karma Building Strategy
+
+**Goal: 500+ karma for credibility.**
+
+Safe subs: r/AskReddit, r/todayilearned, r/LifeProTips, r/explainlikeimfive, r/mildlyinteresting
+
+Rules:
+- **NEVER "free karma" subs** (r/FreeKarma4You, etc.) — flags account
+- Target rising posts (100-500 upvotes)
+- First 10-20 commenters get most upvotes
+- Short, genuine, relatable > long essays
+- Help in r/learnprogramming, r/programming — builds karma + authenticity
+- Never mention products
+- Track karma every Sunday
+- Milestones: 100 → 250 → 500 → 1000
+
+---
+
+## Competitor Queries
+
+Search for pain points — best promo opportunities.
+
+**r/productivity:** "Todoist", "Notion alternative", "meeting app", "PM tools"
+**r/cursor, r/ChatGPT:** "AI agent building", "autonomous coding", "AI for project management"
+**r/projectmanagement:** "AI tools for PM", "project management automation", "agile AI"
+
+Strategy:
+- Search "[competitor] alternative" or "[competitor] frustrating"
+- Sort by New (recent pain)
+- Empathy FIRST, then mention alternative
+- Never bash competitors — "had same problem, built..."
+- Run 1-2 competitor queries per session
+
+---
+
+## User Flair
+
+**Set flair in active subreddits** (makes account recognizable, builds topical authority):
+- r/productivity: "{{brand_tagline}} | Building PM tools"
+- r/cursor: "{{brand_tagline}} | {{role}}"
+- r/projectmanagement: "{{role}} | {{certifications}}"
+- r/PMPExam: "{{certifications}} | {{role}}"
+- r/Entrepreneur: "PM Tools Builder"
+- r/startups: BANNED — do not interact
+
+**Checked:** Weekly during update_memory task. If no flair set → set appropriate flair for that sub.
+
+---
+
+## Save Posts
+
+**Save posts for reference** (unlimited, no tracking needed):
+- Save posts where we commented (to check back for replies)
+- Save competitor mentions for analysis
+- Save viral posts in our topics for content ideas
+
+**When to save:**
+- After commenting on a post (for follow-up tracking)
+- Competitor pain point posts (for future reference)
+
+**How:** Click "Save" button on post, log Type = "Save" in memory
+
+---
+
+## Upvoting
+
+5-10 per session. Builds goodwill, looks natural.
+
+---
+
+## Removed Comment Detection
+
+Once per day (first task): visit `www.reddit.com/user/{{handle_slug}}`
+If comment missing/removed:
+- Log Type = "Alert"
+- Alert Slack
+- Stop commenting in that sub
+- Check if violated rule

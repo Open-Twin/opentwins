@@ -1,0 +1,239 @@
+# BROWSER-notifications.md - LinkedIn Notification, Reply & Connection Patterns
+
+## SS 1. Extract Notifications
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    var notifications = document.querySelectorAll('[data-finite-scroll-hotkey-item]');
+    return Array.from(notifications).slice(0, 15).map(function(notif) {
+      var card = notif.querySelector('.nt-card');
+      var text = notif.innerText;
+      var links = Array.from(notif.querySelectorAll('a'));
+      var isReply = text.includes('commented on') || text.includes('replied to') || text.includes('mentioned you in a comment');
+      var isLike = text.includes('reacted to') || text.includes('liked');
+      var profileLink = links.find(function(a) { return a.href.includes('/in/'); });
+      var activityLink = links.find(function(a) { return a.href.includes('/feed/update/') || a.href.includes('/activity/'); });
+      var username = profileLink ? (profileLink.href.match(/\/in\/([^/?]+)/) || [])[1] : null;
+      // Keep full URL for navigation (has commentUrn for thread targeting) but store base URL for tracking
+      var fullUrl = activityLink ? activityLink.href : null;
+      var baseUrl = fullUrl ? fullUrl.split('?')[0] : null;
+      return {
+        type: isReply ? 'reply' : (isLike ? 'like' : 'other'),
+        username: username,
+        postUrl: fullUrl,
+        baseUrl: baseUrl,
+        preview: text.slice(0, 200),
+        unread: card ? card.classList.contains('nt-card--unread') : false
+      };
+    }).filter(function(n) { return n.type === 'reply' && n.postUrl && n.username; });
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+## SS 5. Reply to Comment (Post Detail Page)
+
+Post pages have multiple TipTap editors. For notification replies, MUST click Reply on the target comment first to open the correct threaded editor.
+
+### Step 0: Click Reply on the target comment (MANDATORY for notification replies)
+
+🚨 **Do NOT add a page-level `alreadyReplied` check** (looking for our profile link on page) — our ORIGINAL comment is always present on notification pages, causing false positives. The tracking file grep (§ 3 step 4) is the ONLY reliable dedup for notifications.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    // Find the comment that replied to us — must START with author name AND contain the snippet
+    var comments = Array.from(document.querySelectorAll('article[class*="comment"]'));
+    var targetComment = comments.find(c => c.innerText.trim().startsWith('${notificationAuthor}') && c.innerText.includes('${notificationPreviewSnippet}'));
+    if (!targetComment) {
+      // Fallback: starts with author name + @mentions us
+      targetComment = comments.find(c => c.innerText.trim().startsWith('${notificationAuthor}') && c.innerText.includes('{{name}}'));
+    }
+    if (!targetComment) return { error: 'target comment not found', commentCount: comments.length };
+    // Click its Reply button
+    var btns = Array.from(targetComment.querySelectorAll('button'));
+    var replyBtn = btns.find(b => b.innerText.trim() === 'Reply');
+    if (!replyBtn) return { error: 'no Reply button on target comment' };
+    replyBtn.click();
+    await new Promise(r => setTimeout(r, 2000));
+    // Check editor opened INSIDE this comment (NOT globally — other threads have editors too)
+    var editorInside = targetComment.querySelector('[contenteditable="true"][role="textbox"]');
+    return { clicked: true, editorOpen: !!editorInside };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If `editorOpen: false` → retry once. Still fails → skip, log error.
+
+### Step 1: Type text in the THREADED reply editor (found by @mention)
+
+🚨 **LinkedIn auto-inserts `@AuthorName` when Reply is clicked.** Find the editor containing this @mention — that's the correct threaded editor. Do NOT use `editors[last]` globally — it types into the wrong thread.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 1000));
+    // Find the editor that has the auto-inserted @mention (correct threaded editor)
+    var editors = Array.from(document.querySelectorAll('[contenteditable="true"][role="textbox"]'));
+    var replyBox = editors.find(e => e.textContent.includes('${notificationAuthor}'));
+    if (!replyBox) return { success: false, reason: 'no-editor-with-mention' };
+    replyBox.focus();
+    await new Promise(r => setTimeout(r, 300));
+    var text = "${replyText.replace(/"/g, '\\"').replace(/\n/g, '\\n')}";
+    document.execCommand('insertText', false, text);
+    await new Promise(r => setTimeout(r, 500));
+    return { success: true, typed: text.slice(0, 50) };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 2: Submit + verify (ONE async evaluate)
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    // Find submit: feed uses data-view-name, post pages use class
+    var btn = document.querySelector('button[data-view-name="comment-post"]');
+    if (!btn) btn = document.querySelector('button.comments-comment-box__submit-button--cr');
+    if (!btn) {
+      var btns = Array.from(document.querySelectorAll('button'));
+      btn = btns.find(b => (b.innerText.trim() === 'Reply' || b.innerText.trim() === 'Comment') && b.getBoundingClientRect().width > 0 && b.getAttribute('data-view-name') !== 'feed-comment-button');
+    }
+    if (!btn) return { success: false, reason: 'no-submit-button' };
+    if (btn.disabled) return { success: false, reason: 'button-disabled' };
+    btn.click();
+    await new Promise(r => setTimeout(r, 3000));
+    var snippet = "${expectedSnippet.replace(/"/g, '\\"')}";
+    var posted = document.body.innerText.includes(snippet);
+    return { submitted: true, posted: posted };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If NOT posted: retry ONCE (will wait another 3s). Still fails → do NOT log, retry next heartbeat.
+
+### When to use SS 5 vs top-level comment:
+- **Notification replies** (§ 3 in HEARTBEAT.md): ALWAYS use Step 0 first → Step 1 → Step 2 (threaded reply)
+- **Proactive comments** (§ 4 browse_and_engage): Use BROWSER-engage.md SS 4 (TipTap editor, no Step 0)
+
+## SS 7. Send Connection Request (with personalized note)
+
+🚨 **Verified 2026-03-26:** On many profiles the "Connect" button is hidden inside the "More" dropdown menu (not a direct action button). The connection flow opens an "Add a note to your invitation?" dialog.
+
+🚨 **ALWAYS add a personalized note.** Notes significantly increase acceptance rates.
+
+### Flow: Navigate to profile → Safety check → Navigate to custom-invite URL → Add note → Send
+
+### Step 1: Safety checks (on profile page, after navigate + 3s wait)
+
+🚨 **Detection uses buttons, NOT body text** — `bodyText.includes('Pending')` false-positives on navbar/notification text.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    var vanity = window.location.pathname.replace('/in/', '').replace(/\\/$/, '');
+    // Profile action detection: "Follow" button with aria-label="Follow {Name}" = NOT connected
+    // "Message" without "Follow" = already 1st-degree connected
+    // "Pending" = connection request already sent
+    var els = Array.from(document.querySelectorAll('button, a')).filter(e => e.offsetParent !== null && e.getBoundingClientRect().y < 600);
+    var hasFollow = els.some(e => (e.getAttribute('aria-label') || '').startsWith('Follow ' + vanity.replace(/-/g, ' ').split(' ')[0]));
+    if (!hasFollow) hasFollow = els.some(e => e.innerText.trim() === 'Follow' && (e.getAttribute('aria-label') || '').startsWith('Follow'));
+    var hasPending = els.some(e => e.innerText.trim() === 'Pending');
+    // 1st-degree: has Message but NO Follow button for this person
+    if (!hasFollow && !hasPending) return { canConnect: false, skipReason: 'already-connected', vanityName: vanity };
+    if (hasPending) return { canConnect: false, skipReason: 'already-pending', vanityName: vanity };
+    // Extract headline for recruiter check
+    var bodyText = document.body.innerText.slice(0, 1500);
+    var lines = bodyText.split('\\n');
+    var headline = '';
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].trim() === 'Follow' || lines[i].trim() === 'More') {
+        for (var j = i - 1; j >= 0; j--) {
+          if (lines[j].trim().length > 0) { headline = lines[j].trim(); break; }
+        }
+        break;
+      }
+    }
+    var recruiterKeywords = ['Recruiter', 'Recruiting', 'Talent Acquisition', 'Hiring Manager', 'HR', 'Headhunter'];
+    for (var k = 0; k < recruiterKeywords.length; k++) {
+      if (headline.includes(recruiterKeywords[k])) return { canConnect: false, headline: headline.slice(0, 150), skipReason: 'recruiter-headline', vanityName: vanity };
+    }
+    return { canConnect: true, headline: headline.slice(0, 150), vanityName: vanity };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If `canConnect: false` → log `Type=Connection Skipped, Reason={skipReason}`, continue.
+
+### Step 2: Navigate to custom-invite URL (opens Add Note dialog)
+
+```
+browser.navigate("https://www.linkedin.com/preload/custom-invite/?vanityName={vanityName}")
+```
+
+Wait 3s. Page shows "Add a note to your invitation?" with "Add a note" and "Send without a note" buttons.
+
+### Step 3: Click "Add a note", type note, click Send
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    // Click "Add a note" button
+    var btns = Array.from(document.querySelectorAll('button'));
+    var addNoteBtn = btns.find(function(b) { return b.innerText.trim() === 'Add a note' && b.offsetParent !== null; });
+    if (!addNoteBtn) return { sent: false, error: 'no Add a note button' };
+    addNoteBtn.click();
+    await new Promise(r => setTimeout(r, 1500));
+    // Find textarea and type note
+    var textarea = document.querySelector('textarea#custom-message');
+    if (!textarea) return { sent: false, error: 'no note textarea' };
+    var note = ${JSON.stringify(connectionNote)};
+    var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+    nativeInputValueSetter.call(textarea, note);
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    textarea.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 1000));
+    // Click Send
+    btns = Array.from(document.querySelectorAll('button'));
+    var sendBtn = btns.find(function(b) { return b.innerText.trim() === 'Send' && b.offsetParent !== null; });
+    if (!sendBtn) return { sent: false, typed: true, error: 'no Send button' };
+    sendBtn.click();
+    await new Promise(r => setTimeout(r, 2000));
+    return { sent: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 4: Verify (navigate back to profile)
+
+Navigate back to profile URL, wait 3s, check for "Pending" in page text.
+
+### Connection Note Rules
+
+- Max 300 characters
+- Personalize: reference their headline, role, or a post they wrote
+- Keep casual, genuine — not salesy
+- Template: "hey {firstName}, {specific thing you noticed about them}. {brief connection to your work}. would be great to connect"
+- Examples:
+  - "hey Daniel, loved your take on product execution at scale. would be great to connect and exchange notes on PM leadership"
+  - "hey Sarah, your post about AI in product management resonated. been running 10+ AI agents as part of my PM workflow and would love to exchange notes"
+
+- If `sent: true` → log `Type=Connection Request`, update `weekly.connection_requests`
+- If `sent: false` → log `Type=Connection Skipped, Reason={error}`, continue
+
+Navigate back to notifications after success.

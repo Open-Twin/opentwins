@@ -1,0 +1,223 @@
+# BROWSER-publish.md - Substack Newsletter Publishing Patterns
+
+## SS 8. Create & Publish Newsletter Post
+
+### Step 1 — Navigate to editor
+
+Navigate directly to `{{handle}}.substack.com/publish/post` — creates a new draft immediately.
+
+```
+exec openclaw browser --browser-profile {{browser_profile}} navigate "https://{{handle}}.substack.com/publish/post" 2>&1
+```
+
+🚨 **Do NOT use "Create" button on dashboard** — it does not reliably open the post editor.
+🚨 **Do NOT use "New post" nav button** — it opens the Notes composer, NOT the article editor.
+
+### Step 2 — Fill title and subtitle
+
+Title and subtitle use `<textarea>`, NOT contenteditable.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 2000));
+    var titleTA = document.querySelector('textarea[placeholder="Title"]');
+    var subtitleTA = document.querySelector('textarea[placeholder*="subtitle"]');
+
+    if (titleTA) {
+      titleTA.focus();
+      titleTA.value = ${JSON.stringify(title)};
+      titleTA.dispatchEvent(new Event('input', { bubbles: true }));
+      titleTA.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    if (subtitleTA) {
+      subtitleTA.focus();
+      subtitleTA.value = ${JSON.stringify(subtitle)};
+      subtitleTA.dispatchEvent(new Event('input', { bubbles: true }));
+      subtitleTA.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    return { titleSet: !!titleTA, subtitleSet: !!subtitleTA };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 3 — Write body content
+
+🚨 **Body uses `div[contenteditable="true"]` (ProseMirror/TipTap editor).** First one on page is the body editor.
+🚨 **Clear first** (editor may have default subscribe/thanks blocks).
+🚨 **Paste as HTML** — the editor accepts rich HTML and renders it correctly.
+
+**Supported HTML formatting (verified 2026-03-28):**
+- `<h2>` — section headings
+- `<strong>` — bold
+- `<em>` — italic
+- `<a href="...">` — links (including Substack profile links like `https://substack.com/@handle`)
+- `<ul><li>` — bullet lists
+- `<blockquote><p>` — blockquotes
+- `<p>` — paragraphs
+
+🚨 **@mentions via HTML paste do NOT work** — the `substack-mention` span bleeds content. Reference writers via `<a href="https://substack.com/@handle">Name</a>` links instead.
+🚨 **Hashtags are NOT supported** in the newsletter editor (Notes only).
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 1000));
+    var editor = document.querySelectorAll('div[contenteditable="true"]')[0];
+    if (!editor) return { error: 'no editor' };
+
+    // Clear existing content
+    editor.focus();
+    document.execCommand('selectAll');
+    await new Promise(r => setTimeout(r, 300));
+    document.execCommand('delete');
+    await new Promise(r => setTimeout(r, 500));
+
+    var html = ${JSON.stringify(bodyHtml)};
+
+    // Paste as HTML for rich formatting
+    var dt = new DataTransfer();
+    dt.setData('text/html', html);
+    dt.setData('text/plain', 'fallback');
+    editor.dispatchEvent(new ClipboardEvent('paste', {
+      clipboardData: dt, bubbles: true, cancelable: true
+    }));
+
+    await new Promise(r => setTimeout(r, 1500));
+
+    // Fallback if paste didn't work
+    if (editor.innerText.length < 100) {
+      document.execCommand('insertText', false, html);
+    }
+
+    return { typed: true, len: editor.innerText.length };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 4 — Wait for auto-save
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    var btns = Array.from(document.querySelectorAll('button'));
+    var saved = btns.find(b => /saved/i.test(b.innerText.trim()));
+    return { saved: saved ? saved.innerText.trim() : 'not found' };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 5 — Open publish settings and configure
+
+Click "Continue" button to open publish panel.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 500));
+    var btns = Array.from(document.querySelectorAll('button'));
+    var continueBtn = btns.find(b => b.innerText.trim() === 'Continue');
+    if (!continueBtn) return { error: 'no Continue button' };
+    continueBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Set Audience to Everyone (first radio group, name=audience)
+    var radios = Array.from(document.querySelectorAll('input[type="radio"]'));
+    var audienceEveryone = radios.find(r => r.name === 'audience' && r.value === 'everyone');
+    if (audienceEveryone && !audienceEveryone.checked) {
+      audienceEveryone.click();
+      audienceEveryone.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    // Re-query radios (DOM may update after audience change)
+    radios = Array.from(document.querySelectorAll('input[type="radio"]'));
+
+    // Set Comments to Everyone (second radio group, name=commentLevel)
+    var commentEveryone = radios.find(r => r.name === 'commentLevel' && r.value === 'everyone');
+    if (commentEveryone && !commentEveryone.checked) {
+      commentEveryone.click();
+      commentEveryone.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    radios = Array.from(document.querySelectorAll('input[type="radio"]'));
+    var state = radios.map(r => ({ name: r.name, value: r.value, checked: r.checked }));
+    return { settingsOpen: true, radios: state };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+🚨 **Both radio groups default to "only_paid" (verified 2026-03-28).** MUST set BOTH to "everyone":
+- First group (`name="audience"`): `value="everyone"` vs `value="only_paid"`
+- Second group (`name="commentLevel"`): `value="everyone"` vs `value="only_paid"` vs `value="none"`
+
+### Step 6 — Publish
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 500));
+    var btns = Array.from(document.querySelectorAll('button'));
+    var publishBtn = btns.find(b => b.innerText.trim() === 'Send to everyone now');
+    if (!publishBtn) return { error: 'no publish button' };
+    publishBtn.click();
+    return { clicked: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+🚨 **After clicking "Send to everyone now"**, the page navigates to share-center. This will cause `Execution context was destroyed` error — this is NORMAL and means publish succeeded.
+
+### Step 7 — Verify published
+
+Wait 3s for navigation, then check:
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    var isLive = document.body.innerText.includes('Your post is live');
+    var url = window.location.href;
+    return { published: isLive, url: url };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+Success indicators:
+- URL contains `/share-center`
+- Page text contains "Your post is live!"
+- Post appears on `{{handle}}.substack.com`
+
+---
+
+## Selectors Reference
+
+| Element | Selector | Notes |
+|---------|----------|-------|
+| Title | `textarea[placeholder="Title"]` | `.value` + input/change events |
+| Subtitle | `textarea[placeholder*="subtitle"]` | `.value` + input/change events |
+| Body editor | `div[contenteditable="true"]` (first one) | Paste approach, clear first |
+| Save status | button text "Saved" | Auto-saves after edits |
+| Continue | button text "Continue" | Opens publish settings panel |
+| Audience radio | `input[type="radio"][value="everyone"]` (first) | First radio group |
+| Comments radio | `input[type="radio"][value="everyone"]` (second) | Second radio group - MUST be Everyone |
+| Publish | button text "Send to everyone now" | Navigates to share-center on success |
+| Dashboard | `{{handle}}.substack.com/publish/home` | Lists posts, drafts |
+| Create post | button text "Create post" (on dashboard) | Opens new editor |
+| New post nav | button text "New post" | Opens Notes composer, NOT article editor |

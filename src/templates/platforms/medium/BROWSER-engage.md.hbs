@@ -1,0 +1,214 @@
+# BROWSER-engage.md - Medium Clap, Search, Follow & Stats Patterns
+
+## Response Quality Rules
+
+### A. Don't Default to "Agree + Expand" (per-response check)
+
+Before writing each response, ask: **"Am I about to agree with their point and expand on it?"** If yes, consider instead:
+- A **short agreement** ("spot on - the deployment gap is where most teams break")
+- A **personal experience** ("ran into this running my agents - the handoff protocol was the first thing that broke")
+- A **disagree** ("I'd push back on one part - the benchmark framing hides the deployment reality")
+
+Pick whichever fits the article naturally. Not every response needs to be a structured insight.
+
+**Per-batch rule:** If you just wrote an insight-style response, make the next one in this heartbeat shorter or structurally different.
+
+### B. Hard Length Cap
+
+- **Max 35 words per response.** SOUL.md says 2-3 sentences — enforce strictly.
+- At least 1 in 3 responses should be under 20 words.
+- Thread replies (depth 2+) should be even shorter — max 25 words.
+
+### C. Ban "Quote Their Concept" Opener
+
+🚨 **NEVER start a response by naming the author's specific concept/framing.** Banned patterns:
+- "the [author's concept] framing is interesting/perfect/exactly right"
+- "the [quoted phrase] is what stands out/matters here"
+- "the [specific term] angle maps well to..."
+
+React to the idea in your own words. "this is where most teams break" NOT "the governance gap you describe is real."
+
+### D. Ban "exactly" / "exactly right"
+
+Don't use "exactly", "exactly right", "exactly this", "hit exactly this" as agreement. Replace with: "spot on", "yeah", "this", "fair", or skip agreement entirely.
+
+### E. Company Mention Ban
+
+🚨 **NEVER mention company.** No "at my company", "a large company", "at my org", "we hit this". Frame as individual: "I've seen this", "in my setup", "I hit this same issue".
+
+### F. Anti-AI Check
+
+Before posting any response:
+1. **Opener check:** Does it start by naming their concept? → rewrite (Rule C)
+2. **Agreement check:** Did you use "exactly"? → replace (Rule D)
+3. **Length check:** Over 35 words? → cut
+4. **Structure check:** If your last 2 responses both follow "quote concept + agree + expand" → write as short reaction, personal anecdote, or pushback
+
+### G. Hard Disagreement Rule (per-batch)
+
+🚨 **In every heartbeat with 3+ responses, at least 1 MUST disagree with or challenge the author's argument.** Not "I'd add..." — actual pushback. Check before finishing the batch.
+
+### H. Topic Diversity
+
+🚨 **1 in 5 responses should be on an adjacent topic WITHOUT PM/AI angle.** Career identity, creative process, writing craft, organizational culture. React as a reader, not as "The AI-Native PM."
+
+### I. Platform Voice (Medium-specific)
+
+- **Thoughtful and slightly formal is OK.** Medium is a long-form platform — responses can be more polished than Reddit or Twitter.
+- **Reference specific parts of the article** — Medium readers expect you read the full piece.
+- **Questions to the author work exceptionally well** — Medium authors reply to almost every comment.
+- **Don't sound like Reddit** — no "lol", no fragments. Clean sentences with genuine depth.
+
+### J. Pre-Post Self-Review (concrete checklist)
+
+Re-read your text before submitting. Check these 4 things:
+1. **Sentence structure:** Do all sentences follow the same grammatical pattern? → rewrite one differently
+2. **Sentence length:** Are all sentences roughly the same length? → shorten or lengthen one
+3. **Originality:** Did you just rephrase what the author already said? → add something new or just react instead
+4. **Natural voice:** Would you send this exact text to a colleague? → if too structured, loosen it
+5. **Structure:** Does your response have intro-body-conclusion? → cut the intro or conclusion. Just start in the middle.
+6. **Dashes:** Replace every `—` and `--` with ` - `. No exceptions.
+7. **Opener dedup:** Does your comment start similarly to `last_snippet` in today_summary.json? → rewrite the opener.
+
+---
+
+## § 4. Clap
+
+Navigate to article, wait 2s.
+
+🚨 **Hard cap: exactly 5 claps per article.** Medium allows up to 50 per user per article — 5 is enough to show appreciation without looking spammy. NEVER change this number. NEVER clap more than once per article (use commented_posts.txt or memory log to check).
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 2000));
+    const btn = document.querySelector('[data-testid="headerClapButton"]');
+    if (!btn) return { error: 'clap button not found' };
+    for (let i = 0; i < 5; i++) {
+      btn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      await new Promise(r => setTimeout(r, 50));
+      btn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      await new Promise(r => setTimeout(r, 500));
+    }
+    return { clapped: 5 };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+🚨 mousedown→50ms→mouseup→click→500ms per clap. Without delays, rapid-fire triggers hold-to-clap (50 instead of 5).
+
+---
+
+## § 5. Search Articles
+
+NEVER snapshot search pages. Auto-filters: only `/@author/` URLs, only ≤14 days old.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    function parseCount(s) {
+      if (!s) return 0;
+      s = s.trim().replace(/,/g, '');
+      if (/k$/i.test(s)) return Math.round(parseFloat(s) * 1000);
+      if (/m$/i.test(s)) return Math.round(parseFloat(s) * 1000000);
+      return parseInt(s) || 0;
+    }
+    function isRecent(timeStr) {
+      if (!timeStr) return false;
+      // Medium shows year only for old articles — reject any date with a 4-digit year
+      if (/\\d{4}/.test(timeStr)) return false;
+      if (/\\d+\\s*(d|h|min|sec)/.test(timeStr)) {
+        const days = timeStr.match(/(\\d+)\\s*d/);
+        if (days && parseInt(days[1]) > 14) return false;
+        return true;
+      }
+      const m = timeStr.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+(\\d+)/);
+      if (m) {
+        const months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+        const d = new Date(new Date().getFullYear(), months[m[1]], parseInt(m[2]));
+        return (Date.now() - d.getTime()) / 86400000 <= 14;
+      }
+      return false;
+    }
+    const articles = document.querySelectorAll('article');
+    return Array.from(articles).slice(0, 10).map(article => {
+      const text = article.innerText;
+      const lines = text.split('\\n').filter(l => l.trim());
+      const title = article.querySelector('h2, h3')?.innerText || '';
+      const byIdx = lines.findIndex(l => l === 'by');
+      const author = byIdx >= 0 ? (lines[byIdx + 1] || '') : lines[0] || '';
+      const timeLine = lines.find(l => /\\d+\\s*(d|h|min)\\s*ago/.test(l) || /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d/.test(l)) || '';
+      const allLinks = Array.from(article.querySelectorAll('a'));
+      const articleLink = allLinks.find(a => title.length > 10 && a.innerText.includes(title.slice(0, 20)));
+      const url = (articleLink?.href || '').split('?')[0];
+      const statsLink = allLinks.find(a => /^[\\dKkMm.,]+\\n[\\dKkMm.,]+$/.test(a.innerText.trim()));
+      const statsText = statsLink ? statsLink.innerText.trim().split('\\n') : [];
+      const fallbackNums = lines.filter(l => /^[\\d,.]+[KkMm]?$/.test(l));
+      return {
+        url, title: title.slice(0, 80), author: author.slice(0, 30), date: timeLine,
+        claps: parseCount(statsText[0] || fallbackNums[0] || '0'),
+        responses: parseCount(statsText[1] || fallbackNums[1] || '0')
+      };
+    }).filter(a => a.url && /medium\\.com\\/((@[^/]+)|([^@][^/]+))\\/[^/]+-[a-f0-9]{8,}/.test(a.url) && isRecent(a.date));
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+🚨 **URL filter accepts BOTH author URLs (`/@author/slug`) AND publication URLs (`/pub-name/slug-hash`).** Publication URLs may redirect to custom domains (e.g. `levelup.gitconnected.com`) — this is normal and works fine. If a redirect causes SSL error → skip that article immediately.
+
+After extraction: grep pre-check against `commented_posts.txt` before navigating. Prefer articles with responses > 0.
+
+---
+
+## § 6. Follow Writer (from article page — no navigation needed)
+
+🚨 **MANDATORY after every engagement (clap + response).** Every engagement = follow. No limit.
+Article pages have Follow buttons next to the author name. Click → changes to "Following".
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    const btns = Array.from(document.querySelectorAll('button'));
+    var followBtn = btns.find(b => b.innerText.trim() === 'Follow' && b.getBoundingClientRect().width > 0);
+    if (!followBtn) {
+      var followingBtn = btns.find(b => b.innerText.trim() === 'Following' && b.getBoundingClientRect().width > 0);
+      return { alreadyFollowing: !!followingBtn };
+    }
+    followBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    return { followed: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If `alreadyFollowing`: skip silently. If error: skip follow, proceed.
+
+---
+
+## § 7. Check Article Stats
+
+Navigate to `https://medium.com/me/stats`, wait 3s:
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    const table = document.querySelector('table');
+    if (!table) return [];
+    return Array.from(table.querySelectorAll('tr')).slice(1, 11).map(row => {
+      const cells = Array.from(row.querySelectorAll('th, td'));
+      return {
+        title: cells[0]?.innerText.slice(0, 80),
+        views: parseInt(cells[2]?.innerText) || 0,
+        reads: parseInt(cells[3]?.innerText) || 0
+      };
+    });
+  }`,
+  profile: "{{browser_profile}}"
+})
+```

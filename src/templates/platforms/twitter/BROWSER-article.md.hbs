@@ -1,0 +1,182 @@
+# BROWSER-article.md - Article Publish Patterns
+
+**Article editor URL:** `https://x.com/compose/articles`
+**Editor type:** Draft.js (`public-DraftEditor-content`)
+
+---
+
+## Key Constraints
+
+- 🚨 **Title:** `textarea[name="Article Title"]` — use CDP `type` via snapshot
+- 🚨 **Body:** `div[data-testid="composer"][contenteditable="true"]` — use ClipboardEvent paste with `text/html`
+- 🚨 **CDP type does NOT work for body** — ref collides with title textarea
+- 🚨 **`execCommand('insertText')` does NOT persist** — Draft.js only saves the last block
+- 🚨 **Paste ONLY works on a fresh editor after typing the title.** Do NOT `selectAll`+`delete` before pasting — breaks multi-block creation. Always create a NEW article draft.
+- 🚨 **Publish is two clicks:** editor "Publish" → confirm dialog "Publish" (`aria-label="Publish"`)
+
+---
+
+## Supported HTML → Draft.js Mapping
+
+| HTML | Draft.js Class | Visual |
+|------|---------------|--------|
+| `<h2>` | `longform-header-two` | **Heading** |
+| `<p>` | `longform-unstyled` | Body paragraph |
+| `<strong>` | `font-weight: bold` (inline) | **Bold** text |
+| `<em>` | `font-style: italic` (inline) | *Italic* text |
+| `<ul><li>` | `longform-unordered-list-item` | Bullet list |
+| `<blockquote>` | `longform-blockquote` | Blockquote |
+| `<a href="https://x.com/handle">@handle</a>` | Auto-linked mention | Clickable @mention (notifies user) |
+| `#hashtag` (plain text) | Auto-detected by editor | Clickable hashtag link |
+| `<a href="https://...">text</a>` | Inline link | Clickable external link |
+
+---
+
+## Step 1 — Navigate to Articles and create new draft
+
+```javascript
+browser.navigate("https://x.com/compose/articles", { profile: "{{browser_profile}}" })
+// Wait 3s, then click Write/create button
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    return new Promise(resolve => setTimeout(() => {
+      const createBtn = document.querySelector('button[aria-label="create"]');
+      if (createBtn) { createBtn.click(); return resolve({ clicked: 'create' }); }
+      const writeBtn = document.querySelector('[data-testid="empty_state_button_text"]')
+                    || Array.from(document.querySelectorAll('a, button')).find(b => b.innerText.trim() === 'Write');
+      if (writeBtn) { writeBtn.click(); return resolve({ clicked: 'write' }); }
+      resolve({ error: 'no Write/create button' });
+    }, 3000));
+  }`,
+  profile: "{{browser_profile}}"
+})
+// Wait 3s for editor to load — URL changes to /compose/articles/edit/{id}
+```
+
+---
+
+## Step 2 — Type title (CDP type via snapshot)
+
+```
+snapshot('textarea[name="Article Title"]') → textbox [ref=eN]
+browser.type(eN, "Article Title Here")
+```
+
+🚨 Title MUST be typed before body paste — this initializes the Draft.js editor for multi-block paste.
+
+---
+
+## Step 3 — Paste body with rich HTML
+
+Build HTML string with formatting, mentions, hashtags. Then paste:
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    var editor = document.querySelector('[data-testid="composer"]');
+    if (!editor) return { error: 'no editor' };
+    editor.focus();
+    editor.click();
+    await new Promise(function(r) { setTimeout(r, 500); });
+
+    var html = ${JSON.stringify(articleHtml)};
+    var plain = ${JSON.stringify(articlePlainText)};
+
+    var dt = new DataTransfer();
+    dt.setData('text/plain', plain);
+    dt.setData('text/html', html);
+    var pasteEvent = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true });
+    editor.dispatchEvent(pasteEvent);
+
+    await new Promise(function(r) { setTimeout(r, 3000); });
+    var result = editor.innerText;
+    var blockCount = editor.querySelectorAll('[data-block]').length;
+    return { pasted: true, wordCount: result.split(/\\s+/).length, blocks: blockCount };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+Wait 5s after paste for auto-save before publishing.
+
+---
+
+## Step 4 — Publish (two-click flow)
+
+**Click 1 — Open publish dialog:**
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var btns = Array.from(document.querySelectorAll('button'));
+    var publishBtn = btns.find(function(b) { return b.innerText.trim() === 'Publish'; });
+    if (!publishBtn) return { error: 'no publish button' };
+    publishBtn.click();
+    return { clicked: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+Wait 2s. Dialog shows: audience (default "Everyone"), reply settings, timeline preview.
+
+**Click 2 — Confirm publish:**
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(function(r) { setTimeout(r, 2000); });
+    var btns = Array.from(document.querySelectorAll('button'));
+    var publishBtn = btns.find(function(b) { return b.innerText.trim() === 'Publish' && b.getAttribute('aria-label') === 'Publish'; });
+    if (!publishBtn) return { error: 'no dialog publish button' };
+    publishBtn.click();
+    await new Promise(function(r) { setTimeout(r, 5000); });
+    return { published: true, url: window.location.href };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+After publish: page redirects to `https://x.com/{handle}/status/{id}`. Success message: "Your Article has been published". Article URL: `https://x.com/{handle}/article/{id}`.
+
+---
+
+## Step 5 — Verify and log
+
+Check `window.location.href` contains `/status/`. Extract article URL by replacing `/status/` with `/article/`.
+
+---
+
+## Example Article HTML
+
+```html
+<p>Six months ago I started running daily standups for my AI agents. Not metaphorical standups. Actual structured check-ins.</p>
+
+<h2>The monitoring gap nobody talks about</h2>
+<p>Most teams deploying AI agents track one thing: did it run? <a href="https://x.com/OpenAI">@OpenAI</a> published their <a href="https://openai.com/index/how-we-monitor-internal-coding-agents-misalignment/">agent monitoring playbook</a> - they moved from log-watching to <strong>reasoning inspection</strong>.</p>
+<p>As <a href="https://x.com/GergelyOrosz">@GergelyOrosz</a> noted, the PM role is shifting fast.</p>
+
+<h2>Three things every PM needs</h2>
+<ul>
+<li>A definition of <em>done</em> that is observable</li>
+<li>A circuit breaker for runaway behavior</li>
+<li>A weekly review cadence treating agent output like sprint demos</li>
+</ul>
+
+<blockquote>Managing AI agents is not an engineering problem wearing a PM hat. It is a genuine project management discipline.</blockquote>
+
+<p>If you are a PM and you have not tried managing even one AI agent yet, start small. Automate one workflow. Build the monitoring. Run the review cycle.</p>
+
+<p>#AIAgents #ProductManagement #BuildInPublic</p>
+```
+
+---
+
+## Mentions & Hashtags Strategy
+
+- **@mentions:** 2-3 per article. Only accounts genuinely referenced in the content. Wrap in `<a href="https://x.com/{handle}">@handle</a>`. Mentioned users get notified.
+- **#hashtags:** 3-5 in a closing paragraph as plain text (auto-linked by editor). Mix niche + broad from SOUL.md hashtag pools.
+- **External links:** `<a href="url">text</a>` for sources. Adds credibility.
+- 🚨 Do NOT tag random big accounts for visibility — that is spam.

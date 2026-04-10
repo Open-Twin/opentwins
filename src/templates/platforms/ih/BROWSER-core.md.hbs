@@ -1,0 +1,34 @@
+# BROWSER-core.md - IH Global Rules & Selectors
+
+All calls require `profile: "{{browser_profile}}"`. Never use `args` in evaluate -- inline via template literals.
+
+**Navigate:** `openclaw browser navigate <url> --browser-profile {{browser_profile}}` (positional `<url>`, NOT `--url`).
+
+**Wait pattern (embedded):** All waits MUST be `await new Promise(r => setTimeout(r, N))` or `new Promise(function(resolve) { setTimeout(function() { ... }, N); })` INSIDE evaluate. NEVER use separate `exec sleep N` — each adds ~6-8s overhead.
+
+## Selectors
+
+| Element | Selector | Notes |
+|---------|----------|-------|
+| Notification item | `.user-notification` | |
+| Notification link | `a[href*="/post/"], a[href*="/product/"]` | within `.user-notification` |
+| CommentId in URL | `?commentId=XXXXX` | |
+| Reply indicator | text: "replied to your comment" / "replied to your post" | |
+| Mark as read | `.user-notification__clear-button` | per notification |
+| Reply button | `.footer__action--reply` | inside `.comment__footer` |
+| Comment box (after reply click) | `.comment-box--focused` | |
+| Comment box (top-level) | `.comment-box` | already visible on post page |
+| Editor | `textarea` (primary), `.tiptap.ProseMirror` (fallback) | IH now uses plain `textarea`; TipTap kept as fallback |
+| Submit button | `.comment-box__save-button` | text "Post Comment", disabled until InputEvent |
+| Post upvote | `.post-liker` | upvoted: `.post-liker--liked` |
+| Feed post | `.story.homepage-post` | |
+| Post title | `.story__title` | |
+| Our display name (on page) | `{{handle}}` | ⚠️ Pages render username, NOT full name "{{name}}". Always use "{{handle}}" in DOM checks. |
+
+## Recovery Rules
+
+- **Browser timeout**: close tab, reopen URL. If fails: `exec openclaw browser start --profile {{browser_profile}}`, wait 3s, retry once. Still fails: skip browser tasks. NEVER use `browser.stop()`.
+- **"matched N elements" error**: snapshot selector too broad. Use narrower selector. Not a gateway issue.
+- **Unexpected evaluate() data**: 1 snapshot to inspect DOM, use discovered selector for rest of heartbeat.
+- **Click fails after snapshot**: retry snapshot once with narrower selector. If retry fails: skip, log Type="Error", next task.
+- **`comment_box_did_not_appear` after REPLY click**: thread hit IH nesting limit (max 3 levels). Skip reply, mark notification read, log `skipped: 'nesting_limit'`.

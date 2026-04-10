@@ -1,0 +1,63 @@
+# PLAYBOOK.md - Indie Hackers Agent
+
+🚨 **End-of-day / on-demand only. Do NOT load on routine heartbeats.**
+
+---
+
+## Generate Schedule
+
+**When:**
+- Morning Schedule Check (HEARTBEAT.md § 0) - generates TODAY's schedule
+- Scheduled daily - generates TODAY's schedule
+
+### Step 1: Read Inputs
+
+Read these two sources:
+- **Content brief:** `{{pipeline_workspace}}/content-briefs/{target_date}.md` — provides today's theme, discussion topics, engagement angles. Adapt to IH builder community tone, don't copy verbatim.
+- **INSIGHTS.md** — provides what's been working: topic performance, builder relationships, comment timing.
+- **How they work together:** Content brief sets the THEME (what to talk about). INSIGHTS.md sets the STRATEGY (which topics work, who to engage, what format lands). If no content brief exists, use INSIGHTS.md alone.
+
+### Step 2: Update INSIGHTS.md (Daily Retro)
+
+**Before generating schedule, review today's learnings:**
+
+- [ ] Read: `memory/{today}.md`, `memory/{yesterday}.md`, `INSIGHTS.md`
+- [ ] Ask: "Did I learn anything genuinely new today?"
+- [ ] If YES → Update `INSIGHTS.md`:
+  - What Works / What Doesn't (post topics, comment styles that got engagement)
+  - Key Relationships (reciprocal builders, regulars)
+  - Content Insights (trending topics, engagement patterns)
+  - Strategy Adjustments (approach changes worth remembering)
+- [ ] Keep `INSIGHTS.md` <100 lines (replace outdated insights)
+- [ ] If NO new learnings → skip update, proceed to schedule
+
+### Step 3: Generate Schedule
+
+- [ ] Extract patterns: topic perf, builder relationships, comment timing
+- [ ] **Incorporate inputs from Step 1:** Write the content brief's theme and angle into each task's `description` field. Use INSIGHTS.md patterns for timing and engagement targets.
+- [ ] Load base template:
+
+| Day | Tasks |
+|-----|-------|
+| Mon-Sat | 10:00 + 15:00 Kyiv (browse/engage) |
+| 🚨 **Wed 15:00** | **+ publish_post (MANDATORY)** |
+| 🚨 **Sat 15:00** | **+ publish_post (MANDATORY)** |
+| Sun | 14:00 only |
+| 🚨 **Every day** | **22:00 update_memory** |
+
+🚨 **Posts: MANDATORY 2/week.** Wednesday + Saturday. Always include `publish_post` task — do NOT skip. If `weekly.posts.current >= limit` → skip the task but keep other tasks.
+   - 🚨 MUST include `content_source` in `publish_post` config:
+     ```json
+     "config": {
+       "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/ih-post.md",
+       ...
+     }
+     ```
+
+- [ ] 🚨 **Capacity match (validate before writing):** Σ(max_comments across all browse_and_engage tasks) MUST = `daily.comments.limit` from limits.json. If mismatch → adjust max_comments per task until they match exactly. Example: limit=4 → 2+2=4 ✅ | 3+2=5 ❌
+- [ ] Milestone check (past week) → add extra `publish_post` if any of: (1) a post reached IH front page, (2) a post crossed 100 upvotes, (3) total karma crossed a 500-point threshold (500, 1000, 1500…), (4) a known IH influencer or reciprocal engager replied to our content. Only add if `weekly.posts.current < weekly.posts.limit`.
+- [ ] Conservative adjust (only if pattern seen 2+ times)
+- [ ] Apply: jitter (±30min), anti-collision (10min), active hours (08:00-23:00)
+- [ ] **Write `schedule.json`** with metadata.for_date = target date (TODAY), all tasks
+
+**Note:** `update_memory` at 22:00 is MANDATORY in every schedule — never skip it.

@@ -1,0 +1,678 @@
+# BROWSER-engage.md - LinkedIn Search, Feed, Comment & Like Patterns
+
+## Comment Quality Rules
+
+### A. Don't Default to "Agree + Expand" (per-comment check)
+
+Before writing each comment, ask: **"Am I about to agree with their point and expand on it?"** If yes, consider instead:
+- A **short agreement** ("spot on - the escalation path is always the first thing that breaks")
+- A **personal experience** ("ran into this exact problem last month - that's where it broke for me")
+- A **disagree** ("I'd push back on one part - the governance layer can emerge from the first few incidents, doesn't have to be pre-built")
+
+Pick whichever fits the post naturally. Not every comment needs to be a structured insight.
+
+**Per-batch rule:** If you just wrote an insight, make the next comment in this heartbeat shorter or structurally different.
+
+### B. Hard Length Cap (MANDATORY)
+
+- **Max 35 words per comment.** SOUL.md says 2-3 sentences — enforce it strictly.
+- At least 1 in 3 comments should be under 20 words.
+- If your draft exceeds 35 words, cut it. The best engagement comes from sharp takes, not comprehensive analysis.
+
+### C. Ban "Quote Their Framing" Opener
+
+🚨 **NEVER start a comment by quoting the author's exact phrase back at them.** Banned patterns:
+- "the '[author's phrase]' framing is exactly right"
+- "the [author's concept] you're describing is real"
+- "the '[quoted phrase]' point is underrated"
+- Any variant that puts their words in quotes as an opener
+
+This is the #1 AI tell on LinkedIn — humans don't systematically mirror other people's exact language. Instead: react to the idea in your own words. "this is where most teams break" NOT "the 'governance gap you describe' is real."
+
+### D. Ban "exactly" / "exactly right" as Agreement
+
+🚨 **NEVER use "exactly", "exactly right", "exactly this" as agreement.** It appeared 7+ times in 4 days — robotic.
+
+Replace with varied agreement (rotate, never repeat within same day):
+- "spot on", "yeah", "this", "fair", "solid take", "true"
+- Or skip agreement entirely and go straight to your point
+- Or start with disagreement/nuance instead
+
+### E. Company Mention Ban
+
+🚨 **NEVER mention company.** No "at my company", "at my org", "at work we", "managing a team at". This applies to comments, replies, AND connection request notes.
+
+Frame as individual experience: "I've seen this", "in my setup", "ran into this myself", "I run about 10 agents that..."
+
+### F. Anti-AI Check Before Every Comment
+
+Before posting any comment:
+
+1. **Opener check:** Does your comment start by quoting the author's phrase? → rewrite (Rule C)
+2. **Agreement check:** Did you use "exactly" or "exactly right"? → replace (Rule D)
+3. **Length check:** Over 35 words? → cut
+4. **Structure check:** If your last 2 comments both follow "agree + expand + PM angle" → write this one as short reaction, personal anecdote, or pushback
+
+### G. Hard Disagreement Rule (per-batch)
+
+🚨 **In every heartbeat with 3+ comments, at least 1 MUST disagree with or challenge the author's point.** Not "I'd add..." — actual pushback: "I think the real issue is different", "this framing misses the operational reality." Check before finishing the batch.
+
+### H. Topic Diversity
+
+🚨 **1 in 5 comments should be on an adjacent topic WITHOUT forcing PM/AI.** Leadership challenges, team dynamics, hiring, career transitions, organizational culture. React as a senior leader with broad experience, not just as "{{brand_tagline}}."
+
+### I. Platform Voice (LinkedIn-specific)
+
+- **Professional polish is OK here** — don't force casual tone on LinkedIn. Clean sentences are expected.
+- **No fragments or "lol"** — save those for Reddit/Threads. LinkedIn comments should sound like a thoughtful senior PM.
+- **Longer comments acceptable** — 35-word cap is still the max, but 25-35 words is the sweet spot here (vs 15-25 on Twitter).
+- **Questions to the author work well** — LinkedIn authors reply to comments. Genuine questions create visible threads.
+- **Don't sound like Twitter** — no hot takes, no sarcasm, no confrontational disagreements. Pushback should be respectful and constructive.
+
+### J. Pre-Post Self-Review (concrete checklist)
+
+Re-read your text before submitting. Check these 4 things:
+1. **Sentence structure:** Do all sentences follow the same grammatical pattern? → rewrite one differently
+2. **Sentence length:** Are all sentences roughly the same length? → shorten or lengthen one
+3. **Originality:** Did you just rephrase what the author already said? → add something new or just react instead
+4. **Natural voice:** Would you send this exact text to a colleague? → if too structured, loosen it
+5. **Structure:** Does your comment have intro-body-conclusion? → cut the intro or conclusion. Just start in the middle.
+6. **Dashes:** Replace every `—` and `--` with ` - `. No exceptions.
+7. **Opener dedup:** Does your comment start similarly to `last_snippet` in today_summary.json? → rewrite the opener.
+
+---
+
+## SS 2. Extract Search Results
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    var items = document.querySelectorAll('div[role="listitem"]');
+    var posts = [];
+    for (var i = 0; i < Math.min(items.length, 10); i++) {
+      var item = items[i];
+      var text = item.innerText;
+      if (text.length < 100) continue;
+      var lines = text.split('\\n').filter(function(l) { return l.trim().length > 0; });
+      var promoted = text.indexOf('Promoted') > -1;
+      if (promoted) continue;
+      var rm = text.match(/(\\d+)\\s+reaction/);
+      var cm = text.match(/(\\d+)\\s+comment/);
+      var likeBtn = item.querySelector('button[aria-label="Reaction button state: no reaction"]');
+      var isLiked = item.querySelector('button[aria-label="Reaction button state: Like"]');
+      // Extract post URL — priority: /feed/update/ first (has activity ID), then /pulse/, skip /company/posts/
+      var allLinks = item.querySelectorAll('a');
+      var feedUrl = null;
+      var pulseUrl = null;
+      var profileUrl = null;
+      for (var k = 0; k < allLinks.length; k++) {
+        var href = allLinks[k].href;
+        if (!feedUrl && href.indexOf('/feed/update/') > -1) feedUrl = href;
+        if (!pulseUrl && href.indexOf('/pulse/') > -1) pulseUrl = href;
+        if (!profileUrl && href.indexOf('/in/') > -1 && allLinks[k].innerText.trim().length > 0) profileUrl = href;
+      }
+      var postUrl = feedUrl || pulseUrl || null;
+      var username = profileUrl ? (profileUrl.match(/\/in\/([^/?]+)/) || [])[1] : '';
+      var isPulse = !!pulseUrl && !feedUrl;
+      // Extract trackable ID: numeric ID from feed URLs, slug from Pulse
+      var trackId = '';
+      if (feedUrl) { var m = feedUrl.match(/(\d{16,20})/); trackId = m ? m[1] : ''; }
+      else if (pulseUrl) { var s = pulseUrl.match(/\/pulse\/([^/?]+)/); trackId = s ? s[1] : ''; }
+      // Age: extract from "4d • " or "1w • " pattern in text lines
+      var ageLine = lines.find(function(l) { return /^\\d+[dhwm]\\s/.test(l.trim()); });
+      var age = ageLine ? ageLine.trim().split(' ')[0] : '';
+      var tooOld = /\\d+(w|mo|yr)/.test(age) && !(age === '1w');
+      posts.push({
+        idx: i,
+        author: lines.length > 1 ? lines[1].slice(0, 60) : '',
+        username: username,
+        headline: lines.length > 3 ? lines[3].slice(0, 100) : '',
+        postUrl: postUrl,
+        trackId: trackId,
+        isPulse: isPulse,
+        age: age,
+        tooOld: tooOld,
+        content: text.slice(0, 400),
+        reactions: rm ? parseInt(rm[1]) : 0,
+        comments: cm ? parseInt(cm[1]) : 0,
+        notLiked: !!likeBtn,
+        alreadyLiked: !!isLiked
+      });
+    }
+    return posts;
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+## SS 3. Extract Feed Posts
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    var items = document.querySelectorAll('div[role="listitem"]');
+    var posts = [];
+    for (var i = 0; i < Math.min(items.length, 12); i++) {
+      var item = items[i];
+      var text = item.innerText;
+      if (text.length < 100) continue;
+      var lines = text.split('\\n').filter(function(l) { return l.trim().length > 0; });
+      var allLinks = item.querySelectorAll('a');
+      var postUrl = null;
+      var profileUrl = null;
+      for (var k = 0; k < allLinks.length; k++) {
+        var href = allLinks[k].href;
+        if (!postUrl && (href.indexOf('/feed/update/') > -1 || href.indexOf('/pulse/') > -1 || href.indexOf('/posts/') > -1)) postUrl = href;
+        if (!profileUrl && href.indexOf('/in/') > -1 && allLinks[k].innerText.trim().length > 0) profileUrl = href;
+      }
+      var likeBtn = item.querySelector('button[aria-label="Reaction button state: no reaction"]');
+      var isLiked = item.querySelector('button[aria-label="Reaction button state: Like"]');
+      var promoted = text.includes('Promoted');
+      if (promoted) continue;
+      var rm = text.match(/(\\d+)\\s+reaction/);
+      var cm = text.match(/(\\d+)\\s+comment/);
+      posts.push({
+        idx: i,
+        author: lines.length > 1 ? lines[1].slice(0, 60) : '',
+        postUrl: postUrl,
+        content: text.slice(0, 300),
+        reactions: rm ? parseInt(rm[1]) : 0,
+        comments: cm ? parseInt(cm[1]) : 0,
+        notLiked: !!likeBtn,
+        alreadyLiked: !!isLiked
+      });
+    }
+    return posts;
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+## SS 3b. Get Post URL from Feed (clipboard approach)
+
+🚨 **Feed posts have `postUrl: null`** — LinkedIn doesn't expose activity URNs in the feed DOM. Use the overflow menu "Copy link to post" to get the URL via clipboard. This replaces the expensive profile-hop approach (saves 4-6 steps per post).
+
+**ONE async evaluate per post — returns postUrl and postId for grep dedup:**
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    var items = document.querySelectorAll('div[role="listitem"]');
+    var item = items[${targetIdx}];
+    if (!item) return { error: 'no item at idx' };
+    var btns = Array.from(item.querySelectorAll('button'));
+    var overflowBtn = btns.find(b => (b.getAttribute('aria-label') || '').includes('Open control'));
+    if (!overflowBtn) return { error: 'no overflow button' };
+    overflowBtn.click();
+    await new Promise(r => setTimeout(r, 800));
+    var menuItems = Array.from(document.querySelectorAll('[role="menuitem"]'));
+    var copyLink = menuItems.find(m => m.innerText.includes('Copy link to post'));
+    if (!copyLink) {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      return { error: 'no Copy link menu item' };
+    }
+    copyLink.click();
+    await new Promise(r => setTimeout(r, 500));
+    var url = await navigator.clipboard.readText();
+    var activityMatch = url.match(/(?:share|activity)[-%:]([0-9]+)/);
+    var numId = activityMatch ? activityMatch[1] : null;
+    var postId = numId ? 'urn:li:activity:' + numId : null;
+    return { postUrl: url, postId: postId };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+**Usage in browse_and_engage:** For each interesting feed post (idx from SS 3), run SS 3b to get `postId`. Then batch-grep ALL postIds against tracking file BEFORE navigating to any post.
+
+---
+
+## SS 3c. Extract Post Content (after navigating to post page)
+
+Returns the post author and text. Run this BEFORE commenting on any post you navigated to. Use the returned `author` and `text` to inform your comment — your comment MUST directly address this specific post's topic.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    var authorEl = document.querySelector('.update-components-actor__title span span');
+    var author = authorEl ? authorEl.innerText.trim().split('\\n')[0] : '';
+    var postEl = document.querySelector('.feed-shared-update-v2__description') || document.querySelector('.update-components-text');
+    var text = postEl ? postEl.innerText.trim().slice(0, 500) : '';
+    return { author, text };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+---
+
+## SS 4. Comment Inline (Search/Feed)
+
+LinkedIn inline comments use TipTap/ProseMirror editor (NOT Quill).
+
+🚨 CRITICAL submit rules:
+- ❌ NEVER use `textContent === 'Comment'` — it matches the toggle first!
+- ✅ ALWAYS use `button[data-view-name="comment-post"]` to submit
+- ✅ VERIFY by checking editor is EMPTY (`textContent.trim().length === 0`) — NOT `innerText.indexOf(snippet)` (always true while text in editor)
+
+### Step 1: Like + open comment + type (ONE async evaluate)
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    var TARGET_IDX = ${targetIdx};
+    var items = document.querySelectorAll('div[role="listitem"]');
+    var item = items[TARGET_IDX];
+    if (!item) return { error: 'no-item at idx ' + TARGET_IDX };
+
+    // Like (Type A)
+    var likeBtn = item.querySelector('button[aria-label="Reaction button state: no reaction"]');
+    var liked = false;
+    if (likeBtn) { likeBtn.click(); liked = true; }
+
+    // Open comment editor
+    await new Promise(r => setTimeout(r, 1000));
+    var commentBtn = item.querySelector('button[data-view-name="feed-comment-button"]');
+    if (!commentBtn) return { liked: liked, error: 'no comment button' };
+    commentBtn.click();
+
+    // Wait for editor
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Type
+    var editor = item.querySelector('div.tiptap.ProseMirror[role="textbox"]');
+    if (!editor) editor = item.querySelector('[contenteditable="true"][role="textbox"]');
+    if (!editor) return { liked: liked, opened: true, error: 'no editor' };
+    editor.focus();
+    var text = "${commentText.replace(/"/g, '\\"').replace(/\n/g, '\\n')}";
+    document.execCommand('insertText', false, text);
+
+    await new Promise(r => setTimeout(r, 500));
+    return {
+      liked: liked,
+      opened: true,
+      typed: true,
+      editorText: editor.textContent.slice(0, 80),
+      submitExists: !!item.querySelector('button[data-view-name="comment-post"]')
+    };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 2: Submit + verify (ONE async evaluate)
+🚨 **Verification MUST check the comment list, not the editor.** The editor can be empty AND the comment can still have failed (LinkedIn silently rejects empty content). We need to find our comment URN in the rendered comment list.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    var TARGET_IDX = ${targetIdx};
+    var items = document.querySelectorAll('div[role="listitem"]');
+    var item = items[TARGET_IDX];
+    if (!item) return { error: 'no-item' };
+
+    // Verify text in editor before submitting
+    var editor = item.querySelector('div.tiptap.ProseMirror[role="textbox"]');
+    if (!editor) editor = item.querySelector('[contenteditable="true"][role="textbox"]');
+    if (!editor || !editor.textContent.trim()) return { error: 'editor empty or missing' };
+
+    // Submit
+    var submitBtn = item.querySelector('button[data-view-name="comment-post"]');
+    if (!submitBtn) return { error: 'no submit button' };
+    submitBtn.click();
+
+    // Wait for submission + render
+    await new Promise(r => setTimeout(r, 4000));
+
+    // 🚨 AUTHORITATIVE VERIFY: find our comment in the comment list
+    // Look for articles/divs with our author link as child, containing our snippet
+    var snippet = "${commentText.slice(0, 35).replace(/"/g, '\\"')}";
+    var allAuthorLinks = item.querySelectorAll('a[href*="/in/{{handle_slug}}"]');
+    var ourCommentFound = false;
+    for (var i = 0; i < allAuthorLinks.length; i++) {
+      // Walk up to find the comment container, then search its text for our snippet
+      var parent = allAuthorLinks[i].closest('article') || allAuthorLinks[i].closest('[class*="comment-entity"]') || allAuthorLinks[i].closest('[data-urn*="comment"]');
+      if (!parent) parent = allAuthorLinks[i].parentElement;
+      for (var hops = 0; hops < 6 && parent; hops++) {
+        if (parent.innerText && parent.innerText.indexOf(snippet) > -1 && !parent.querySelector('[role="textbox"]')) {
+          ourCommentFound = true;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      if (ourCommentFound) break;
+    }
+
+    // Also verify editor is empty as secondary signal
+    var editorAfter = item.querySelector('div.tiptap.ProseMirror[role="textbox"]');
+    if (!editorAfter) editorAfter = item.querySelector('[contenteditable="true"][role="textbox"]');
+    var editorEmpty = !editorAfter || editorAfter.textContent.trim().length === 0;
+
+    return {
+      submitted: true,
+      editorEmpty: editorEmpty,
+      ourCommentFound: ourCommentFound,
+      verified: ourCommentFound  // authoritative: must find our comment in the DOM
+    };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If `verified: false`: retry ONCE. Still fails → do NOT log, do NOT increment counters, skip to next post.
+
+---
+
+## SS 4b. Comment on Pulse Article (Quill Editor)
+
+🚨 **Pulse articles use QUILL editor, NOT TipTap.** `execCommand('insertText')` inserts text in the DOM but leaves Quill's internal Delta state EMPTY → submit is silently rejected. Must use Quill's API directly.
+
+**Prerequisite:** Agent has already navigated to the Pulse article URL and confirmed the article loads (dedup/content-read step in HEARTBEAT.md).
+
+### Step 1: Scroll to comments + open composer + insert via Quill API (ONE async evaluate)
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    // Scroll to bottom to lazy-load comment section
+    window.scrollTo(0, document.body.scrollHeight);
+    await new Promise(r => setTimeout(r, 2500));
+
+    // Focus the editor (Pulse renders a placeholder that becomes a Quill editor on click)
+    var composer = document.querySelector('.ql-editor[contenteditable="true"]')
+                 || document.querySelector('[class*="comments-comment-box"] [contenteditable="true"]')
+                 || document.querySelector('.comments-comment-box__form [contenteditable="true"]');
+    if (!composer) {
+      // Try clicking the comment placeholder first
+      var placeholder = document.querySelector('[class*="comments-comment-box__comment-input"]') || document.querySelector('button[aria-label*="Comment"]');
+      if (placeholder) { placeholder.click(); await new Promise(r => setTimeout(r, 1500)); }
+      composer = document.querySelector('.ql-editor[contenteditable="true"]') || document.querySelector('[class*="comments-comment-box"] [contenteditable="true"]');
+    }
+    if (!composer) return { error: 'no_quill_editor_found' };
+
+    // Get the Quill instance via its container element
+    // LinkedIn wraps Quill in .ql-container; Quill stores instance on the container element
+    var qlContainer = composer.closest('.ql-container') || composer.parentElement;
+    var quillInstance = null;
+
+    // Method 1: Quill.find() (if Quill global is exposed)
+    if (typeof window.Quill !== 'undefined' && window.Quill.find) {
+      quillInstance = window.Quill.find(qlContainer);
+    }
+    // Method 2: walk DOM for __quill property set by Quill internals
+    if (!quillInstance) {
+      var probe = composer;
+      while (probe && !quillInstance) {
+        if (probe.__quill) quillInstance = probe.__quill;
+        probe = probe.parentElement;
+      }
+    }
+
+    var text = "${commentText.replace(/"/g, '\\"').replace(/\n/g, '\\n')}";
+
+    if (quillInstance) {
+      // PROPER way: Quill API updates both DOM and Delta state
+      quillInstance.setText(text);
+      // Place cursor at end and trigger text-change via a no-op edit
+      quillInstance.setSelection(text.length, 0, 'user');
+    } else {
+      // Fallback: simulate typing via InputEvents which Quill listens to
+      composer.focus();
+      composer.innerHTML = '';
+      // Fire beforeinput + input events that Quill's Delta binding will catch
+      var inputEvent = new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: text });
+      composer.dispatchEvent(inputEvent);
+      // If beforeinput wasn't canceled, insert via execCommand as last resort
+      document.execCommand('insertText', false, text);
+      composer.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    await new Promise(r => setTimeout(r, 800));
+
+    var currentText = composer.innerText || composer.textContent || '';
+    return {
+      editorFound: true,
+      quillInstanceUsed: !!quillInstance,
+      textInserted: currentText.trim().length > 0,
+      preview: currentText.slice(0, 80)
+    };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If `textInserted: false` → skip this target, log error with `Reason: quill_insertion_failed`. Do NOT attempt submit.
+
+### Step 2: Submit + authoritative verify (ONE async evaluate)
+🚨 **Pulse submit button uses `aria-label` starting with "Post comment on", NOT `data-view-name="comment-post"`.** Verified Apr 9, 2026 — data-view-name selector works for feed inline comments only. For Pulse, find the button inside the composer's form by aria-label prefix.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    // Find the submit button: lives inside composer form, identified by aria-label starting with "Post comment on"
+    var composer = document.querySelector('.ql-editor[contenteditable="true"]');
+    var form = composer ? composer.closest('form') : null;
+    if (!form) return { error: 'no_form' };
+    var btns = Array.from(form.querySelectorAll('button'));
+    var submitBtn = btns.find(function(b) {
+      var label = (b.getAttribute('aria-label') || '').toLowerCase();
+      return label.indexOf('post comment on') === 0;
+    });
+    // Fallback: try data-view-name in case LinkedIn standardizes later
+    if (!submitBtn) submitBtn = form.querySelector('button[data-view-name="comment-post"]');
+    if (!submitBtn) return { error: 'no_submit_button', labels: btns.map(function(b) { return b.getAttribute('aria-label'); }) };
+    if (submitBtn.disabled || submitBtn.getAttribute('aria-disabled') === 'true') {
+      return { error: 'submit_disabled', reason: 'Quill Delta likely empty even though DOM has text' };
+    }
+    submitBtn.click();
+
+    // Wait for submission + render into comment list
+    await new Promise(r => setTimeout(r, 5000));
+
+    // 🚨 AUTHORITATIVE VERIFY: find our comment in the Pulse comments list
+    var snippet = "${commentText.slice(0, 35).replace(/"/g, '\\"')}";
+    var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle_slug}}"]'));
+    var ourCommentFound = false;
+    var foundWhere = '';
+    for (var i = 0; i < ourLinks.length; i++) {
+      if (ourLinks[i].href.includes('sidebar_menu') || ourLinks[i].href.includes('author')) continue;
+      var parent = ourLinks[i].closest('article') || ourLinks[i].closest('[class*="comment-entity"]') || ourLinks[i].closest('[data-urn*="comment"]');
+      if (!parent) parent = ourLinks[i].parentElement;
+      for (var hops = 0; hops < 8 && parent; hops++) {
+        if (parent.innerText && parent.innerText.indexOf(snippet) > -1 && !parent.querySelector('[role="textbox"]') && !parent.querySelector('.ql-editor')) {
+          ourCommentFound = true;
+          foundWhere = parent.tagName + '.' + (parent.className || '').slice(0, 40);
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      if (ourCommentFound) break;
+    }
+
+    // Also check editor cleared
+    var editorAfter = document.querySelector('.ql-editor[contenteditable="true"]');
+    var editorEmpty = !editorAfter || (editorAfter.innerText || '').trim().length === 0;
+
+    return {
+      submitted: true,
+      editorEmpty: editorEmpty,
+      ourCommentFound: ourCommentFound,
+      foundWhere: foundWhere,
+      verified: ourCommentFound
+    };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If `verified: false`: retry Step 1 + Step 2 ONCE. Still fails → do NOT log, do NOT increment counters, skip.
+
+🚨 **Critical:** `verified` is ONLY true if `ourCommentFound` is true. Editor being empty is NOT proof — Quill can clear the DOM on submit rejection. The only authoritative signal is our comment appearing in the comment list.
+
+## SS 6. Like Posts (Batch) + Verify (ONE async evaluate)
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    var maxLikes = ${maxLikes};
+    var buttons = document.querySelectorAll('button');
+    var unliked = [];
+    for (var i = 0; i < buttons.length; i++) {
+      var label = buttons[i].getAttribute('aria-label');
+      if (label === 'Reaction button state: no reaction') unliked.push(buttons[i]);
+    }
+    var liked = 0;
+    for (var i = 0; i < Math.min(maxLikes, unliked.length); i++) {
+      unliked[i].click();
+      liked++;
+    }
+    // Embedded verify wait
+    await new Promise(r => setTimeout(r, 2000));
+    var verifyBtns = document.querySelectorAll('button');
+    var likedCount = 0;
+    for (var j = 0; j < verifyBtns.length; j++) {
+      if (verifyBtns[j].getAttribute('aria-label') === 'Reaction button state: Like') likedCount++;
+    }
+    return { totalUnliked: unliked.length, attempted: liked, totalLikedAfter: likedCount };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+## SS 7. Article Publishing
+
+### Brand Links (use when article mentions the brand)
+| Resource | URL |
+|----------|-----|
+| LinkedIn | linkedin.com/in/{{handle_slug}} |
+| GitHub | github.com/{{handle_slug}} |
+| BRAND.md | See /BRAND.md for full positioning |
+
+### Step 1: Set title
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var ta = document.querySelector('textarea.article-editor-headline__textarea');
+    if (!ta) return { success: false, reason: 'no-title-textarea' };
+    var nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+    nativeSetter.call(ta, "${articleTitle.replace(/"/g, '\\"')}");
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    ta.dispatchEvent(new Event('change', { bubbles: true }));
+    return { success: true, value: ta.value };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+Title textarea has maxLength=150. Do NOT use `type` or `fill` actions - they fail on this element.
+
+### Step 2: Set body content (wait 1s after title)
+```javascript
+// articleHTML = '<p>First paragraph...</p><p><strong>Section heading</strong></p><p>Content...</p>'
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var editor = document.querySelector('[role="textbox"][aria-label="Article editor content"]');
+    if (!editor) return { success: false, reason: 'no-editor' };
+    editor.innerHTML = \`${articleHTML}\`;
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    return { success: true, length: editor.innerText.length };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+**Article body rules:**
+- Use `<p>` for paragraphs, `<strong>` for section headings
+- Include brand link as `<a href="https://linkedin.com/in/{{handle_slug}}">{{name}}</a>` or `<a href="https://github.com/{{handle_slug}}">open-source PM tools</a>` at least once in the article body
+- Hashtags go in the share text (Step 4), NOT in article body
+- Keep HTML under 8000 chars to avoid evaluate payload bloat
+
+### Step 3: Click Next (wait 1s after body)
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var buttons = document.querySelectorAll('button');
+    for (var i = 0; i < buttons.length; i++) {
+      if (buttons[i].innerText.trim() === 'Next') {
+        buttons[i].click();
+        return { clicked: true };
+      }
+    }
+    return { clicked: false, reason: 'no-next-button' };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 4: Add share text with hashtags (wait 2s after Next for dialog)
+
+The publish dialog has a Quill `.ql-editor` with placeholder "Tell your network what your article is about..."
+
+```javascript
+// shareText = "One-liner about article + 3-5 hashtags"
+// Example: "47 meetings in one week taught me why meeting culture is broken - and what I built to fix it.\n\n#meetingculture #productivity #ai #buildinpublic #vibecoding"
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var editor = document.querySelector('.ql-editor[data-placeholder*="Tell your network"]');
+    if (!editor) return { success: false, reason: 'no-share-editor' };
+    editor.focus();
+    var text = "${shareText.replace(/"/g, '\\"').replace(/\n/g, '\\n')}";
+    editor.innerHTML = '<p>' + text.replace(/\\n/g, '</p><p>') + '</p>';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    editor.classList.remove('ql-blank');
+    return { success: true, text: editor.innerText.slice(0, 100) };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+**Hashtag rules:** Pick 3-5 from queries.json `hashtags` array. Match article topic. Always include `#buildinpublic`.
+
+### Step 5: Click Publish (wait 1s after share text)
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var buttons = document.querySelectorAll('button');
+    for (var i = 0; i < buttons.length; i++) {
+      if (buttons[i].innerText.trim() === 'Publish' && !buttons[i].disabled) {
+        buttons[i].click();
+        return { clicked: true };
+      }
+    }
+    return { clicked: false, reason: 'no-publish-button' };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 6: Verify (wait 5s after publish)
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var url = window.location.href;
+    return {
+      published: url.indexOf('published=t') > -1 || url.indexOf('/pulse/') > -1,
+      url: url,
+      title: document.title
+    };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+If NOT published (still on edit page): wait 3s, check URL again. If still not published after 2 attempts: log error, do NOT mark task done.

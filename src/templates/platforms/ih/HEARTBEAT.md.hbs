@@ -1,0 +1,312 @@
+# HEARTBEAT.md - Indie Hackers Agent
+
+## Global Rules
+**CLI syntax:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
+- **evaluate:** `... evaluate --fn 'async () => { ... }' 2>&1` (JS after `--fn`)
+- **open/close:** `... open "URL" 2>&1` / `... close 2>&1`
+- `evaluate()` for data extraction; `snapshot()` only for clickable refs
+- `compact: true`, `interactive: true` on snapshots; scope with `selector: "main"`
+- Never `screenshot`; never `args` in evaluate (inline via template literals)
+- Never `browser.stop()` or `pkill` -- kills Chrome process
+- Max 3 evaluate calls per notification (check + reply + verify)
+- Typing = submitting? NO. Always verify text appeared after submit.
+- 🚨 Username on IH pages = **"{{handle}}"** (NOT "{{name}}"). Always use "{{handle}}" in page checks.
+- 🚨 **NEVER re-insert comment text as a retry strategy.** If submit fails, retry the click ONLY. If verification fails but commentCount increased, treat as success.
+
+## Step Budget (MANDATORY)
+- **Target: <30 steps.** Combine remaining work if approaching limit.
+- NEVER `exec sleep` — waits go inside evaluate: `() => new Promise(r => setTimeout(() => { r(result); }, 3000))`
+- NEVER combine text insert + submit in one evaluate (submit stays disabled until next tick)
+- Zero snapshots for engagement. All selectors in BROWSER-*.md — never explore DOM.
+
+**File loading:** BROWSER-core.md is ALWAYS read. Other BROWSER-*.md files are read ON-DEMAND only when needed.
+
+## Decision Tree
+```
+Heartbeat
+  -> Read BROWSER-core.md (selectors/recovery) + limits + schedule
+  -> Browser startup (with retry)
+  -> Reply check (MANDATORY)
+     (🚨 Read BROWSER-replies.md BEFORE extracting notifications)
+  -> Execute due tasks
+     (Read BROWSER-engage.md for engagement tasks)
+  -> Log + Slack
+  -> Close browser
+  -> HEARTBEAT_OK
+```
+BOTH reply check AND schedule check are MANDATORY every heartbeat.
+🚨 **ALL steps mandatory every heartbeat.** Browser + notifications MUST run even if no tasks are due.
+🚨 **NEVER use `sessions_spawn` or sub-sessions.** Execute ALL commands directly — no child sessions.
+
+---
+
+## 0. Morning Schedule Check
+
+If `schedule.json` missing or `metadata.for_date != today`:
+1. Generate INSIGHTS.md (PLAYBOOK.md Memory Update)
+2. Generate today's schedule (PLAYBOOK.md Generate Schedule)
+3. Proceed
+
+🚨 **NEVER generate a schedule for tomorrow.** Only generate for TODAY. Schedule generation happens once per day in the morning. If all today's tasks are done, return HEARTBEAT_OK — do NOT create a new schedule.
+
+## 1. Read Limits
+
+| Condition | Action |
+|-----------|--------|
+| `last_reset != today` | `current=0, last_reset=today` |
+| Monday AND `last_reset` before today | `current=0, last_reset=today` (weekly) |
+
+Store: `available = limit - current`
+
+---
+
+## 1b. Read Today Summary
+
+Read `memory/today_summary.json`. Use tallies to inform comment decisions:
+- `disagreements` < {{behavior.disagree_target_pct}}% of `comments` AND `comments >= 3` → next MUST disagree (IH builders respect honest critique)
+- `last_style` was insight → next must be short/personal/pushback
+- Any style is 60%+ of total → MUST use a different style
+- `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question
+- `avg_words` above platform cap → next comment MUST be under 20 words
+
+If file doesn't exist or `date != today`, initialize:
+```bash
+exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+```
+
+## 2. Browser Startup (with retry)
+
+1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://www.indiehackers.com/" 2>&1`
+2. If CDP error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
+3. **Dismiss cookie banner** (first evaluate after page load):
+   ```javascript
+   fn: `() => { var b = document.querySelector('#onetrust-accept-btn-handler'); if (b) { b.click(); return {dismissed:true}; } return {noBanner:true}; }`
+   ```
+
+## 3. Reply Check (FIRST - MANDATORY)
+
+**Read BROWSER-replies.md first.**
+
+Before any scheduled tasks. No exceptions.
+
+1. Navigate to `https://www.indiehackers.com/{{handle}}/notifications`
+2. Extract notifications with 3s page-load wait built in:
+   ```javascript
+   fn: `() => new Promise(function(resolve) { setTimeout(function() { /* S 1 extraction code here */ resolve(result); }, 3000); })`
+   ```
+   Use BROWSER-replies.md S 1 code inside the Promise. Do NOT use a separate `exec sleep 3`.
+3. 🚨 **MANDATORY: Grep pre-check** — for each notification, build a tracking key as `{commentId}_{date}` (e.g. `VUuxlmI34G59IxCwrC5k_2026-02-19`):
+   - Extract `commentId` from URL query param `?commentId=XXX`
+   - Extract `date` from notification text (e.g. "FEB 19 2026" → `2026-02-19`)
+   - ⚠️ Do NOT use the raw URL as tracking key — different replies to the same comment thread produce the same URL, causing new replies to be skipped
+   ```bash
+   exec printf '%s\n' "KEY1" "KEY2" "KEY3" | grep -vxF -f memory/replied_notifications.txt || true
+   ```
+   🚨 Empty output = ALL already tracked → skip. Lines printed = NEW. NEVER cat/read the tracking file to verify — grep is authoritative.
+   Only keys NOT in file are new. If empty → skip to § 4.
+5. For each **new** notification:
+   - Navigate to URL (has `?commentId=XXX` → the target comment gets `comment--selected` class)
+   - 🚨 **Scoped duplicate check** (1 evaluate): Find `.comment--selected`, check its CHILD `.comment` elements (within same `<li>`, excluding selected) for `'{{handle}}'`. Found = already replied → append tracking key and skip.
+     - ❌ **NEVER** use `document.body.innerText.includes('{{handle}}')` — this finds our TOP-LEVEL comment, causing false positives
+     - ✅ See BROWSER-replies.md S 3 for the correct scoped pattern
+   - 🚨 **Thread depth + consecutive reply check** (in the SAME evaluate as scoped duplicate check):
+     ```javascript
+     // Check thread depth via comment-tree--level-N
+     var tree = selected.closest('.comment-tree');
+     var levelMatch = tree ? tree.className.match(/level-(\d+)/) : null;
+     var level = levelMatch ? parseInt(levelMatch[1]) : 1;
+     if (level >= 4) return { skipped: true, reason: 'thread_too_deep', level: level };
+
+     // Count our replies in this thread (walk up from selected through parent trees)
+     var allComments = Array.from(document.querySelectorAll('.comment'));
+     var ourRepliesInThread = allComments.filter(function(c) {
+       var t = c.closest('.comment-tree');
+       return t && c.innerText.includes('{{handle}}');
+     }).length;
+     if (ourRepliesInThread >= 3) return { skipped: true, reason: 'too_many_replies_in_thread', count: ourRepliesInThread };
+     ```
+     - `level >= 4` → skip reply, append tracking key, log `Type=Reply Skipped, Reason=thread_too_deep`
+     - `ourRepliesInThread >= 3` → skip reply, append tracking key, log `Type=Reply Skipped, Reason=too_many_replies`
+   - If `comment--selected` not found → proceed with reply (do NOT skip — err on the side of replying)
+   - Not found: click reply (BROWSER-replies.md S 3), then type+submit (S 4 — includes 1.5s wait via Promise), then verify (3s wait via Promise inside same evaluate)
+   - **After successful reply:** `exec printf '%s\n' '{commentId}_{date}' >> memory/replied_notifications.txt`
+6. Language: Cyrillic text = Ukrainian (masculine forms). Latin = English.
+7. Apply SOUL.md anti-AI guidelines
+8. Log: `memory/{today}.md` -> `Type="Reply" | User | URL | text(100 chars)`
+9. No limits update (replies unlimited)
+
+Finish ALL replies before schedule.
+
+---
+
+## 4. Schedule Check
+
+**Read BROWSER-engage.md first** (for feed extraction, commenting, upvoting).
+
+Read `schedule.json`: `status="pending" AND time<=now`, sort by time.
+
+### browse_and_engage:
+```
+if daily.comments.current >= limit: mark_done("daily limit reached")
+```
+**No spacing rule.** Execute tasks back-to-back when due.
+
+1. Browse feed -- extract posts: BROWSER-engage.md S 2. DO NOT navigate individually for stats.
+2. Filter in memory: Post Quality Filter from TOOLS.md (2-15 comments, relevant, fresh)
+3. 🚨 **MANDATORY: Grep pre-check against tracking file** — for each candidate post, extract its ID:
+   - URL has `?post=XXX` → ID = the `XXX` part
+   - URL is `/post/slug-hash` → extract BOTH the full `slug-hash` AND just the trailing hash after last `-`
+   Then run: `exec grep -qE "^(full_slug_hash|trailing_hash)$" memory/commented_posts.txt && echo "SKIP" || echo "OK"`
+   ⚠️ Always STORE the full `slug-hash` in tracking file. The dual check handles legacy short-hash entries.
+   If "SKIP" → exclude from candidates (already commented, cheaper than browser navigation)
+4. Select 1-2 qualifying posts from remaining candidates
+5. For each: navigate → 🚨 **MANDATORY: Read post before commenting** (BROWSER-engage.md S 3 — your comment MUST directly address the returned `title` and `body`) → wait 3s inside first evaluate → **on-page duplicate check** → upvote (S 6, 1 eval) → 🚨 **Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) → comment (S 5, 3 evals) = **6 evaluates per post**
+   - ❌ NEVER use separate `exec sleep 3` for page load wait
+   - ✅ Combine page-load wait + duplicate check into upvote evaluate:
+     ```javascript
+     new Promise(r => setTimeout(() => {
+       // Check if we already commented on this post
+       var comments = document.querySelectorAll('.comment');
+       var alreadyCommented = false;
+       comments.forEach(function(c) { if (c.innerText.indexOf('{{handle}}') >= 0) alreadyCommented = true; });
+       if (alreadyCommented) return r({ skipped: true, reason: 'already_commented_on_page' });
+       // Upvote
+       var postUpvote = document.querySelector('.post-liker');
+       /* ... upvote logic ... */
+       r(result);
+     }, 3000))
+     ```
+   - 🚨 If `skipped: true, reason: 'already_commented_on_page'`: skip comment, append post_id to tracking file, and move on
+6. **After each successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
+7. After comment: `daily.comments.current++` in limits.json
+8. Log: `memory/{today}.md` -> `Type="Comment" | URL | text(100 chars)`
+9. 1 comment/heartbeat max. Upvotes unlimited (3-5).
+10. `comments_done++`. If `>= max_comments`: mark "done", else "pending"
+
+### Content-Ready Override (publish tasks only)
+
+Before executing any `publish_post` task:
+
+1. Read the file at `config.content_source`
+2. Find the first post with `status: pending`
+3. Use that content for publishing (extract title and body)
+4. After verified publish → update the file: change `status: pending` to `status: published` for that post
+
+### publish_post:
+
+🚨 **Read BROWSER-post.md first** — it has verified selectors. NEVER skip this file and explore DOM manually.
+
+```
+if Wednesday: use_weekly_template(TOOLS.md), read_mem(last_7d)
+Write post (real data + numbers). Self-review (SOUL.md). Then follow these EXACT steps:
+```
+
+**Post creation — 4 evaluates total (steps are in BROWSER-post.md S 7):**
+1. Navigate to `https://www.indiehackers.com/new-post` (browser.navigate, NOT snapshot+click)
+2. **Evaluate 1:** Dismiss cookie banner + set title
+   ```javascript
+   fn: `() => {
+     var b = document.querySelector('#onetrust-accept-btn-handler');
+     if (b) b.click();
+     return new Promise(function(resolve) {
+       setTimeout(function() {
+         var t = document.querySelector('textarea.post-page__title-field');
+         if (!t) return resolve({error:'title_field_not_found'});
+         t.focus(); t.value = '${postTitle}';
+         t.dispatchEvent(new Event('input',{bubbles:true}));
+         t.dispatchEvent(new Event('change',{bubbles:true}));
+         resolve({success:true, titleLen:t.value.length});
+       }, 2000);
+     });
+   }`
+   ```
+3. **Evaluate 2:** Set body (plain textarea, NOT TipTap)
+   ```javascript
+   fn: `() => {
+     var b = document.querySelector('textarea.edit-post__body-field');
+     if (!b) return {error:'body_field_not_found'};
+     b.focus(); b.value = '${postBody}';
+     b.dispatchEvent(new Event('input',{bubbles:true}));
+     b.dispatchEvent(new Event('change',{bubbles:true}));
+     return {success:true, bodyLen:b.value.length};
+   }`
+   ```
+4. **Evaluate 3:** Wait 500ms + click submit
+   ```javascript
+   fn: `() => new Promise(function(r) { setTimeout(function() {
+     var s = document.querySelector('.post-page__submit-button');
+     if (!s) return r({error:'submit_not_found'});
+     if (s.disabled) return r({error:'submit_disabled'});
+     s.click(); r({success:true});
+   }, 500); })`
+   ```
+5. **Evaluate 4:** Wait 4s + verify URL changed
+   ```javascript
+   fn: `() => new Promise(function(r) { setTimeout(function() {
+     r({ url:location.href, isPublished:!location.href.includes('/new-post'), title:document.title });
+   }, 4000); })`
+   ```
+6. If `isPublished: true`: update `weekly.posts.current++`, log `Type="Post Published"`, mark_done()
+7. If `isPublished: false`: retry evaluate 3 once. Still false → HEARTBEAT_BLOCKED
+
+Safety net: `Thursday+ AND weekly.posts.current==0` -> publish_now()
+
+❌ **Post creation anti-patterns (Feb 18 violations):**
+- ❌ NEVER use snapshot + click on nav links — "Starting Up" tab navigates AWAY from /new-post (cost 2 steps in Feb 18)
+- ❌ NEVER search for category selectors — `.category-switch-handler` and `.category-filter-handler` are **cookie consent** elements, NOT post categories (cost 3 steps in Feb 18)
+- ❌ NEVER enumerate all buttons with `querySelectorAll('button')` — submit selector is `.post-page__submit-button` (cost 2 steps in Feb 18)
+- ❌ NEVER use `innerHTML.slice()` to explore form structure — selectors are in BROWSER-post.md (cost 3 steps in Feb 18)
+- ❌ Body is a plain `<textarea>`, NOT TipTap/ProseMirror — use `.value` + input event
+- ❌ Group selector shows "You haven't joined any groups" — skip it, post to general feed
+
+---
+
+## 5. Log & Report (🚨 MANDATORY — never skip)
+
+- Append `memory/{today}.md`: `Type="Heartbeat" | timestamp | summary`
+- 🚨 **Comment entries MUST include:** `Style: {insight|short|personal|pushback}` + `text="full text posted"` (not topic summary, min 120 chars). Enables quality audits.
+- 🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
+- 🚨 **MANDATORY Slack report** — output this EXACT format as your final text message (gateway routes to Slack automatically):
+  ```
+  IH Heartbeat Complete ✅
+  Comments: {current}/{limit} | Posts: {current}/{limit} weekly
+  Done: [list what was done this heartbeat]
+  Next: [next pending task time or "all done for today"]
+  ```
+  ❌ If you skip this step, the heartbeat is INCOMPLETE even if all tasks succeeded.
+
+---
+
+## 6. Close Browser (MANDATORY)
+
+`exec openclaw browser --browser-profile {{browser_profile}} close 2>&1`. If close fails → retry once.
+
+---
+
+## 7. HEARTBEAT_OK
+
+Before returning, verify:
+1. Slack notification sent (step 5)
+2. Browser closed (step 6)
+3. Memory log written (step 5)
+
+Return when ALL true:
+- No replies pending
+- No tasks due
+- Slack notification sent
+- Late night (23:00-08:00) OR checked <30min ago
+
+---
+
+## Reference
+- IH feed: https://www.indiehackers.com/
+- IH Builders DB: `2ff577f6-e161-81a9-a040-e203ee9eee2d`
+- Files: schedule.json, limits.json, queries.json, memory/{date}.md, INSIGHTS.md
+
+## Error Handling
+
+| Error | Action |
+|-------|--------|
+| Browser fails | Log Type="Error", skip browser steps, proceed with files |
+| Submit fails | Do NOT log complete, retry next heartbeat |
+| Partial done | Log what WAS done, never skip Log step |

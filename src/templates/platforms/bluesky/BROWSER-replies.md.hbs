@@ -1,0 +1,71 @@
+# BROWSER-replies.md - Notifications Page Reply Patterns
+
+**Notifications URL:** `https://bsky.app/notifications`
+**Page test ID:** `data-testid="notifsFeed"` — container for notification items.
+
+## S 1. Extract Unreplied Posts (Notifications Page)
+
+Navigate to `https://bsky.app/notifications`, then extract with 3s embedded wait.
+
+On Bluesky, notification items contain links to posts. Each notification is inside a `div[role="link"]` container.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    const containers = Array.from(document.querySelectorAll('div[role="link"]'));
+    const results = [];
+    const seen = new Set();
+
+    for (const container of containers) {
+      if (results.length >= 10) break;
+      const link = container.querySelector('a[href*="/post/"]');
+      if (!link) continue;
+
+      const urlMatch = link.href.match(/\\/post\\/([^/?]+)/);
+      if (!urlMatch) continue;
+      const postId = urlMatch[1];
+      if (seen.has(postId)) continue;
+      seen.add(postId);
+
+      const text = container.innerText;
+      const lines = text.split('\\n').filter(l => l.trim());
+
+      // Skip our own posts
+      if (text.includes('{{handle}}')) continue;
+
+      // Check if already replied (look for reply count indicator)
+      const replyBtn = container.querySelector('button[aria-label*="Reply"]');
+      const replyLabel = replyBtn ? replyBtn.getAttribute('aria-label') : '';
+      const replyCount = parseInt((replyLabel.match(/(\\d+)\\s*repl/i) || [])[1]) || 0;
+
+      results.push({
+        url: link.href,
+        postId: postId,
+        author: lines[0] || 'unknown',
+        preview: lines.slice(1).join(' ').slice(0, 200),
+        replyCount
+      });
+    }
+    return results;
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+---
+
+## S 2. Open Reply Dialog on Notification Post
+
+**Requires `allowedIds`** — array of post IDs from grep pre-check (step 3b).
+
+Navigate to the post URL, then use S 4b (Compose reply click) + S 5 (type and submit).
+
+On Bluesky notifications page, clicking a notification navigates to the post page directly. From there, use the standard compose reply flow:
+
+1. Navigate to post URL
+2. Run BROWSER-engage.md S 4b (click "Compose reply")
+3. Run BROWSER-core.md S 5 (type + submit)
+
+This is different from Threads where replies happen via popup from activity page. On Bluesky, always navigate to the post page first.

@@ -1,0 +1,52 @@
+# Amplification Agent — Cron Prompt
+
+## Step 1: Load Context
+
+1. Read `amplification/AGENT.md` — your spec (data sources, thresholds, output format)
+2. Determine today's date
+
+## Step 2: Read Performance Data
+
+🚨 **MANDATORY: Read BOTH sources.** They complement each other — metrics.json has per-post numbers, INSIGHTS.md has trends, context, and relationships. Skipping either produces an incomplete report.
+
+**Source 1:** Read `engagement-tracker/metrics.json`
+
+**Source 2:** Read ALL 10 INSIGHTS.md files (do not skip any):
+
+```
+{{opentwins_home}}agent-twitter/INSIGHTS.md
+{{opentwins_home}}agent-linkedin/INSIGHTS.md
+{{opentwins_home}}agent-reddit/INSIGHTS.md
+{{opentwins_home}}agent-medium/INSIGHTS.md
+{{opentwins_home}}agent-threads/INSIGHTS.md
+{{opentwins_home}}agent-bluesky/INSIGHTS.md
+{{opentwins_home}}agent-substack/INSIGHTS.md
+{{opentwins_home}}agent-devto/INSIGHTS.md
+{{opentwins_home}}agent-ph/INSIGHTS.md
+{{opentwins_home}}agent-ih/INSIGHTS.md
+```
+
+INSIGHTS.md files contain follower counts, recent performance trends, top performers, and VIP relationships that are NOT in metrics.json. Cross-reference both for the fullest picture.
+
+## Step 3: Identify Wins
+
+Apply thresholds from AGENT.md to all content found.
+
+For each win:
+- Note platform, content text/summary, metric, URL if available
+- Analyze why it worked (topic? format? timing? engaged a big account?)
+- Suggest 2-3 target platforms for amplification and why
+
+Also note cross-platform patterns (e.g., "AI agent topics outperform PM toolkit across all platforms").
+
+## Step 4: Write Report
+
+Save to `amplification/wins/{today_date}.md` following the format in AGENT.md.
+
+Create the `amplification/wins/` directory if it doesn't exist.
+
+If no wins → write minimal report ("No content met thresholds").
+
+## Step 5: Output to Slack
+
+Brief summary (format in AGENT.md). Scannable in 10 seconds.

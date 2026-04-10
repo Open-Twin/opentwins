@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+src/ui/client/dist/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# OpenTwins runtime data
+.opentwins/
+
+# OpenClaw
+openclaw.json.bak
+.mcp.json
+
+# Browser profiles and sessions
+/browser/
+/browser-profiles/
+
+# Logs
+logs/
+
+# Credentials and auth
+credentials/
+identity/
+devices/
+auth-profile.json
+auth-profiles.json
+**/auth-profiles.json
+
+# Database files
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Session files
+*.jsonl
+*.jsonl.lock
+*.jsonl.deleted.*
+sessions.json
+*.session
+
+# Runtime state
+update-check.json
+workspace-state.json
+**/state.json
+subagents/
+.clawhub/lock.json
+agents/*/sessions/
+**/memory/
+**/media/
+
+# IDE and tools
+.claude/
+.vercel
+.DS_Store
+*.swp
+*.swo

@@ -1,0 +1,77 @@
+# BROWSER-core.md - Bluesky Global Rules & Shared Patterns
+
+**Profile:** `{{browser_profile}}` on EVERY browser call.
+**CLI syntax:** `openclaw browser --browser-profile {{browser_profile}} <subcommand> ...` (global flag BEFORE subcommand).
+**Navigate:** `openclaw browser --browser-profile {{browser_profile}} navigate "https://bsky.app/..."` (URL is a positional arg, NOT `--url`).
+**Open:** `openclaw browser --browser-profile {{browser_profile}} open "https://bsky.app/..."` (same — positional arg).
+
+**Snapshot rules:** Always include `selector`, `compact: true`, `interactive: true`, `depth: 3`.
+
+**Tool roles:**
+- `evaluate()` -> extract data, check states, type text via execCommand (lightweight, prefer)
+- `snapshot()` -> get clickable refs (only needed when evaluate can't find elements)
+
+**Selectors:**
+- Post containers: `div[role="link"]` — each post is wrapped in one, use as boundary
+- Post links: `a[href*="/post/"]` — extract author/postId from URL pattern `/profile/{handle}/post/{id}`
+- Reply button (search/feed): `button[aria-label*="Reply"]` — label format: `"Reply (N replies)"`
+- Like button: `button[aria-label*="Like"]` — label format: `"Like (N likes)"`
+- Repost button: `button[aria-label="Repost or quote post"]`
+- Compose reply (post page): `button[aria-label="Compose reply"]`
+- Dialog: `[role="dialog"]`
+- Textbox: `[role="textbox"][contenteditable="true"]`
+- Submit reply: `button[aria-label="Publish reply"]` (text: "Reply")
+- Submit post/quote: `button[aria-label="Publish post"]` (text: "Post")
+- Follow button: `button` with text "Follow" / "Following"
+- Tabs (search): `div[role="tab"]` or `button[role="tab"]` — "Top", "Latest", "People", "Feeds"
+
+**Wait pattern:** **NEVER use `browser.act({ kind: "wait" })` as a separate step** — each step adds 5-8s LLM overhead.
+- **Embed waits at START of next evaluate:** `async () => { await new Promise(r => setTimeout(r, 3000)); ... }`
+- **NEVER use `exec sleep N`** for page waits — each exec adds 4-8s API overhead on top of the sleep.
+
+**Bluesky DOM notes:**
+- Bluesky uses React with accessible markup — `button`, `role="link"`, `aria-label` attributes are reliable
+- NO `<article>` tags — use `div[role="link"]` as post container
+- Class names are auto-generated (e.g., `css-g5y9jx`) — NEVER use them
+- Engagement counts are in button aria-labels, NOT in visible text (text just shows the number)
+- Menu items after repost click use `div[role="menuitem"]`
+
+---
+
+## S 5. Reply/Comment Flow (after compose dialog is open)
+
+Use for replies, comments, quotes, and original posts (AFTER dialog is open).
+
+**Submit button differs by context:**
+- Reply/Comment: `button[aria-label="Publish reply"]`
+- Quote post / Original post: `button[aria-label="Publish post"]`
+
+The script below tries "Publish reply" first, falls back to "Publish post" — works for ALL cases.
+
+**ONE evaluate** — wait 1.5s + type + wait 0.5s + click submit:
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 1500));
+    const dialog = document.querySelector('[role="dialog"]');
+    if (!dialog) return { error: 'no_dialog' };
+    const textbox = dialog.querySelector('[role="textbox"][contenteditable="true"]');
+    if (!textbox) return { error: 'no_textbox' };
+    textbox.focus();
+    document.execCommand('insertText', false, '${commentText.replace(/'/g, "\\'")}');
+    await new Promise(r => setTimeout(r, 500));
+    const submitBtn = dialog.querySelector('button[aria-label="Publish reply"]')
+                   || dialog.querySelector('button[aria-label="Publish post"]');
+    if (!submitBtn) return { typed: true, error: 'no_submit_button' };
+    submitBtn.click();
+    return { typed: true, submitted: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+**Replies-disabled posts:** If "Compose reply" button is missing on a post page (author restricted replies), skip to next candidate. Do NOT error — just log and move on.
+
+Do NOT verify after submit — replies/comments work reliably. Dialog closes on success.

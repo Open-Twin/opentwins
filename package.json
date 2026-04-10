@@ -1,0 +1,65 @@
+{
+  "name": "opentwins",
+  "version": "0.1.0",
+  "description": "Your autonomous digital twins across every social platform",
+  "type": "module",
+  "bin": {
+    "opentwins": "./dist/bin/opentwins.js"
+  },
+  "files": [
+    "dist/",
+    "src/templates/",
+    "src/ui/client/dist/"
+  ],
+  "scripts": {
+    "build": "tsup && npm run build:ui",
+    "build:server": "tsup",
+    "build:ui": "cd src/ui/client && npx vite build",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "social-media",
+    "automation",
+    "digital-twins",
+    "claude"
+  ],
+  "author": "Open-Twin",
+  "license": "MIT",
+  "homepage": "https://opentwins.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Open-Twin/opentwins.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Open-Twin/opentwins/issues"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.0.0",
+    "better-sqlite3": "^11.0.0",
+    "bree": "^9.0.0",
+    "chalk": "^5.3.0",
+    "commander": "^12.0.0",
+    "execa": "^9.0.0",
+    "express": "^4.21.0",
+    "handlebars": "^4.7.8",
+    "ora": "^8.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

@@ -1,0 +1,53 @@
+# PLAYBOOK.md - PH Agent
+
+**End-of-day and on-demand tasks. Do NOT load on routine heartbeats.**
+
+Only read this when:
+- Current task is schedule generation
+- You learned something new after engagement
+- Morning Schedule Check (schedule.json missing or for_date != today)
+
+---
+
+## Generate Schedule
+
+**When:**
+- Morning Schedule Check (HEARTBEAT.md § 0) - generates TODAY's schedule
+- Scheduled daily - generates TODAY's schedule
+
+1. **Read inputs for schedule generation:**
+   - **Content brief:** `{{pipeline_workspace}}/content-briefs/{target_date}.md` — provides today's theme, product categories to target, engagement angles. Adapt to PH style — authentic, curious, builder-focused.
+   - **INSIGHTS.md** — provides what's been working: category performance, comment timing, product stats, forum engagement.
+   - **How they work together:** Content brief sets the THEME (what to talk about). INSIGHTS.md sets the STRATEGY (which categories work, when to comment, what maker relationships exist). If no content brief exists, use INSIGHTS.md alone.
+2. Extract patterns: category performance, comment timing, product stats, forum engagement
+3. Load base template from TOOLS.md § Schedule Base Templates for today's day of week
+
+   **Forum tasks (Tue/Thu only):** On Tuesdays and Thursdays, add a `forum_engagement` task at 15:00 (with jitter). Target `/p/general` and `/p/vibecoding` topic pages. Forum task max_comments counts toward `daily.comments.limit` — reduce browse_and_engage max_comments accordingly so total still matches the limit.
+
+4. **Capacity matching (MANDATORY):**
+   - Sum of `max_comments` across ALL engagement tasks MUST equal `daily.comments.limit` from limits.json
+   - After building schedule, validate: `sum(task.config.max_comments for task in tasks if task.action in ['browse_and_engage', 'forum_engagement']) == limits.daily.comments.limit`
+   - If mismatch: adjust task count or max_comments values until they match exactly
+   - Example: limits.json has 8/day → 4 tasks × 2 max_comments OR 2 tasks × 4 max_comments
+5. Apply conservative adjustments (only if pattern seen 2+ times): prioritize engaging categories, shift timing, spread tasks if hit limits early
+6. Apply jitter (±30 min), anti-collision (10 min spacing), active hours (08:00-23:00)
+7. **Final validation:** Re-check capacity match before writing
+9. **Write:** `schedule.json` with metadata.for_date = target date (TODAY), all tasks
+
+**Note:** `update_memory` at 22:00 is MANDATORY in every schedule — never skip it.
+
+---
+
+## Memory Update
+
+**When:** Scheduled task `update_memory` at ~22:00 (end of day retro)
+
+Review today's engagement from `memory/{today}.md`. Ask: "Did I learn anything new today?"
+
+If YES, update `INSIGHTS.md`:
+- **What Works:** launch category/comment style that got upvotes or replies
+- **What Doesn't Work:** approach that got no engagement or negative reception
+- **Content Insights:** pattern spotted in product vote trends or comment performance
+- **Strategy Adjustments:** any change to approach worth remembering
+
+Keep INSIGHTS.md under 100 lines. Replace outdated insights rather than appending forever.

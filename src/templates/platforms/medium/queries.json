@@ -1,0 +1,16 @@
+{
+  "generated_for": "2026-04-08",
+  "theme": "Issue tracking is dead — when AI agents create the work, who owns the outcome?",
+  "search_queries": [
+    {"query": "ai", "category": "ai"},
+    {"query": "project-management", "category": "pm"},
+    {"query": "autonomous-agents", "category": "ai"},
+    {"query": "ai-governance", "category": "ai"},
+    {"query": "developer-tools", "category": "dev"},
+    {"query": "future-of-work", "category": "trending"},
+    {"query": "ai-accountability", "category": "pm"},
+    {"query": "coding-agents", "category": "ai"}
+  ],
+  "hashtags": ["#AgenticAI", "#ProjectManagement", "#AIGovernance", "#FutureOfWork", "#AIAgents"],
+  "engagement_targets": []
+}

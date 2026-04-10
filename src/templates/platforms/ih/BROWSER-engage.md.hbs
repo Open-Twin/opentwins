@@ -1,0 +1,226 @@
+# BROWSER-engage.md - IH Feed, Comment & Upvote Patterns
+
+## Comment Quality Rules (Light — IH voice is already good)
+
+### A. Don't Default to "Agree + Expand" (per-comment check)
+
+Before writing each comment, ask: **"Am I about to agree and expand?"** If yes, consider instead:
+- A **short reaction** ("love this. the pricing angle is the part nobody talks about")
+- A **personal experience** ("I hit this exact wall building my PM tools - the timing was everything")
+- A **disagree** ("I'd push back a bit - the real problem isn't the tool it's the workflow")
+
+Pick whichever fits naturally. **Per-batch rule:** If you just wrote an insight, make the next one shorter or different.
+
+### B. Soft Length Cap
+
+- **Max 40 words per first comment.** IH tolerates slightly more than Twitter but 45+ word comments are essay territory.
+- At least 1 in 3 comments should be under 20 words.
+
+### C. Vary Your Openers
+
+Don't start every comment by naming their specific concept. Vary between:
+- Reacting to the idea in your own words (preferred)
+- Starting with your experience ("I hit this exact wall...")
+- Starting with a question ("curious what happened after...")
+- Short reaction first ("love this.")
+
+### D. Ban "exactly" / "exactly right"
+
+Don't use "exactly", "exactly right", "exactly this" as agreement. Use: "spot on", "yeah", "this", "fair", or skip agreement entirely.
+
+### E. Company Mention Ban
+
+🚨 **NEVER mention company.** No "at my company", "at my org". Frame as individual: "I've seen this", "in my setup", "I tried X and found Y".
+
+### F. Light Anti-AI Check
+
+Before posting: if your last 2 comments both follow the same structure (agree + expand + question) → write this one differently.
+
+### G. Hard Disagreement Rule (per-batch)
+
+🚨 **In every heartbeat with 3+ comments, at least 1 MUST disagree with the OP's premise.** Not "great idea, I'd add..." — actual pushback: "I think the real problem is different", "tried this approach and it broke because..." Check before finishing the batch.
+
+### H. Topic Diversity
+
+🚨 **1 in 5 comments should be on a non-PM/AI topic.** Pricing models, founder burnout, customer support, marketing channels, launch lessons. React as a builder, not as "{{brand_tagline}}."
+
+### I. Platform Voice (IH-specific)
+
+- **Builder-to-builder is the only register.** No corporate speak, no thought leadership framing. You're a PM who builds tools on the side — talk like it.
+- **Numbers and specifics win.** "$250 MRR", "2 hours sleep", "3 signups" — IH loves real data.
+- **Honest failures > polished insights.** "I tried X and it didn't work" gets more engagement than "here's my framework."
+- **Don't sound like LinkedIn or Medium** — no structured analysis. Share from doing, not from thinking.
+
+### J. Pre-Post Self-Review (concrete checklist)
+
+Re-read your text before submitting. Check these 4 things:
+1. **Sentence structure:** Do all sentences follow the same grammatical pattern? → rewrite one differently
+2. **Sentence length:** Are all sentences roughly the same length? → shorten or lengthen one
+3. **Originality:** Did you just rephrase what the OP already said? → add something new or just react instead
+4. **Natural voice:** Would you post this in a Slack group of builders? → if too polished, rough it up
+5. **Structure:** Does your comment have intro-body-conclusion? → cut the intro or conclusion. Just start in the middle.
+6. **Dashes:** Replace every `—` and `--` with ` - `. No exceptions.
+7. **Opener dedup:** Does your comment start similarly to `last_snippet` in today_summary.json? → rewrite the opener.
+
+---
+
+## S 2. Extract Feed Posts
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    return new Promise(function(resolve) {
+      setTimeout(function() {
+        var b = document.querySelector('#onetrust-accept-btn-handler');
+        if (b) b.click();
+        var posts = Array.from(document.querySelectorAll('.story.homepage-post'));
+        resolve({
+          count: posts.length,
+          items: posts.slice(0, 10).map(function(post) {
+            var link = post.querySelector('a[href*="/post/"]') || post.querySelector('a[href*="/product/"]');
+            var lines = post.innerText.split('\\n').filter(function(l) { return l.trim(); });
+            var numbers = lines.filter(function(l) { return /^\d+$/.test(l.trim()); });
+            var lastNumbers = numbers.slice(-2);
+            return {
+              url: link ? link.href : '',
+              title: post.querySelector('.story__title') ? post.querySelector('.story__title').innerText.slice(0, 80) : '',
+              upvotes: lastNumbers[0] ? parseInt(lastNumbers[0]) : 0,
+              comments: lastNumbers[1] ? parseInt(lastNumbers[1]) : 0
+            };
+          }).filter(function(p) { return p.url; })
+        });
+      }, 3000);
+    });
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+## S 3. Extract Post Content (after navigating to post page)
+
+Returns the post title and body text. Run this BEFORE upvoting or typing a comment. Use the returned `title` and `body` to inform your comment — your comment MUST directly address this specific post's topic.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 3000));
+    var titleEl = document.querySelector('h1') || document.querySelector('.story__title');
+    var title = titleEl ? titleEl.innerText.trim() : '';
+    var bodyEl = document.querySelector('.content') || document.querySelector('article') || document.querySelector('.post-body');
+    var body = bodyEl ? bodyEl.innerText.trim().slice(0, 500) : '';
+    return { title, body };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+---
+
+## S 5. Write Top-Level Comment (3 evaluates total)
+
+Comment box already visible on post page (no reply click needed).
+
+⚠️ **Some posts use plain `<textarea>` instead of TipTap.** If `.tiptap.ProseMirror` not found, fall back to:
+```javascript
+var ta = commentBox.querySelector('textarea');
+if (ta) { ta.focus(); ta.value = commentText; ta.dispatchEvent(new Event('input', {bubbles:true})); }
+```
+
+🚨 **Two-step pattern** — TipTap needs an event loop tick before submit button enables.
+- ❌ **NEVER** combine text insertion + submit check in ONE evaluate — `submitBtn.disabled` will be `true`
+- ❌ **NEVER** add `.click()` on submit in the same evaluate as `execCommand('insertText')`
+- ✅ Step 1 = insert text ONLY. Step 2 = wait + submit. Step 3 = wait + verify.
+
+```javascript
+// Step 1 of 3: Insert text ONLY (no submit attempt!)
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var commentText = '${commentText.replace(/'/g, "\\'")}';
+    var commentBox = document.querySelector('.comment-box');
+    if (!commentBox) return { error: 'comment_box_not_found' };
+    var editor = commentBox.querySelector('.tiptap.ProseMirror');
+    if (!editor) return { error: 'editor_not_found' };
+    editor.focus();
+    document.execCommand('selectAll', false, null);
+    document.execCommand('delete', false, null);
+    document.execCommand('insertText', false, commentText);
+    editor.dispatchEvent(new InputEvent('input', { data: commentText, inputType: 'insertText', bubbles: true }));
+    return { inserted: true, textLen: editor.innerText.length };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+```javascript
+// Step 2 of 3: Wait 500ms for TipTap state propagation, then submit
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    return new Promise(function(resolve) {
+      setTimeout(function() {
+        var commentBox = document.querySelector('.comment-box');
+        if (!commentBox) return resolve({ error: 'comment_box_not_found' });
+        var submitBtn = commentBox.querySelector('.comment-box__save-button');
+        if (!submitBtn) return resolve({ error: 'submit_button_not_found' });
+        if (submitBtn.disabled) return resolve({ error: 'submit_still_disabled' });
+        submitBtn.click();
+        resolve({ success: true });
+      }, 500);
+    });
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+```javascript
+// Step 3 of 3: Wait 3s, verify OUR comment posted
+// 🚨 Use "{{handle}}" (username shown on page), NOT "{{name}}" (full name — NOT rendered)
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    return new Promise(function(resolve) {
+      setTimeout(function() {
+        var comments = document.querySelectorAll('.comment');
+        var ourCount = 0;
+        comments.forEach(function(c) {
+          if (c.innerText.indexOf('{{handle}}') >= 0) ourCount++;
+        });
+        resolve({ verified: ourCount > 0, commentCount: comments.length, ourComments: ourCount });
+      }, 3000);
+    });
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+🚨 **Retry rules (STRICT — do NOT deviate):**
+- If `verified: true`: success, proceed to tracking.
+- If `ourComments > 1`: duplicate was posted — do NOT retry, log `Type="Error:DuplicateComment"`, proceed to tracking.
+- If `verified: false` AND `ourComments == 0` AND `commentCount` UNCHANGED from before step 1: retry step 2 ONLY (click submit). **NEVER re-insert text.** If retry also fails: HEARTBEAT_BLOCKED.
+- If `verified: false` AND `commentCount` INCREASED: comment likely posted — treat as success, proceed to tracking.
+- ❌ **NEVER re-insert text and re-submit as a "fix"** — this is the #1 cause of duplicate comments.
+
+## S 6. Upvote Post (single evaluate — click + wait + verify)
+
+```javascript
+// 1 evaluate: upvote + 1s wait + verify (NOT 3 separate steps)
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var postUpvote = document.querySelector('.post-liker');
+    if (!postUpvote) return { error: 'upvote_button_not_found' };
+    if (postUpvote.classList.contains('post-liker--liked')) return { skipped: true, reason: 'already_upvoted' };
+    postUpvote.click();
+    return new Promise(function(resolve) {
+      setTimeout(function() {
+        var verified = document.querySelector('.post-liker--liked') !== null;
+        resolve({ success: true, verified: verified });
+      }, 1000);
+    });
+  }`,
+  profile: "{{browser_profile}}"
+})
+```

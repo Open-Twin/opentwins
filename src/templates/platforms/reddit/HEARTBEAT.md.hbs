@@ -1,0 +1,206 @@
+# HEARTBEAT.md - Reddit Agent
+
+**CLI syntax:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
+- **evaluate:** `... evaluate --fn 'async () => { ... }' 2>&1` (JS after `--fn`)
+- **open/navigate/close:** `... open "URL" 2>&1` / `... navigate "URL" 2>&1` / `... close 2>&1`
+- 🚨 **Tab reuse:** Use `open` ONLY for the FIRST page. Use `navigate` for ALL subsequent pages.
+
+**After EVERY proactive comment (§ 4 only):** increment `limits.json` comments + `schedule.json` comments_done. Replies (§ 3) are unlimited — do NOT update limits.
+**Waits:** Embed in evaluate. Never separate `wait` step.
+
+Steps: § 0 Morning Schedule Check → § 1 Limits → § 2 Browser → § 3 Notifications → § 4 Schedule → § 5 Log → § 6 Close → § 7 HEARTBEAT_OK
+🚨 **ALL steps mandatory every heartbeat.** § 2 + § 3 MUST run even if no tasks are due — replies are always checked.
+🚨 **NEVER use `sessions_spawn` or sub-sessions.** Execute ALL commands directly — no child sessions.
+
+**File loading:** BROWSER-core.md always. Other BROWSER-*.md on-demand per task.
+
+## 0. Morning Schedule Check
+
+If `schedule.json` missing or `metadata.for_date != today`:
+1. Generate INSIGHTS.md from yesterday (PLAYBOOK.md)
+2. Generate today's schedule (PLAYBOOK.md)
+3. Proceed
+
+🚨 **NEVER generate a schedule for tomorrow.** Only generate for TODAY. Schedule generation happens once per day in the morning. If all today's tasks are done, return HEARTBEAT_OK — do NOT create a new schedule.
+
+## 1. Read Limits
+
+Read `limits.json`:
+- If `daily.comments.last_reset != today` -> reset `current = 0, last_reset = today`
+- If `daily.upvotes.last_reset != today` -> reset
+- If Monday AND `weekly.posts.last_reset` before today -> reset
+- Available = `limit - current` per action type
+
+## 1b. Read Today Summary
+
+Read `memory/today_summary.json`. Use tallies to inform comment decisions:
+- `disagreements` < {{behavior.disagree_target_pct}}% of `comments` AND `comments >= 4` → next MUST disagree (Reddit rewards contrarian takes — be aggressive)
+
+- `last_style` was insight → next must be short/personal/pushback
+- Any style is 60%+ of total → MUST use a different style
+- `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question
+- `avg_words` above platform cap → next comment MUST be under 20 words
+
+If file doesn't exist or `date != today`, initialize:
+```bash
+exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+```
+
+## 2. Browser Startup (with retry)
+
+1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://www.reddit.com/notifications" 2>&1`
+2. If CDP error → retry same command once. Still fails → skip browser tasks, return HEARTBEAT_OK
+
+## 3. Reply Check
+
+On **https://www.reddit.com/notifications**:
+
+1. 🚨 **Read BROWSER-notifications.md FIRST** — extraction code is in § 1, reply code is in § 5
+2. Extract notifications using **EXACT code from § 1** (has embedded 3s wait — NO separate wait needed):
+   - MUST use `document.querySelectorAll('notification-item')` elements
+   - MUST extract `notification-id` attribute (UUID format like `2f2f5b45-0827-11f1-...`)
+   - ❌ NEVER use `a[href*="/r/"]` or any other link-based extraction — produces comment IDs that DON'T match tracking file
+   - 🚨 **Return `items` array with `{notificationId, url}` — NEVER return just IDs.** Returning only IDs forces a second evaluate to fetch URLs. Use the EXACT return shape from BROWSER-notifications.md § 1. Do NOT add `.slice()` limits — process ALL relevant notifications.
+3. Filter: ONLY `messageType="COMMENT_REPLY"` or `"POST_REPLY"`. Skip `{{handle_slug}}`.
+4. Batch grep to filter handled IDs (ONE command for ALL notifications):
+   ```bash
+   exec printf '%s\n' "UUID1" "UUID2" "UUID3" | grep -vxF -f memory/replied_notifications.txt || true
+   ```
+   Empty result → skip to § 4.
+5. **Process ALL new notifications** (loop through each, do NOT stop after first):
+   For each new reply: navigate to URL → run BROWSER-notifications.md § 5 step 1 (ONE async evaluate: depth check + dedup + scroll + click Reply + wait + type)
+   - If `skipped: true, reason: 'too_deep'` → append UUID to tracking, move to next (depth >= 4 = no visibility)
+   - If `skipped: true, reason: 'deleted_parent'` → append UUID to tracking, move to next (Reddit removes reply buttons under deleted comments)
+   - If `alreadyReplied: true` → **SKIP reply, BUT STILL append UUID to tracking file** and move to next
+   - If `typed: true` → run § 5 step 2 (ONE async evaluate: verify + submit + wait + verify)
+   - Language: ALWAYS English (Ukrainian only if comment is Ukrainian, per SOUL.md)
+   - Use SOUL.md Anti-AI Detection guidelines
+   - Log Type = "Reply" (unlimited, NOT counted against daily limit — do NOT update limits.json)
+   - After reply: `exec printf '%s\n' 'NOTIFICATION_UUID' >> memory/replied_notifications.txt`
+
+## 4. Schedule Check
+
+Filter `schedule.json`: `status = "pending"` AND `time <= now`, sort earliest first.
+
+Per due task:
+- Pick 2-3 subreddits from `queries.json`
+- Apply Post Quality Filter (TOOLS.md) before commenting
+- First task of day: check profile for removed comments (TOOLS.md)
+- Verify comment after submit. Do NOT log until verified.
+
+### browse_and_engage
+
+**Read BROWSER-engage.md first.** Post TOP-LEVEL comment using § 4. Do NOT reply to existing comments.
+
+1. If `last_comment_at` < 10 min ago -> skip, keep pending
+2. Navigate to subreddit -> extract posts (BROWSER-engage.md § 2) — returns `title, score, comments, permalink, id`. Do NOT run a second extraction.
+3. Pick qualifying post (5+ upvotes, <200 comments, 5-50 ideal)
+4. 🚨 **MANDATORY: Grep pre-check** — use `id` field from extraction (already stripped of `t3_` prefix):
+   ```bash
+   exec grep -q "^{post_id}$" memory/commented_posts.txt && echo "SKIP" || echo "OK"
+   ```
+   If "SKIP" → pick next post (already commented, cheaper than browser navigation)
+5. Navigate to post
+6. 🚨 **MANDATORY: Read post before commenting** (BROWSER-engage.md § 2b). Confirm the topic matches the title from extraction. Your comment MUST directly address the returned `title` and `body`.
+7. Upvote + expand composer (BROWSER-engage.md § 3 — single evaluate, combines upvote + composer open)
+8. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/E/F) — check if defaulting to agree+expand, enforce length cap (50 words / 80 for ExperiencedDevs), check personal mention limit, use short style on high-engagement posts, run anti-AI self-check
+9. Focus + type (BROWSER-engage.md § 4 step 4 — async evaluate with embedded 2s wait)
+   - 🚨 **Page-loss guard:** If typing evaluate returns `no editor`, check URL immediately. If `about:blank` or wrong domain → re-navigate ONCE and retry from step 7. Do NOT probe with multiple evaluates — one URL check is enough.
+10. Verify text (§ 4 step 5) → submit (§ 4 step 6) → verify comment (§ 4 step 7 — async evaluate with embedded 3s wait)
+11. **After successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
+12. MANDATORY update limits.json: `comments.current += 1`, `last_comment_at`, `upvotes.current += upvoted_count` (0 or 1). NEVER write unchanged values.
+13. MANDATORY update schedule.json: increment `comments_done`. If `>= config.max_comments` -> `status: "done"`
+14. Log Type = "Comment", upvoted: Yes/No
+15. Self-review: "does this sound AI?" (TOOLS.md). Rewrite if yes.
+
+### karma_building
+
+1. Pick 1-2 from `queries.json -> karma_subreddits`
+2. If `last_comment_at` < 10 min ago -> skip, keep pending
+3. Navigate to `/new` (NOT /rising) -> extract posts (BROWSER-engage.md § 2 — returns `id`, `contentType`, `isLinkOnly` fields)
+4. Pick qualifying post with < 20 comments (fresher = better)
+   - 🚨 **Skip `isLinkOnly: true` posts on factual subs** (r/todayilearned, r/history, r/science) — body is just a URL to an external article. You can't read the article and will fabricate details. Only comment on these if sticking to pure reactions ("wild story", "that's insane"). Prefer text posts (`contentType: "text"`) or AskReddit questions where you can answer from experience.
+5. 🚨 **MANDATORY: Grep pre-check** — use `id` field from extraction:
+   ```bash
+   exec grep -q "^{post_id}$" memory/commented_posts.txt && echo "SKIP" || echo "OK"
+   ```
+   If "SKIP" → pick next post
+6. Navigate to post
+7. 🚨 **MANDATORY: Read post before commenting** (BROWSER-engage.md § 2b). Your comment MUST directly address the returned `title` and `body`. If the title is different from what you expected, re-evaluate your comment angle before proceeding.
+8. Upvote + expand composer (BROWSER-engage.md § 3 — single evaluate)
+9. Focus + type (BROWSER-engage.md § 4 step 4 — async evaluate with embedded 2s wait). NO product mentions. Comment MUST reference or respond to the specific post topic confirmed in step 7.
+   - 🚨 **Factual accuracy:** On r/todayilearned and similar factual subs, NEVER add details about real people/events you're not certain about. React to the story instead ("wild story", "that's insane"). Wrong facts = mass downvotes + collapsed comment + karma destruction.
+   - 🚨 **Page-loss guard:** If `no editor`, check URL. If `about:blank` → re-navigate ONCE, retry from step 8. One check, not multiple probes.
+10. Verify text → submit → wait 3s → verify comment (§ 4 steps 5-7)
+11. **After successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
+12. MANDATORY update limits.json: `comments.current += 1`, `last_comment_at`, `upvotes.current += upvoted_count`
+13. MANDATORY update schedule.json: increment `comments_done`. If `>= config.max_comments` -> `status: "done"`
+14. Log Type = "Karma Comment", upvoted: Yes/No
+
+### Content-Ready Override (publish tasks only)
+
+Before executing any `post_original_content` task:
+
+1. Read the file at `config.content_source`
+2. Find the first post with `status: pending`
+3. Use that content for publishing (the file includes subreddit suggestion and title)
+4. After verified publish → update the file: change `status: pending` to `status: published` for that post
+
+### post_original_content
+
+Read BROWSER-post.md first. Follow TOOLS.md "Post Strategy". Update `weekly.posts.current += 1`. Log "Post". Mark "done".
+
+### update_memory
+
+Read PLAYBOOK.md -> Memory Update.
+
+## 5. Log Locally
+
+1. Append to `memory/{today}.md` using `exec` (NEVER `read`/`edit`):
+   ```bash
+   cat >> memory/2026-02-08.md <<'EOF'
+   ## 2026-02-08 10:15 - Comment
+   - Subreddit: r/productivity
+   - Post: https://www.reddit.com/r/productivity/comments/abc123
+   - Style: insight
+   - Our comment: "honestly been struggling with the same thing..."
+
+   EOF
+   ```
+   🚨 **Style field MANDATORY** for all Comment entries — track which style was used (insight|short|personal|disagree). Enables quality audits.
+   Types: Heartbeat, Comment, Reply, Post, Upvote, Karma Comment, Flair, Error, Alert
+
+2. 🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, recalculate `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
+
+3. 🚨 **MANDATORY Slack report** (every heartbeat, even if nothing done).
+   Output as text (gateway routes to Slack automatically). Do NOT use `message` tool with `target` parameter — it will error.
+   ```
+   Reddit HB{N}: {actions_summary}
+   Comments: {current}/{limit} | Upvotes: {current}/{limit}
+   Replies: {count} (unlimited)
+   Next: {next_task_time or "nothing scheduled"}
+   ```
+
+**Note:** limits.json updated on action completion. Do NOT re-count from memory.
+
+## Error Handling
+
+**Retry Limits:**
+- Comment verification: max 2 attempts (3s wait, retry after 2s)
+- Browser CDP: max 1 retry with profile restart
+- Same task fails 2x -> skip, keep pending
+- Same task fails 3x -> mark "done" with "Blocked by browser issues"
+
+**Failure Actions:**
+- Browser fails -> log "Error", skip browser steps, HEARTBEAT_OK
+- JSON corrupted -> regenerate from base template
+- Comment submit fails verification -> HEARTBEAT_BLOCKED (do NOT update limits.json)
+- Partial completion -> log completed, update limits for completed only
+
+## 6. Close Browser
+
+`browser.close({ profile: "{{browser_profile}}" })`. NEVER use `browser.stop()` — kills Chrome process.
+
+## 7. HEARTBEAT_OK
+
+Reply `HEARTBEAT_OK` when § 3 checked (notifications) AND no tasks due AND Slack sent AND browser closed.

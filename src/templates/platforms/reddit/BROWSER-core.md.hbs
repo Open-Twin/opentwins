@@ -1,0 +1,60 @@
+# BROWSER-core.md - Reddit Agent Global Rules & Selectors
+
+All evaluate/snapshot calls MUST include `profile: "{{browser_profile}}"`.
+
+## Global Rules
+
+- **evaluate()** = read data, extract content, set text, check states (lightweight)
+- **snapshot()** = get clickable refs. Requires `compact: true, interactive: true, depth: 6`. Narrow selector always.
+- **NEVER use `refs: "aria"`** in snapshot — causes errors.
+- **NEVER use `args` param in evaluate** — gateway ignores it. Inline values via template literals `${var}`.
+- **NEVER use `element.click()` on React buttons** — does NOT trigger React events. Text stays in draft.
+  - Use: `btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))`
+  - Shadow DOM buttons (upvote arrows) DO work with `.click()`.
+- **Wait pattern (embedded):** All waits MUST be `await new Promise(r => setTimeout(r, N))` INSIDE async evaluate functions. NEVER use separate `browser.act({ kind: "wait" })` calls — each separate call adds ~5s overhead.
+  - NEVER use `browser.navigate()` without targetUrl. NEVER use `browser.wait()`.
+- Always use `www.reddit.com` (never old.reddit.com).
+- Use EXACTLY the code below — do NOT create custom variations with args/parameters.
+
+## Verified Selectors
+
+### Post
+- Container: `shreddit-post`
+- Attrs: `post-title`, `author`, `score`, `comment-count`, `created-timestamp` (ISO), `subreddit-prefixed-name`, `content-href`
+
+### Comment
+- Container: `shreddit-comment` with `thingid` attr (e.g. `t1_xxxxx`) — NOT `id`!
+- Author: `.getAttribute('author')`, Score: `.getAttribute('score')`
+- Text: `.querySelector('div[slot="comment"]').textContent.trim()`
+
+### Comment Composer
+- Collapsed trigger: `faceplate-textarea-input[data-testid="trigger-button"]`
+  - MUST click `triggers[1].shadowRoot.querySelector('textarea')` — NOT host element!
+  - Use index `[1]` (second element)
+- Lexical editor: `div[data-lexical-editor="true"]` (after expansion)
+- Submit (top-level): `button[type="submit"]` with text "Comment" inside `comment-composer-host:not([reply-mode])`
+- Typing: `document.execCommand('insertText', false, text)` — NEVER snapshot refs for Lexical
+
+### Notifications
+- Item: `notification-item` (NOT `shreddit-notification`)
+- Attrs: `message-type` (COMMENT_REPLY, POST_REPLY, etc.), `notification-id` (unique UUID), `inaccessiblehref` on inner `rpl-inbox-row`
+
+### Upvote (Shadow DOM)
+- Post: `post.shadowRoot.querySelector('button[upvote]')`
+- Comment: `comment.shadowRoot.querySelector('button[upvote]')`
+- State: `aria-pressed="true"` = already upvoted. `.click()` works (shadow DOM).
+
+### Post Creation (Shadow DOM)
+- Title: `faceplate-textarea-input[name="title"]` -> `.shadowRoot.querySelector('textarea')`
+- Body: visible `div[data-lexical-editor="true"]` (check `getBoundingClientRect()`)
+- Submit: `r-post-form-submit-button#submit-post-button` -> `.shadowRoot.querySelector('#inner-post-submit-button')`
+- Flair button: `button#edit-post-flair-button`
+- Flair modal: `r-post-flairs-modal`, radio: `faceplate-radio-input[id^="post-flair-radio-input-"]`
+
+## Recovery Rules
+
+- **Browser timeout** -> close tab, reopen URL. If fails -> `exec openclaw browser start --profile {{browser_profile}}`, wait 3s, retry once. Still fails -> skip browser tasks. NEVER use `browser.stop()`.
+- **"matched N elements" / strict mode** -> snapshot selector too broad, use narrower selector.
+- **evaluate() unexpected data** -> 1 snapshot to inspect DOM, use discovered selector.
+- **Click fails after snapshot** -> retry with narrower selector. Retry also fails -> skip, log Error.
+- **Same task fails 3x** -> mark "done" with note "Blocked by browser issues".

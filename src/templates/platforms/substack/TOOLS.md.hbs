@@ -1,0 +1,39 @@
+# TOOLS.md - Substack Agent
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| schedule.json | Daily tasks with jitter. Read every heartbeat. |
+| limits.json | Action counts (source of truth). Increment after actions. |
+| queries.json | Search queries, target newsletters. |
+| memory/{date}.md | Activity log (WRITE-ONLY, append only) |
+| memory/replied_notifications_substack.txt | Reply tracking. Format: type\|author\|url\|snippet\|timestamp |
+| memory/commented_posts.txt | Posts we've commented on |
+
+## Engagement Rules
+
+- **Like BEFORE comment** (always)
+- **Subscribe** after commenting on quality newsletters
+## Self-Review Gate
+
+Before ANY post/comment: "Would I think AI wrote this?" Check for parallel structure, clean grammar, bullets, hedging. If doubt → rewrite messier.
+
+## Post Filter
+
+Recent (<14d), has engagement, relevant, <50 comments, sweet spot 1-20.
+
+## Browser
+
+`profile: "{{browser_profile}}"` on EVERY call. No public API — all browser-based.
+
+## Schedule Templates
+
+**Mon-Fri:** 10:00 + 15:00 browse+engage, 12:00 publish_note (mandatory)
+**Tue/Thu:** +19:00 publish_newsletter (mandatory, skip if weekly limit reached)
+**Wed:** +19:00 notes engagement, +20:00 recommend (if weekly limit allows)
+**Sat:** 11:00 browse+engage, 14:00 publish_note (mandatory)
+**Sun:** 14:00 light browse (notes only)
+**Every day:** 22:00 update_memory, 22:30 generate_tomorrow_schedule
+
+Capacity: Σ(max_comments) = daily.comments.limit. Limits.json is source of truth for all counts.

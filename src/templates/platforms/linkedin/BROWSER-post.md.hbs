@@ -1,0 +1,481 @@
+# BROWSER-post.md - LinkedIn Post Creation, Poll & Repost Patterns
+
+## 🚨 CRITICAL: Shadow DOM
+
+LinkedIn's post/poll/repost creation modal lives inside a **shadow DOM**. All UI elements (buttons, inputs, editors) are INSIDE `#interop-outlet` shadowRoot.
+
+**You MUST query shadow DOM for all post creation interactions:**
+```javascript
+const host = document.querySelector('#interop-outlet');
+const shadow = host.shadowRoot;
+// Then: shadow.querySelector(...) or shadow.querySelectorAll(...)
+```
+
+Regular `document.querySelector()` will return NOTHING for modal elements. NEVER use it for post creation.
+
+---
+
+## SS 8. Open Post Creation Modal
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var host = document.querySelector('#interop-outlet');
+    if (host && host.shadowRoot) {
+      var shadow = host.shadowRoot;
+      var editor = shadow.querySelector('[contenteditable="true"][role="textbox"]');
+      if (editor) return { alreadyOpen: true };
+    }
+    var startBtn = Array.from(document.querySelectorAll('div, button')).find(
+      el => el.innerText && el.innerText.trim() === 'Start a post'
+    );
+    if (!startBtn) return { success: false, reason: 'no-start-post-button' };
+    startBtn.click();
+    return { success: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+Wait 2s after click. Then verify modal opened:
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var host = document.querySelector('#interop-outlet');
+    if (!host || !host.shadowRoot) return { open: false, reason: 'no-shadow-root' };
+    var shadow = host.shadowRoot;
+    var btns = Array.from(shadow.querySelectorAll('button'));
+    return {
+      open: btns.length > 3,
+      buttons: btns.map(b => ({
+        text: (b.innerText || '').trim().slice(0, 30),
+        label: b.getAttribute('aria-label') || ''
+      }))
+    };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+## SS 9. Create Poll
+
+### Shadow DOM Selectors
+
+| Element | Selector (inside shadowRoot) |
+|---------|-----|
+| Poll button | `button` with `aria-label="Create a poll"` (hidden under "More" button) |
+| Question textarea | `textarea` with placeholder "E.g., How do you commute to work?" |
+| Option 1 | `input#poll-option-1` |
+| Option 2 | `input#poll-option-2` |
+| Option 3 | `input#poll-option-3` (after clicking "Add option") |
+| Option 4 | `input#poll-option-4` (after clicking "Add option" twice) |
+| Add option button | `button` with text "Add option" |
+| Done button | `button` with text "Done" |
+| Post text editor | `.ql-editor[role="textbox"]` or `[contenteditable="true"][role="textbox"]` |
+| Post button | `button` with text "Post" (not disabled) |
+| Dismiss (verify prompt) | `button` with text "Not now" |
+
+🚨 **Poll option limit: 30 characters max.** The input fields silently truncate typed text to 30 chars, but `nativeSetter` bypasses this truncation. If options exceed 30 chars via nativeSetter, the Done button becomes disabled with no visible error. **Always `.slice(0, 30)` option text before setting.**
+
+🚨 **"Create a poll" is hidden under the "More" button** (`aria-label="More"`) in the post modal. Click More first, then click "Create a poll".
+
+🚨 **"Start a post" button is in the main DOM**, NOT shadow DOM. Click it in the main DOM, then check shadow DOM for the modal. The shadow DOM also contains the messaging overlay — filter it out by checking for editor/Dismiss buttons.
+
+### Step 1: Open modal — click "Start a post" in main DOM, wait 3s
+
+### Step 2: Click "More" then "Create a poll"
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    var host = document.querySelector('#interop-outlet');
+    var shadow = host.shadowRoot;
+    // Click "More" to reveal poll button
+    var moreBtn = Array.from(shadow.querySelectorAll('button')).find(
+      b => b.getAttribute('aria-label') === 'More'
+    );
+    if (!moreBtn) return { success: false, reason: 'no-more-button' };
+    moreBtn.click();
+    await new Promise(r => setTimeout(r, 1000));
+    // Click "Create a poll"
+    var pollBtn = Array.from(shadow.querySelectorAll('button')).find(
+      b => b.getAttribute('aria-label') === 'Create a poll'
+    );
+    if (!pollBtn) return { success: false, reason: 'no-poll-button' };
+    pollBtn.click();
+    return { success: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var host = document.querySelector('#interop-outlet');
+    var shadow = host.shadowRoot;
+    var pollBtn = Array.from(shadow.querySelectorAll('button')).find(
+      b => b.getAttribute('aria-label') === 'Create a poll'
+    );
+    if (!pollBtn) return { success: false, reason: 'no-poll-button' };
+    pollBtn.click();
+    return { success: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+Wait 2s for poll form.
+
+### Step 3: Fill question
+```javascript
+// pollQuestion = "How much do you trust AI-generated code in production?"
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var host = document.querySelector('#interop-outlet');
+    var shadow = host.shadowRoot;
+    var ta = shadow.querySelector('textarea[placeholder*="How do you commute"]') ||
+             Array.from(shadow.querySelectorAll('textarea')).find(t => t.className.includes('polls-detour'));
+    if (!ta) return { success: false, reason: 'no-question-textarea' };
+    var nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+    nativeSetter.call(ta, "${pollQuestion}");
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    ta.dispatchEvent(new Event('change', { bubbles: true }));
+    return { success: true, value: ta.value };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 4: Fill options 1 and 2
+
+🚨 **Always `.slice(0, 30)` — options over 30 chars disable the Done button silently.**
+
+```javascript
+// option1 = "Full trust - ship it", option2 = "Trust but verify manually"
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var host = document.querySelector('#interop-outlet');
+    var shadow = host.shadowRoot;
+    var opt1 = shadow.querySelector('#poll-option-1');
+    var opt2 = shadow.querySelector('#poll-option-2');
+    if (!opt1 || !opt2) return { success: false, reason: 'no-option-inputs' };
+    var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(opt1, "${option1}".slice(0, 30));
+    opt1.dispatchEvent(new Event('input', { bubbles: true }));
+    opt1.dispatchEvent(new Event('change', { bubbles: true }));
+    setter.call(opt2, "${option2}".slice(0, 30));
+    opt2.dispatchEvent(new Event('input', { bubbles: true }));
+    opt2.dispatchEvent(new Event('change', { bubbles: true }));
+    return { success: true, opt1: opt1.value, opt1Len: opt1.value.length, opt2: opt2.value, opt2Len: opt2.value.length };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 5: Add option 3 (click "Add option", wait 1s, fill)
+```javascript
+// option3 = "Let AI handle it all"
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var host = document.querySelector('#interop-outlet');
+    var shadow = host.shadowRoot;
+    var addBtn = Array.from(shadow.querySelectorAll('button')).find(
+      b => (b.innerText || '').includes('Add option')
+    );
+    if (!addBtn) return { success: false, reason: 'no-add-option-button' };
+    addBtn.click();
+    return { success: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+Wait 1s, then:
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var host = document.querySelector('#interop-outlet');
+    var shadow = host.shadowRoot;
+    var opt3 = shadow.querySelector('#poll-option-3');
+    if (!opt3) return { success: false, reason: 'no-option-3' };
+    var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(opt3, "${option3}".slice(0, 30));
+    opt3.dispatchEvent(new Event('input', { bubbles: true }));
+    opt3.dispatchEvent(new Event('change', { bubbles: true }));
+    return { success: true, value: opt3.value, len: opt3.value.length };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 6: Add option 4 (same pattern — click "Add option", wait 1s, fill)
+```javascript
+// option4 = "Never in prod (yet)"
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var host = document.querySelector('#interop-outlet');
+    var shadow = host.shadowRoot;
+    var addBtn = Array.from(shadow.querySelectorAll('button')).find(
+      b => (b.innerText || '').includes('Add option')
+    );
+    if (addBtn) addBtn.click();
+    return { success: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+Wait 1s, then:
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var host = document.querySelector('#interop-outlet');
+    var shadow = host.shadowRoot;
+    var opt4 = shadow.querySelector('#poll-option-4');
+    if (!opt4) return { success: false, reason: 'no-option-4' };
+    var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(opt4, "${option4}".slice(0, 30));
+    opt4.dispatchEvent(new Event('input', { bubbles: true }));
+    opt4.dispatchEvent(new Event('change', { bubbles: true }));
+    return { success: true, value: opt4.value, len: opt4.value.length };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 7: Click "Done"
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var host = document.querySelector('#interop-outlet');
+    var shadow = host.shadowRoot;
+    var doneBtn = Array.from(shadow.querySelectorAll('button')).find(
+      b => (b.innerText || '').trim() === 'Done'
+    );
+    if (!doneBtn) return { success: false, reason: 'no-done-button' };
+    doneBtn.click();
+    return { success: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+Wait 2s for poll preview.
+
+### Step 8: Add post text (optional intro above poll)
+```javascript
+// postText = "Running a quick poll - curious where the community stands..."
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var host = document.querySelector('#interop-outlet');
+    var shadow = host.shadowRoot;
+    var editor = shadow.querySelector('.ql-editor[role="textbox"]') ||
+                 shadow.querySelector('[contenteditable="true"][role="textbox"]');
+    if (!editor) return { success: false, reason: 'no-editor' };
+    editor.focus();
+    editor.innerHTML = '<p>' + "${postText}".replace(/\\n/g, '</p><p>') + '</p>';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    return { success: true, length: editor.innerText.length };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+Wait 1s.
+
+### Step 9: Click "Post"
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var host = document.querySelector('#interop-outlet');
+    var shadow = host.shadowRoot;
+    var postBtn = Array.from(shadow.querySelectorAll('button')).find(
+      b => (b.innerText || '').trim() === 'Post' && !b.disabled
+    );
+    if (!postBtn) return { success: false, reason: 'post-button-not-ready' };
+    postBtn.click();
+    return { success: true };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+Wait 4s.
+
+### Step 10: Dismiss verification prompt + verify
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var host = document.querySelector('#interop-outlet');
+    var shadow = host ? host.shadowRoot : null;
+    if (shadow) {
+      var notNow = Array.from(shadow.querySelectorAll('button')).find(
+        b => (b.innerText || '').includes('Not now')
+      );
+      if (notNow) notNow.click();
+    }
+    return { dismissed: true, url: window.location.href };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 11: Get poll post URL (wait 2s after dismiss)
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var links = Array.from(document.querySelectorAll('a'));
+    var postLink = links.find(a => a.href && a.href.includes('/feed/update/urn:li:ugcPost:'));
+    return { url: postLink ? postLink.href : null };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 12: Add follow-up comment (navigate to post URL, wait 3s)
+
+Use BROWSER-notifications.md SS 5 (Quill `.ql-editor` on post detail page — this is in the main DOM, NOT shadow DOM).
+
+---
+
+## SS 10. Create Regular Post (Text Only)
+
+### Step 1: Open modal (SS 8), wait 2s
+
+### Step 2: Type post text
+```javascript
+// postContent = "Your post text here"
+browser.act({
+  kind: "evaluate",
+  fn: `() => {
+    var host = document.querySelector('#interop-outlet');
+    var shadow = host.shadowRoot;
+    var editor = shadow.querySelector('.ql-editor[role="textbox"]') ||
+                 shadow.querySelector('[contenteditable="true"][role="textbox"]');
+    if (!editor) return { success: false, reason: 'no-editor' };
+    editor.focus();
+    var lines = "${postContent}".split('\\n');
+    editor.innerHTML = lines.map(function(line) { return '<p>' + (line.trim() === '' ? '<br>' : line) + '</p>'; }).join('');
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    return { success: true, length: editor.innerText.length };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 3: Click "Post" (SS 9 Step 9)
+### Step 4: Dismiss + verify (SS 9 Steps 10-11)
+
+---
+
+## SS 11. Repost with Commentary
+
+🚨 **Verified 2026-03-26:** LinkedIn removed `/feed/update/` URLs from the feed DOM. Posts no longer have navigable post URLs in search results or the feed. Repost MUST be done **directly from the feed page** — NOT by navigating to a post URL first.
+
+🚨 **Do NOT search for repostable posts** — LinkedIn search returns mostly Pulse articles. Instead, **browse the home feed** (`/feed/`) and pick a relevant post with good engagement.
+
+### Step 0: Browse feed for repostable post
+
+Navigate to `https://www.linkedin.com/feed/`, scroll to find a relevant post. Evaluate the visible text to identify good candidates (author, topic, engagement count). Target: post in our niche (AI, PM, agents) with 20+ reactions from a real person (not a brand/news account).
+
+### Step 1: Click Repost → "Repost with your thoughts" → editor opens (ONE evaluate)
+
+🚨 **Find the correct Repost button** by position — the button must be near the target post in the viewport. Use `getBoundingClientRect().top` to identify which Repost button belongs to which post.
+
+🚨 **"Repost with your thoughts" is a `<div>` in a dropdown**, NOT a `[role="menuitem"]`. Find it by text content match.
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 1000));
+    // Click the Repost button near target post (identify by vertical position)
+    var allBtns = Array.from(document.querySelectorAll('button'));
+    var repostBtns = allBtns.filter(function(b) {
+      return b.innerText.trim() === 'Repost' && b.offsetParent !== null;
+    });
+    // Target the Repost button at approximate Y position (adjust based on which post)
+    var targetBtn = repostBtns.find(function(b) {
+      var top = b.getBoundingClientRect().top;
+      return top > ${targetMinY} && top < ${targetMaxY};
+    });
+    if (!targetBtn) return { error: 'no Repost button in range', count: repostBtns.length };
+    targetBtn.click();
+
+    // Wait for dropdown
+    await new Promise(r => setTimeout(r, 1500));
+
+    // Click "Repost with your thoughts" (it's a div, not a menuitem)
+    var allDivs = Array.from(document.querySelectorAll('div'));
+    var thoughtsDiv = allDivs.find(function(d) {
+      var t = (d.textContent || '').trim();
+      return d.offsetParent !== null && t.startsWith('Repost with your thoughts') && t.length < 100;
+    });
+    if (!thoughtsDiv) return { repostClicked: true, error: 'no thoughts option' };
+    thoughtsDiv.click();
+
+    // Wait for editor in shadow DOM
+    await new Promise(r => setTimeout(r, 3000));
+    var host = document.querySelector('#interop-outlet');
+    if (!host || !host.shadowRoot) return { repostClicked: true, thoughtsClicked: true, error: 'no shadow root' };
+    var editor = host.shadowRoot.querySelector('.ql-editor');
+    return { repostClicked: true, thoughtsClicked: true, editorReady: !!editor };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 2: Type commentary (shadow DOM `.ql-editor` — set innerHTML + dispatch input)
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    var host = document.querySelector('#interop-outlet');
+    if (!host || !host.shadowRoot) return { error: 'no shadow root' };
+    var editor = host.shadowRoot.querySelector('.ql-editor');
+    if (!editor) return { error: 'no editor' };
+    editor.focus();
+    editor.innerHTML = '<p>${commentaryText.replace(/'/g, "\\'")}</p>';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 1000));
+    var postBtn = Array.from(host.shadowRoot.querySelectorAll('button')).find(function(b) {
+      return b.innerText.trim() === 'Post' && !b.disabled;
+    });
+    return { typed: true, postBtnReady: !!postBtn };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 3: Click "Post" (shadow DOM button)
+
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    var host = document.querySelector('#interop-outlet');
+    var postBtn = Array.from(host.shadowRoot.querySelectorAll('button')).find(function(b) {
+      return b.innerText.trim() === 'Post' && !b.disabled;
+    });
+    if (!postBtn) return { error: 'no Post button' };
+    postBtn.click();
+    await new Promise(r => setTimeout(r, 3000));
+    var editorGone = !host.shadowRoot.querySelector('.ql-editor');
+    return { posted: true, editorGone: editorGone };
+  }`,
+  profile: "{{browser_profile}}"
+})
+```
+
+### Step 4: Verify — editor should be gone after post. Log as Type=Repost.
