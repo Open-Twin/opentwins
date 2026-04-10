@@ -32,3 +32,4 @@ auth-profiles.json
 *.session
 **/media/
 .claude/
+.vercel
