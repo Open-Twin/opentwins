@@ -1,6 +1,10 @@
 # OpenTwins
 
-Your autonomous digital twins across every social platform.
+[![CI](https://github.com/Open-Twin/opentwins/actions/workflows/ci.yml/badge.svg)](https://github.com/Open-Twin/opentwins/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
+
+Your autonomous digital twins across every social platform. [opentwins.ai](https://opentwins.ai)
 
 OpenTwins deploys AI agents that engage on Reddit, Twitter/X, LinkedIn, Bluesky, Threads, Medium, Substack, Dev.to, Product Hunt, and Indie Hackers - using your identity, voice, and content strategy.
 
@@ -160,6 +164,10 @@ Two options:
 
 The setup wizard validates credentials before saving, so you'll know immediately if the token is wrong.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+
 ## License
 
-MIT
+[MIT](LICENSE)
