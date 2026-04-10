@@ -68,6 +68,7 @@ interface TemplateContext {
   // Platform-specific
   platform: string;
   handle: string | Record<string, string>;
+  handle_slug: string;
   profile_url: string;
   premium?: boolean;
   account_age?: string;
@@ -125,6 +126,18 @@ function buildContext(
       ? 'готувала, робила, пробувала'
       : 'готував, робив, пробував';
 
+  // Extract slug from handle (might be full URL or just slug)
+  const handleSlug = (() => {
+    const h = typeof platform.handle === 'string' ? platform.handle : '';
+    if (h.startsWith('http')) {
+      try {
+        const segs = new URL(h).pathname.split('/').filter(Boolean);
+        return segs[segs.length - 1] || h;
+      } catch { return h; }
+    }
+    return h.startsWith('@') ? h.slice(1) : h;
+  })();
+
   return {
     name: config.name,
     display_name: config.display_name,
@@ -142,6 +155,7 @@ function buildContext(
 
     platform: platform.platform,
     handle: platform.handle,
+    handle_slug: handleSlug,
     profile_url: platform.profile_url,
     premium: platform.premium,
     account_age: platform.account_age,
@@ -333,6 +347,7 @@ export async function generateAgentFiles(config: OpenTwinsConfig): Promise<{ gen
         pillars: config.pillars,
         platform: 'pipeline',
         handle: buildHandleMap(config),
+        handle_slug: '',
         profile_url: '',
         browser_profile: '',
         voice: config.voice,

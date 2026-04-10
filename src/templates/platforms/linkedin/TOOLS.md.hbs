@@ -11,9 +11,9 @@
 
 ## Browser
 
-`profile: "promo-linkedin"` on EVERY call. No API — 100% browser.
+`profile: "{{browser_profile}}"` on EVERY call. No API — 100% browser.
 
-URLs: Feed `/feed/`, Notifications `/notifications/`, Profile `/in/{{handle}}`, Search `/search/results/content/`
+URLs: Feed `/feed/`, Notifications `/notifications/`, Profile `/in/{{handle_slug}}`, Search `/search/results/content/`
 
 ## Post Quality Filter
 
@@ -28,7 +28,7 @@ URLs: Feed `/feed/`, Notifications `/notifications/`, Profile `/in/{{handle}}`, 
 See POST-TEMPLATES.md. Pick unused template, self-review (SOUL.md), peak hours (15:00-17:00 Kyiv). 3-5 hashtags (read from `queries.json → hashtags` array — refreshed daily).
 
 ### Articles
-1000-2000 words, personal story. "Director of PM by day, AI-native builder by night." Topics: AI agents as team, sprint planning with AI, PM in AI era, AI-native workflows, conference insights. Tuesday + Friday (mandatory). End with question.
+1000-2000 words, personal story. "{{role}} by day, AI-native builder by night." Topics: AI agents as team, sprint planning with AI, PM in AI era, running 10+ agents, conference insights. Tuesday + Friday (mandatory). End with question.
 
 ### Polls
 4 options (1 funny). No product in poll — only in follow-up comment. See BROWSER-post.md SS 9.

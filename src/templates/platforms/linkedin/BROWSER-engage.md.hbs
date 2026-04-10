@@ -40,7 +40,7 @@ Replace with varied agreement (rotate, never repeat within same day):
 
 ### E. Company Mention Ban
 
-🚨 **NEVER mention company.** No "at my company", "a large company", "at my org", "at work we", "managing a team at". This applies to comments, replies, AND connection request notes.
+🚨 **NEVER mention company.** No "at my company", "at my org", "at work we", "managing a team at". This applies to comments, replies, AND connection request notes.
 
 Frame as individual experience: "I've seen this", "in my setup", "ran into this myself", "I run about 10 agents that..."
 
@@ -59,7 +59,7 @@ Before posting any comment:
 
 ### H. Topic Diversity
 
-🚨 **1 in 5 comments should be on an adjacent topic WITHOUT forcing PM/AI.** Leadership challenges, team dynamics, hiring, career transitions, organizational culture. React as a senior leader with broad experience, not just as "The AI-Native PM."
+🚨 **1 in 5 comments should be on an adjacent topic WITHOUT forcing PM/AI.** Leadership challenges, team dynamics, hiring, career transitions, organizational culture. React as a senior leader with broad experience, not just as "{{brand_tagline}}."
 
 ### I. Platform Voice (LinkedIn-specific)
 
@@ -335,7 +335,7 @@ browser.act({
     // 🚨 AUTHORITATIVE VERIFY: find our comment in the comment list
     // Look for articles/divs with our author link as child, containing our snippet
     var snippet = "${commentText.slice(0, 35).replace(/"/g, '\\"')}";
-    var allAuthorLinks = item.querySelectorAll('a[href*="/in/{{handle}}"]');
+    var allAuthorLinks = item.querySelectorAll('a[href*="/in/{{handle_slug}}"]');
     var ourCommentFound = false;
     for (var i = 0; i < allAuthorLinks.length; i++) {
       // Walk up to find the comment container, then search its text for our snippet
@@ -368,6 +368,8 @@ browser.act({
 ```
 
 If `verified: false`: retry ONCE. Still fails → do NOT log, do NOT increment counters, skip to next post.
+
+---
 
 ## SS 4b. Comment on Pulse Article (Quill Editor)
 
@@ -478,7 +480,7 @@ browser.act({
 
     // 🚨 AUTHORITATIVE VERIFY: find our comment in the Pulse comments list
     var snippet = "${commentText.slice(0, 35).replace(/"/g, '\\"')}";
-    var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle}}"]'));
+    var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle_slug}}"]'));
     var ourCommentFound = false;
     var foundWhere = '';
     for (var i = 0; i < ourLinks.length; i++) {
@@ -552,9 +554,9 @@ browser.act({
 ### Brand Links (use when article mentions the brand)
 | Resource | URL |
 |----------|-----|
-| LinkedIn | linkedin.com/in/{{handle}} |
-| GitHub tools | github.com/{{handle}} |
-| BRAND.md | See identity config for full positioning |
+| LinkedIn | linkedin.com/in/{{handle_slug}} |
+| GitHub | github.com/{{handle_slug}} |
+| BRAND.md | See /BRAND.md for full positioning |
 
 ### Step 1: Set title
 ```javascript
@@ -592,7 +594,7 @@ browser.act({
 
 **Article body rules:**
 - Use `<p>` for paragraphs, `<strong>` for section headings
-- Include brand link as `<a href="https://linkedin.com/in/{{handle}}">{{name}}</a>` or `<a href="https://github.com/{{handle}}">open-source tools in your field</a>` at least once in the article body
+- Include brand link as `<a href="https://linkedin.com/in/{{handle_slug}}">{{name}}</a>` or `<a href="https://github.com/{{handle_slug}}">open-source PM tools</a>` at least once in the article body
 - Hashtags go in the share text (Step 4), NOT in article body
 - Keep HTML under 8000 chars to avoid evaluate payload bloat
 

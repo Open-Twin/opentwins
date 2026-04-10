@@ -70,7 +70,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 1. Navigate `https://www.linkedin.com/notifications/`
 2. Extract notifications using BROWSER-notifications.md SS 1 (has embedded 3s wait — NO separate wait needed)
 4. **Dedup — filter out known notifications:**
-   - Skip if: our account ({{handle}}), same user in `limits.json` history today
+   - Skip if: our account ({{handle_slug}}), same user in `limits.json` history today
    - 🚨 **MANDATORY: Grep pre-check** — for each notification, build key `{username}|{baseUrl}` (use `baseUrl` without query params, NOT the full `postUrl`):
      ```bash
      exec grep -qF "{username}|{baseUrl}" memory/replied_notifications_linkedin.txt && echo "SKIP" || echo "OK"
@@ -84,7 +84,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
      ```javascript
      var comments = Array.from(document.querySelectorAll('article[class*="comment"]'));
      var ourReplies = comments.filter(function(c) {
-       return c.innerText.includes('{{name}}') || c.innerText.includes('{{handle}}');
+       return c.innerText.includes('{{name}}') || c.innerText.includes('{{handle_slug}}');
      }).length;
      if (ourReplies >= 2) return { skipped: true, reason: 'too_many_replies_on_post', count: ourReplies };
      ```
@@ -144,7 +144,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
      var timeEl = document.querySelector('time');
      var age = timeEl ? timeEl.innerText.trim() : '';
      var tooOld = /\d+\s*(mo|yr)/.test(age) || (/(\d+)w/.test(age) && parseInt(age) > 1);
-     var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle}}"]'));
+     var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle_slug}}"]'));
      var alreadyCommented = ourLinks.filter(a => !a.href.includes('sidebar_menu')).length > 0;
      return { age: age, tooOld: tooOld, alreadyCommented: alreadyCommented };
    }
@@ -172,7 +172,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
        var url = window.location.href;
        var m = url.match(/(\d{16,20})/);
        var trackId = m ? m[1] : '';
-       var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle}}"]'));
+       var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle_slug}}"]'));
        var alreadyCommented = ourLinks.filter(a => !a.href.includes('sidebar_menu')).length > 0;
        return { trackId: trackId, alreadyCommented: alreadyCommented, url: url };
      }
@@ -182,7 +182,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
      ```javascript
      async () => {
        await new Promise(r => setTimeout(r, 3000));
-       var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle}}"]'));
+       var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle_slug}}"]'));
        var alreadyCommented = ourLinks.filter(a => !a.href.includes('sidebar_menu')).length > 0;
        if (alreadyCommented) return { alreadyCommented: true };
        var article = document.querySelector('article') || document.querySelector('.reader-article-content');
