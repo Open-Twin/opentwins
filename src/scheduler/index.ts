@@ -47,38 +47,19 @@ export function createScheduler(config: OpenTwinsConfig): Bree {
     });
   }
 
-  // Platform heartbeats (per-agent intervals, staggered)
+  // Platform heartbeats - check every 5 minutes during active hours.
+  // The agent-runner itself decides whether enough time has passed since
+  // the last completed run (based on heartbeat_interval_minutes).
+  // This decouples the scheduler from the interval logic.
   const enabledPlatforms = config.platforms.filter((p) => p.enabled);
+  const { start, end } = config.active_hours;
   enabledPlatforms.forEach((platform, index) => {
-    const intervalMin = platform.heartbeat_interval_minutes || 60;
-    const { start, end } = config.active_hours;
-    const minuteOffset = (index * 10) % 60;
-
-    // Build cron based on interval:
-    // 60 min  -> run at minuteOffset every hour
-    // 30 min  -> run at minuteOffset and minuteOffset+30 every hour
-    // 15 min  -> run every 15 min
-    // 90 min  -> use Bree's interval instead of cron
-    // 120 min -> run at minuteOffset every 2 hours
-    let cron: string;
-    if (intervalMin <= 15) {
-      cron = `*/15 ${start}-${end} * * *`;
-    } else if (intervalMin <= 30) {
-      const m2 = (minuteOffset + 30) % 60;
-      cron = `${minuteOffset},${m2} ${start}-${end} * * *`;
-    } else if (intervalMin <= 60) {
-      cron = `${minuteOffset} ${start}-${end} * * *`;
-    } else if (intervalMin <= 120) {
-      cron = `${minuteOffset} ${start}-${end}/2 * * *`;
-    } else if (intervalMin <= 240) {
-      cron = `${minuteOffset} ${start}-${end}/4 * * *`;
-    } else {
-      cron = `${minuteOffset} ${start}-${end}/8 * * *`;
-    }
+    // Stagger checks so agents don't all fire at the same minute
+    const minuteOffset = (index * 2) % 5; // 0, 2, 4, 1, 3, ...
 
     jobs.push({
       name: platform.platform,
-      cron,
+      cron: `${minuteOffset}/5 ${start}-${end} * * *`,
       timezone: config.timezone,
       worker: {
         workerData: {

@@ -53,6 +53,10 @@ export function getLockFile(agentName: string): string {
   return resolve(getLocksDir(), `${agentName}.lock`);
 }
 
+export function getLastHeartbeatFile(agentName: string): string {
+  return resolve(getLocksDir(), `${agentName}.last_heartbeat`);
+}
+
 export function getPidFile(): string {
   return resolve(getOpenTwinsHome(), 'opentwins.pid');
 }

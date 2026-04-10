@@ -34,6 +34,6 @@ program
     }
 
     const spinner = ora(`Running ${target} agent...`).start();
-    await runPlatformAgent(config, target, { skipActiveHoursCheck: true });
+    await runPlatformAgent(config, target, { skipActiveHoursCheck: true, skipIntervalCheck: true });
     spinner.succeed(`${target} agent completed`);
   }));
