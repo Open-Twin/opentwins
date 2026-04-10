@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://opentwins.dev/sitemap.xml
+Sitemap: https://opentwins.ai/sitemap.xml
