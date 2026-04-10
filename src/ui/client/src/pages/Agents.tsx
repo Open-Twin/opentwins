@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useApi, useMutation } from '../hooks/useApi.ts';
 import { useAgentsEnabled, HealthBanner } from '../contexts/HealthContext.tsx';
@@ -532,9 +532,9 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
               onSave={async (minutes) => {
                 const result = await saveAgent({ heartbeat_interval_minutes: minutes });
                 if (result) {
-                  setFlash(`Interval updated to ${minutes}m`);
+                  setFlash(`Interval set to ${intervalLabel(minutes)} - restart scheduler to apply`);
                   refetch();
-                  setTimeout(() => setFlash(null), 3000);
+                  setTimeout(() => setFlash(null), 4000);
                 }
               }}
             />
@@ -1282,7 +1282,7 @@ function Empty({ text, hint }: { text: string; hint: string }) {
   );
 }
 
-const INTERVAL_OPTIONS = [15, 30, 60, 90, 120, 180, 240, 480] as const;
+const INTERVAL_OPTIONS = [15, 30, 60, 120, 240, 480] as const;
 
 function intervalLabel(minutes: number): string {
   if (minutes < 60) return `${minutes}m`;
@@ -1292,9 +1292,19 @@ function intervalLabel(minutes: number): string {
 
 function IntervalPicker({ value, onSave }: { value: number; onSave: (minutes: number) => void }) {
   const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-1.5" style={{ color: 'var(--c-text-muted)' }}>Run every</div>
       <button
         onClick={() => setOpen(!open)}
