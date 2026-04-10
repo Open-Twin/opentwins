@@ -135,30 +135,27 @@
     ]
   }
   </script>
+  <!-- Structured Data: Organization -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "OpenTwins",
+    "url": "https://opentwins.ai",
+    "logo": "https://opentwins.ai/og-image.png",
+    "description": "Open source AI agents that grow your social presence across 10 platforms.",
+    "sameAs": [
+      "https://github.com/Open-Twin/opentwins"
+    ]
+  }
+  </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            void: '#080b12', surface: '#0e1320', panel: '#151d2e',
-            border: '#283548', 'border-dim': '#1e293b',
-            teal: '#2dd4bf', 'teal-dim': '#0d9488',
-          },
-          fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
-          },
-        },
-      },
-    };
-  </script>
+  <link rel="stylesheet" href="/styles.css">
   <style>
     body { background: #080b12; color: #e2e8f0; -webkit-font-smoothing: antialiased; }
     .glow-teal { box-shadow: 0 0 60px rgba(45,212,191,0.15), 0 0 120px rgba(45,212,191,0.05); }
@@ -803,6 +800,7 @@
       <div class="text-center mb-16 reveal">
         <div class="font-mono text-xs uppercase tracking-[0.2em] text-teal-dim mb-3">Dashboard</div>
         <h2 class="text-3xl md:text-4xl font-bold">Your command center</h2>
+        <img src="/og-image.png" alt="OpenTwins dashboard showing AI agent status, engagement metrics and cost tracking across LinkedIn, Twitter, Reddit and other social platforms" width="1200" height="630" class="hidden" loading="lazy">
       </div>
 
       <div class="space-y-6">
