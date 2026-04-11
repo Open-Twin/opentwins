@@ -6,7 +6,6 @@ export default defineConfig({
     'src/cli/index': 'src/cli/index.ts',
     'src/scheduler/pipeline-runner': 'src/scheduler/pipeline-runner.ts',
     'src/scheduler/agent-runner': 'src/scheduler/agent-runner.ts',
-    'src/scheduler/browser-cleanup': 'src/scheduler/browser-cleanup.ts',
   },
   format: ['esm'],
   target: 'node18',
