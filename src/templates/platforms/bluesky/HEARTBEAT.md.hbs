@@ -1,6 +1,7 @@
 # HEARTBEAT.md - Bluesky Agent
 
 Read every heartbeat: `limits.json`, `schedule.json`, `BROWSER-core.md`. Other BROWSER-*.md on-demand per task.
+🚨 **NEVER write your own browser JavaScript.** The BROWSER-*.md files contain exact, tested evaluate functions for every action (extract, click, type, navigate, like). Copy-paste them verbatim. Do NOT improvise selectors, write custom querySelectorAll, or modify the provided JS. If a function does not exist for what you need, skip the action.
 
 **CLI syntax:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}' 2>&1`
 - **evaluate:** `curl -s -X POST .../evaluate -d '{"fn":"async () => { ... }"}'`

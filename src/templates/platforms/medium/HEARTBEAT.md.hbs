@@ -5,6 +5,7 @@
 - **open/close:** `curl -s -X POST .../open -d '{"url":"URL"}'` / `.../close`
 - 🚨 **Keep evaluate JS under 1000 chars.** If longer, split into 2 evaluates. The CLI truncates/breaks JS over ~1500 chars.
 - **Editor:** BROWSER-core.md § 3 (inline Slate, NOT dialog). Split into 2 evaluates: (1) scroll+clear+type, (2) find Respond+click+verify.
+🚨 **NEVER write your own browser JavaScript.** The BROWSER-*.md files contain exact, tested evaluate functions for every action (extract, click, type, navigate, like). Copy-paste them verbatim. Do NOT improvise selectors, write custom querySelectorAll, or modify the provided JS. If a function does not exist for what you need, skip the action.
 - **500 errors after submit are NORMAL** — response IS saved. Verify via responses panel, not `body.innerText`.
 - **Submit:** `dispatchEvent(new MouseEvent('click'))` — never `.click()`.
 - **URLs:** Both `/@author/` and publication URLs. SSL error → skip.

@@ -11,6 +11,7 @@
 - If cached selector breaks: snapshot once to re-discover, reuse for rest of heartbeat
 
 **File loading:** BROWSER-core.md is ALWAYS read. Other BROWSER-*.md files are read ON-DEMAND only when needed.
+🚨 **NEVER write your own browser JavaScript.** The BROWSER-*.md files contain exact, tested evaluate functions for every action (extract, click, type, navigate, like). Copy-paste them verbatim. Do NOT improvise selectors, write custom querySelectorAll, or modify the provided JS. If a function does not exist for what you need, skip the action.
 
 ### Step Budget (MANDATORY)
 - **Target: <40 steps.** Budget: ~10 setup + ~10 per product.

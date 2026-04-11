@@ -10,6 +10,7 @@
 - **Clicks:** `dispatchEvent(new MouseEvent('click', { bubbles: true }))` — NOT `.click()`
 - **Comments:** Navigate to `{post_url}/comments` — do NOT click "Comments" button (destroys context)
 - **File loading:** BROWSER-core.md always. Other BROWSER-*.md on-demand per task type.
+🚨 **NEVER write your own browser JavaScript.** The BROWSER-*.md files contain exact, tested evaluate functions for every action (extract, click, type, navigate, like). Copy-paste them verbatim. Do NOT improvise selectors, write custom querySelectorAll, or modify the provided JS. If a function does not exist for what you need, skip the action.
 
 ## Decision Tree
 
