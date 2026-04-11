@@ -10,7 +10,7 @@ import * as log from '../util/logger.js';
 
 // Browser profiles are now managed directly by OpenTwins.
 // Chrome is launched with --remote-debugging-port and --user-data-dir.
-// No external dependencies (OpenClaw) required.
+// Chrome is managed directly via CDP - no external dependencies.
 
 const PLATFORM_LOGIN_URLS: Record<string, string> = {
   linkedin: 'https://www.linkedin.com/login',

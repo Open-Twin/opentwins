@@ -4,7 +4,7 @@
 
 ## Overview
 
-OpenTwins is a Node.js CLI tool that deploys AI-powered agents across 10 social media platforms. Each agent uses Claude (via Claude Code CLI) as its AI brain and OpenClaw for browser automation. Agents engage authentically - commenting, posting, reacting and building connections - using the user's configured identity, voice and content strategy.
+OpenTwins is a Node.js CLI tool that deploys AI-powered agents across 10 social media platforms. Each agent uses Claude (via Claude Code CLI) as its AI brain with built-in Chrome CDP browser automation. Agents engage authentically - commenting, posting, reacting and building connections - using the user's configured identity, voice and content strategy.
 
 The tool runs entirely on the user's machine. No cloud service is involved. Credentials and session cookies stay local.
 
@@ -38,7 +38,7 @@ The tool runs entirely on the user's machine. No cloud service is involved. Cred
 1. Scheduler triggers agent heartbeat (hourly during active hours)
 2. `runClaudeAgent()` spawns `claude -p` with the agent's HEARTBEAT.md prompt
 3. Claude reads the schedule, picks the current task, and executes it
-4. Browser automation via `openclaw browser` CLI commands (open, navigate, evaluate, click)
+4. Browser automation via `opentwins browser` CLI commands (open, navigate, evaluate, click)
 5. Agent writes results to memory files and updates limits.json
 6. Session JSONL is saved to `~/.claude/projects/` for activity tracking
 
@@ -92,7 +92,7 @@ Served at localhost:3847 via `opentwins ui` or `opentwins start --ui`.
 **Agents** - Per-agent management
 - Hero panel with run/stop controls, status badge
 - Quick stats: today's actions, tasks done, last run, workspace status
-- Browser setup button (launches Chrome via OpenClaw for login)
+- Browser setup button (launches Chrome for login)
 - Limits with progress bars (daily/weekly, editable)
 - Behavior tuning: style mix bars, parameters
 - Today's schedule with task progress
@@ -131,7 +131,7 @@ Served at localhost:3847 via `opentwins ui` or `opentwins start --ui`.
 
 ### Health monitoring
 - Always-visible status pills in top nav bar
-- OpenClaw gateway: probes localhost health endpoint every 20s
+- Browser health: checks Chrome CDP ports for active profiles
 - Claude status: fetches status.claude.com API, cached 60s server-side
 - When gateway is down: agent actions disabled, warning banner shown
 
@@ -158,7 +158,6 @@ opentwins logs <platform>   - view today's activity log
 
 - Node.js 18+
 - Claude Code CLI (`npm install -g @anthropic-ai/claude-code`)
-- OpenClaw CLI (`npm install -g openclaw`) with gateway running
 - Claude Code subscription or Anthropic API key
 
 ## Links

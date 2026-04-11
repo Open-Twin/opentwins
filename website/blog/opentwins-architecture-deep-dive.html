@@ -87,7 +87,7 @@
         "name": "How does OpenTwins work?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "OpenTwins is a Node.js application that runs locally and coordinates three components: Claude (an AI model) for decision-making and content generation, a browser automation layer (OpenClaw) for platform interaction, and a scheduler that determines when agents run. Each platform gets its own agent running a loop of feed scanning, post scoring, comment generation, browser-based execution and action logging."
+          "text": "OpenTwins is a Node.js application that runs locally and coordinates three components: Claude (an AI model) for decision-making and content generation, a browser automation layer (Chrome CDP) for platform interaction, and a scheduler that determines when agents run. Each platform gets its own agent running a loop of feed scanning, post scoring, comment generation, browser-based execution and action logging."
         }
       },
       {
@@ -180,7 +180,7 @@
         <ul style="margin: 0; padding-left: 1.25rem; color: #cbd5e1; font-size: 0.95rem; line-height: 1.8;">
           <li>OpenTwins is an open-source Node.js application that orchestrates AI-powered social media engagement using Claude, browser automation and a configurable scheduler.</li>
           <li>Each platform gets its own agent instance running a loop of feed scanning, post scoring, comment generation, browser execution and action logging.</li>
-          <li>Browser automation uses OpenClaw with semantic element targeting rather than fragile CSS selectors, making it resilient to platform UI changes.</li>
+          <li>Browser automation uses Chrome CDP with semantic element targeting rather than fragile CSS selectors, making it resilient to platform UI changes.</li>
           <li>The identity system builds a voice profile from 10-20 real writing samples, capturing vocabulary, sentence structure, tone and opinions.</li>
           <li>Typical daily API costs range from $1-3 for moderate activity across 3-5 platforms, using Haiku for scoring and Sonnet for content generation.</li>
         </ul>
@@ -227,7 +227,7 @@
 │       │                      │           │
 │  ┌────▼──────┐        ┌─────▼────────┐  │
 │  │  Browser  │        │   Claude     │  │
-│  │  (OpenClaw)│       │   (API/CLI)  │  │
+│  │  (Chrome CDP)│       │   (API/CLI)  │  │
 │  └───────────┘        └──────────────┘  │
 └─────────────────────────────────────────┘</code></pre>
 
@@ -266,9 +266,9 @@
 
         <h2 id="browser-automation">Browser Automation Layer</h2>
 
-        <p>OpenTwins uses <a href="https://github.com/anthropics/openclaw">OpenClaw</a> for browser automation. OpenClaw is an open-source browser control library built on Chromium that provides a higher-level API than raw Playwright or Puppeteer. This is a key architectural difference from tools like <a href="https://expandi.io" target="_blank" rel="noopener noreferrer">Expandi</a> and <a href="https://phantombuster.com" target="_blank" rel="noopener noreferrer">PhantomBuster</a>, which rely on API-based methods that carry higher detection and account suspension risk.</p>
+        <p>OpenTwins uses <a href="https://developer.chrome.com/docs/devtools/protocol">Chrome CDP</a> for browser automation. Chrome CDP is an open-source browser control library built on Chromium that provides a higher-level API than raw Playwright or Puppeteer. This is a key architectural difference from tools like <a href="https://expandi.io" target="_blank" rel="noopener noreferrer">Expandi</a> and <a href="https://phantombuster.com" target="_blank" rel="noopener noreferrer">PhantomBuster</a>, which rely on API-based methods that carry higher detection and account suspension risk.</p>
 
-        <p>The key difference between OpenClaw and traditional browser automation is the abstraction level. Instead of targeting specific CSS selectors (which break whenever a platform updates their UI), OpenClaw uses a combination of visual recognition and DOM analysis to interact with elements semantically. "Find the comment input field" rather than "find element with class .comment-box-v2__input".</p>
+        <p>The key difference between Chrome CDP and traditional browser automation is the abstraction level. Instead of targeting specific CSS selectors (which break whenever a platform updates their UI), Chrome CDP uses a combination of visual recognition and DOM analysis to interact with elements semantically. "Find the comment input field" rather than "find element with class .comment-box-v2__input".</p>
 
         <h3>Session Management</h3>
 

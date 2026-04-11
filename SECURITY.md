@@ -26,7 +26,7 @@ We will acknowledge your report within 48 hours and aim to release a fix within 
 OpenTwins manages browser sessions and API tokens. Keep in mind:
 
 - **Config file** (`~/.opentwins/config.json`) may contain API keys. It is excluded from git by default.
-- **Browser profiles** store login sessions. Treat `~/.openclaw/` as sensitive.
+- **Browser profiles** store login sessions. Treat `~/.opentwins/chrome-profiles/` as sensitive.
 - **Claude tokens** are stored in config. Never commit config files to version control.
 - **Agent workspaces** may contain generated content. Review before sharing.
 
