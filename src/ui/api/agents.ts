@@ -235,7 +235,7 @@ export async function handleRunAgent(req: Request, res: Response): Promise<void>
 
 // ── POST /api/agents/:platform/stop ───────────────────────────
 
-export function handleStopAgent(req: Request, res: Response): void {
+export async function handleStopAgent(req: Request, res: Response): Promise<void> {
   const platform = req.params.platform as string;
   const lockFile = getLockFile(platform);
 
@@ -262,19 +262,22 @@ export function handleStopAgent(req: Request, res: Response): void {
       try {
         process.kill(pid, 0); // test if alive
         process.kill(pid, 'SIGTERM');
-        res.json({ ok: true, message: `Sent stop signal to ${platform} agent (PID ${pid})` });
       } catch {
         // Process already dead, clean up lock
         unlinkSync(lockFile);
-        res.json({ ok: true, message: 'Agent already stopped, cleared stale lock' });
       }
     } catch {
       try { unlinkSync(lockFile); } catch {}
-      res.json({ ok: true, message: 'Cleared lock' });
     }
-  } else {
-    res.json({ ok: true, message: 'Agent stop tracked' });
   }
+
+  // Stop the browser for this platform
+  try {
+    const { stopChrome } = await import('../../browser/chrome.js');
+    stopChrome(`ot-${platform}`);
+  } catch { /* best effort */ }
+
+  res.json({ ok: true, message: `Stopped ${platform} agent and browser` });
 }
 
 // ── PUT /api/agents/:platform/limits ──────────────────────────
