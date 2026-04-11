@@ -443,17 +443,17 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
   const fullProfileUrl = profileUrl(platform, agent.handle);
 
   return (
-    <div className="space-y-6 animate-fade-up">
+    <div className="space-y-4 animate-fade-up">
       {/* Agent hero panel */}
       <div className="panel noise" style={{
         background: `linear-gradient(135deg, var(--c-panel) 0%, var(--c-panel) 70%, ${color}08 100%)`,
       }}>
-        <div className="p-6">
+        <div className="p-5">
           <div className="flex items-start justify-between gap-6 flex-wrap">
             {/* Identity */}
             <div className="flex items-start gap-4 min-w-0 flex-1">
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                 style={{
                   background: `${color}15`,
                   border: `1px solid ${color}30`,
@@ -536,7 +536,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
           </div>
 
           {/* Quick stats row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5" style={{ borderTop: '1px solid var(--c-border-dim)' }}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4" style={{ borderTop: '1px solid var(--c-border-dim)' }}>
             <HeroStat
               label="Today's actions"
               value={dailyLimitsTotal}
@@ -656,7 +656,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
               )}
             </div>
           </div>
-          <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
             <LimitGroup
               title="Daily"
               limits={agent.limits.daily}
@@ -701,11 +701,11 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
               )}
             </div>
           </div>
-          <div className="p-5">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="p-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Style Ratios */}
               <div>
-                <div className="mono text-[14px] uppercase tracking-wider mb-3" style={{ color: 'var(--c-text-muted)' }}>Reply Style Mix</div>
+                <div className="mono text-[14px] uppercase tracking-wider mb-2" style={{ color: 'var(--c-text-muted)' }}>Reply Style Mix</div>
                 <div className="space-y-3">
                   {(['questions', 'statements', 'reactions', 'trailing'] as const).map((key) => {
                     const labels: Record<string, string> = { questions: 'Questions', statements: 'Statements', reactions: 'Short reactions', trailing: 'Trailing thoughts' };
@@ -736,7 +736,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
                             <span className="mono text-[14px]" style={{ color: 'var(--c-text-muted)' }}>%</span>
                           </div>
                         </div>
-                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--c-border-dim)' }}>
+                        <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--c-border-dim)' }}>
                           <div className="h-full rounded-full transition-all duration-300" style={{ width: `${val}%`, background: color, opacity: 0.5 }} />
                         </div>
                       </div>
@@ -757,7 +757,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
 
               {/* Other behavior params */}
               <div>
-                <div className="mono text-[14px] uppercase tracking-wider mb-3" style={{ color: 'var(--c-text-muted)' }}>Parameters</div>
+                <div className="mono text-[14px] uppercase tracking-wider mb-2" style={{ color: 'var(--c-text-muted)' }}>Parameters</div>
                 <div className="space-y-3">
                   <BehaviorField
                     label="Disagree target"
@@ -790,7 +790,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
             {/* Platform-specific lists */}
             {(agent.behavior.subreddits !== undefined || agent.behavior.target_accounts !== undefined || agent.behavior.target_companies !== undefined || agent.behavior.hashtags !== undefined) && (
               <div className="pt-4 mt-4" style={{ borderTop: '1px solid var(--c-border-dim)' }}>
-                <div className="mono text-[14px] uppercase tracking-wider mb-3" style={{ color: 'var(--c-text-muted)' }}>Platform Content</div>
+                <div className="mono text-[14px] uppercase tracking-wider mb-2" style={{ color: 'var(--c-text-muted)' }}>Platform Content</div>
                 <div className="space-y-3">
                   {agent.behavior.subreddits !== undefined && (
                     <ListField
@@ -827,7 +827,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
       )}
 
       {/* Schedule + Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
         {/* Schedule — takes 3 columns */}
         <div className="panel noise lg:col-span-3">
           <div className="panel-header flex items-center justify-between">
@@ -838,7 +838,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
               </span>
             )}
           </div>
-          <div className="p-4">
+          <div className="p-3">
             {scheduleEntries.length > 0 ? (
               <>
                 {/* Day theme */}
@@ -867,9 +867,9 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
         {/* Insights — takes 2 columns */}
         <div className="panel noise lg:col-span-2">
           <div className="panel-header">// Insights</div>
-          <div className="p-4">
+          <div className="p-3">
             {agent.insights ? (
-              <pre className="mono text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--c-text-dim)' }}>
+              <pre className="mono text-[13px] leading-snug whitespace-pre-wrap" style={{ color: 'var(--c-text-dim)' }}>
                 {agent.insights}
               </pre>
             ) : (
@@ -1080,7 +1080,7 @@ function AgentFeed({ platform, running }: { platform: string; running: boolean }
               return (
                 <div
                   key={i}
-                  className="flex items-start gap-3 py-1.5 px-2 rounded transition-colors hover:bg-white/[0.02] cursor-pointer"
+                  className="flex items-start gap-3 py-1 px-2 rounded transition-colors hover:bg-white/[0.02] cursor-pointer"
                   onClick={() => {
                     const next = new Set(expanded);
                     if (isExpanded) next.delete(i); else next.add(i);
