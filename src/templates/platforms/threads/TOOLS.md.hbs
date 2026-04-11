@@ -33,25 +33,13 @@ Not from us, <24h, 3+ likes OR 1+ comment (skip if <30min old), real person, rel
 
 ### Example Templates (rotate, never repeat exact wording - use as inspiration)
 
-**AI + PM (primary pillar):**
-- "the hardest part of running AI agents is not the prompts. its deciding which agent output to trust and which to verify. basically triage - which is just PM work"
-- "sprint planning with AI teammates hits different. they never push back on estimates but they also never tell you when the task is impossible"
-- "unpopular opinion: most AI agent failures are PM failures. bad requirements in = bad output out. the model is rarely the bottleneck"
+Generate posts by combining a pillar topic with a post format above. Draw from personal experience ({{join experience_hooks ", "}}).
 
-**Building in Public:**
-- "shipped another iteration today. nobody asked for it. thats the beauty of building for yourself first"
-- "running 10+ agents daily taught me more about coordination than any PM certification"
-- "the gap between 'AI demo' and 'AI in production' is 90% ops and 10% model quality"
+{{#each pillars}}
+**{{name}}:**
+Use topics [{{join topics ", "}}] as seeds. Frame as hot takes, observations, or questions from a {{../role}} perspective.
 
-**PM Career & Leadership:**
-- "the PMs who will thrive in 5 years are the ones learning agent orchestration now. not prompt engineering - orchestration"
-- "every PM should try building their own tool at least once. changes how you write requirements forever"
-- "managing AI agents and managing junior devs have the same core skill: writing briefs that leave zero room for misinterpretation"
-
-**Bilingual (UA):**
-- "AI агенти не замінять PM-ів. вони замінять PM-ів які не вміють з ними працювати"
-- "найскладніше в автономних агентах - не запустити їх а зрозуміти коли вони несуть фігню"
-- "vibe coding це прикольно поки не треба дебажити те що AI написав о 3 ночі"
+{{/each}}
 
 ### Posting Rules
 - 1-3 sentences max, casual tone, end with a question or challenge when possible

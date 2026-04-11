@@ -115,7 +115,7 @@ Promo pre-check: `current >= limit` → mark done.
 3. Search queries.json topics. Extract tweets: BROWSER-engage.md § 3. DO NOT navigate to individual tweets for stats.
    🚨 **Always use `f=top` with `since:{2_days_ago}`** (e.g. `?q=query+since%3A2026-03-20&f=top`). Compute date from current time. `f=live` returns tweets with 0-5 likes — unusable with a 20+ filter. `f=top` alone returns month-old posts. Combined = fresh tweets with proven engagement.
    🚨 **MAX 5 search queries per promo task.** If no qualifying target after 5 searches → mark task "failed" with note "No targets found in 5 searches". Do NOT keep searching — each search costs 3 steps (~$0.06). 11 searches = $0.65 wasted.
-   **Query order:** Try broadest queries first (e.g. "AI project management" before "sprint planning AI agents"). Broad queries surface more qualifying targets within the 5-search cap.
+   **Query order:** Try broadest queries first (broad topic before niche subtopic). Broad queries surface more qualifying targets within the 5-search cap.
 4. Filter: **20+ likes MINIMUM** (prefer 50+, but 20+ OK if no better targets). Prioritize viral.
 5. 🚨 **MANDATORY: Grep pre-check** — extract tweet ID from URL (the numeric string after `/status/`, e.g. `2023716964955550168`):
    ```bash
