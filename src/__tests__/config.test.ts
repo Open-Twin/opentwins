@@ -97,6 +97,61 @@ describe('Config Schema Validation', () => {
     };
     expect(() => OpenTwinsConfigSchema.parse(invalid)).toThrow();
   });
+
+  it('rejects heartbeat_interval_minutes below the 15-minute floor', () => {
+    const invalid = {
+      ...VALID_CONFIG,
+      platforms: [{ ...VALID_CONFIG.platforms[0], heartbeat_interval_minutes: 10 }],
+    };
+    expect(() => OpenTwinsConfigSchema.parse(invalid)).toThrow();
+  });
+
+  it('rejects heartbeat_interval_minutes above the 480-minute ceiling', () => {
+    const invalid = {
+      ...VALID_CONFIG,
+      platforms: [{ ...VALID_CONFIG.platforms[0], heartbeat_interval_minutes: 999 }],
+    };
+    expect(() => OpenTwinsConfigSchema.parse(invalid)).toThrow();
+  });
+
+  it('rejects a non-URL profile_url', () => {
+    const invalid = {
+      ...VALID_CONFIG,
+      platforms: [{ ...VALID_CONFIG.platforms[0], profile_url: 'not a url' }],
+    };
+    expect(() => OpenTwinsConfigSchema.parse(invalid)).toThrow();
+  });
+
+  it('rejects a zero or negative limit', () => {
+    const invalid = {
+      ...VALID_CONFIG,
+      platforms: [{
+        ...VALID_CONFIG.platforms[0],
+        limits: { daily: { comments: { limit: 0 } } },
+      }],
+    };
+    expect(() => OpenTwinsConfigSchema.parse(invalid)).toThrow();
+  });
+
+  it('rejects active_hours outside 0..23', () => {
+    const invalid = { ...VALID_CONFIG, active_hours: { start: -1, end: 23 } };
+    expect(() => OpenTwinsConfigSchema.parse(invalid)).toThrow();
+    const invalid2 = { ...VALID_CONFIG, active_hours: { start: 0, end: 24 } };
+    expect(() => OpenTwinsConfigSchema.parse(invalid2)).toThrow();
+  });
+
+  it('rejects empty pillar topics array', () => {
+    const invalid = {
+      ...VALID_CONFIG,
+      pillars: [{ name: 'P', topics: [], mention_templates: [], target_percentage: 0 }],
+    };
+    expect(() => OpenTwinsConfigSchema.parse(invalid)).toThrow();
+  });
+
+  it('rejects an out-of-range pipeline_start_hour', () => {
+    const invalid = { ...VALID_CONFIG, pipeline_start_hour: 25 };
+    expect(() => OpenTwinsConfigSchema.parse(invalid)).toThrow();
+  });
 });
 
 describe('Config Loader', () => {

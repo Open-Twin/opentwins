@@ -5,6 +5,9 @@ node_modules/
 dist/
 src/ui/client/dist/
 
+# Test coverage
+coverage/
+
 # Environment and secrets
 .env
 .env.*
