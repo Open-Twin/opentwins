@@ -1,10 +1,18 @@
 import type { Request, Response } from 'express';
-import { launchChrome, stopChrome } from '../../browser/chrome.js';
+import { launchChrome, stopChrome, isPortInUse, getProfilePort } from '../../browser/chrome.js';
 import { openTab, navigateTo, closeTab, evaluate, clickElement, snapshot, getTabInfo } from '../../browser/cdp.js';
 
 // ── Browser control API ──────────────────────────────────────
 // Used by agent templates via curl to control Chrome.
 // Each handler wraps a cdp.ts/chrome.ts function.
+
+// Auto-start Chrome if not running. Called by open/navigate/evaluate/click/snapshot.
+async function ensureChrome(profile: string): Promise<void> {
+  const port = getProfilePort(profile);
+  if (!isPortInUse(port)) {
+    await launchChrome(profile);
+  }
+}
 
 export async function handleBrowserStart(req: Request, res: Response): Promise<void> {
   const profile = req.params.profile;
@@ -41,6 +49,7 @@ export async function handleBrowserOpen(req: Request, res: Response): Promise<vo
   const profile = req.params.profile;
   const url = req.body?.url || 'about:blank';
   try {
+    await ensureChrome(profile);
     const result = JSON.parse(await openTab(profile, url));
     res.json(result);
   } catch (err) {
@@ -53,6 +62,7 @@ export async function handleBrowserNavigate(req: Request, res: Response): Promis
   const url = req.body?.url;
   if (!url) { res.status(400).json({ error: 'url is required' }); return; }
   try {
+    await ensureChrome(profile);
     const result = JSON.parse(await navigateTo(profile, url));
     res.json(result);
   } catch (err) {
@@ -76,6 +86,7 @@ export async function handleBrowserEvaluate(req: Request, res: Response): Promis
   const fn = req.body?.fn;
   if (!fn) { res.status(400).json({ error: 'fn is required' }); return; }
   try {
+    await ensureChrome(profile);
     const result = JSON.parse(await evaluate(profile, fn));
     res.json(result);
   } catch (err) {
@@ -88,6 +99,7 @@ export async function handleBrowserClick(req: Request, res: Response): Promise<v
   const selector = req.body?.selector;
   if (!selector) { res.status(400).json({ error: 'selector is required' }); return; }
   try {
+    await ensureChrome(profile);
     const result = JSON.parse(await clickElement(profile, selector));
     res.json(result);
   } catch (err) {
@@ -99,6 +111,7 @@ export async function handleBrowserSnapshot(req: Request, res: Response): Promis
   const profile = req.params.profile;
   const { selector, compact, interactive, depth } = req.body || {};
   try {
+    await ensureChrome(profile);
     const result = JSON.parse(await snapshot(profile, selector, {
       compact: !!compact,
       interactive: !!interactive,
