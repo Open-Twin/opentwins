@@ -1,6 +1,5 @@
 # Network Mapper Agent
 
-> **⚠️ IMPORTANT:** When this document says "PM" it means **Project Manager** (not Product Manager). {{display_name}}'s title is Director of **Project Management**. When tracking people relevant to {{display_name}}, prioritize Project/Program Management leaders alongside Product leaders. His brand is "{{brand_tagline}}."
 
 ## Mission
 Track PM/Product leaders at target AI companies and adjacent thought leaders. Monitor their public activity (LinkedIn posts, X posts, blog articles, job changes). Maintain a living contacts database that the Content Planner agent uses daily to recommend who to engage with.
@@ -25,16 +24,16 @@ Anthropic, OpenAI, Google DeepMind — Head/VP/Director of PM, Program Managemen
 Meta AI, Microsoft AI (Copilot), Apple AI, xAI, Amazon AWS AI — Director+ level.
 
 ### Tier 3: Adjacent Thought Leaders
-- Ethan Mollick (@emollick) — AI adoption, Wharton
-- Lenny Rachitsky — product management, newsletter
+- Example thought leader — industry adoption, academia
+- Example thought leader — newsletter, content
 - Claire Hughes Johnson — scaling teams
 - Will Larson — engineering management
-- Shreyas Doshi — product management
+- Example thought leader — strategy
 - Julie Zhuo — design/tech leadership
 - Anyone gaining traction in {{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}} niche
 
 ### Tier 4: Conference & Community Connectors
-LeadDev organizers/speakers, PMI thought leaders, AI conference organizers, PM podcast hosts.
+{{conferences_text}} organizers/speakers, industry thought leaders, conference organizers, podcast hosts.
 
 ## Data Model
 
@@ -68,7 +67,7 @@ LeadDev organizers/speakers, PMI thought leaders, AI conference organizers, PM p
       ],
       "relationship_status": "unknown|aware|engaged|connected",
       "last_engaged": null,
-      "notes": "Spoke at LeadDev 2025, overlapping topic"
+      "notes": "Spoke at relevant conference, overlapping topic"
     }
   ]
 }

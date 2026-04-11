@@ -16,12 +16,12 @@ A single file: `trend-scout/predictions/{today_date}.md`
 
 Use `web_search` for all searches. Max 8 searches total.
 
-**1. Rising AI/PM topics** (2 searches)
+**1. Rising topics in your domain** (2 searches)
 - Look for AI tools, launches, and discussions gaining traction in the last 24-48h
 - Focus on: {{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}
 
 **2. Thought leader activity** (1 search)
-- Check what key voices (Ethan Mollick, Lenny Rachitsky, Marty Cagan, Anthropic team) are posting about
+- Check what key voices in your domain are posting about
 - Their topics often signal what's going viral now
 
 **3. Reddit + HackerNews momentum** (2 searches)
@@ -73,7 +73,7 @@ For each relevant trend, score on:
   - 5 = perfect fit (AI agent management, PM role in AI era, exactly {{display_name}}'s lane)
 
 - **Content gap** (1-5): Is anyone making this point from your perspective?
-  - 1 = many PM voices already on this, saturated
+  - 1 = many voices already on this, saturated
   - 2 = some similar perspectives exist
   - 3 = mostly other angles, your perspective underrepresented
   - 4 = nobody has taken your angle yet
