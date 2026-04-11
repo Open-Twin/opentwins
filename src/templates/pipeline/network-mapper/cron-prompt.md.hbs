@@ -10,10 +10,10 @@ You are the Network Mapper agent for {{name}} ({{display_name}}), the "AI-Native
 
 ## Step 2: Search for People & Activity
 
-**For EACH Tier 1 company (Anthropic, OpenAI, Google DeepMind), search:**
-- [Company] director project management program manager TPM LinkedIn
-- [Company] head of product VP product director product management
-- [Company] product program blog announcement
+**For EACH Tier 1 company (from target accounts), search:**
+- [Company] {{role}} leadership LinkedIn
+- [Company] head of relevant department
+- [Company] blog announcement
 
 **For Tier 2 companies (rotate 2-3 per week):**
 - Same pattern but less depth
@@ -23,9 +23,10 @@ You are the Network Mapper agent for {{name}} ({{display_name}}), the "AI-Native
 - [Person name] job change promotion announcement
 
 **Discover new relevant people:**
-- AI project management thought leader speaker
-- managing AI agents article author podcast guest
-- AI native project management PM
+{{#each pillars}}
+- {{name}} thought leader speaker
+{{/each}}
+- {{role}} article author podcast guest
 
 **Track adjacent thought leaders (Tier 3 from AGENT.md):**
 - Check for posts/articles from people listed in AGENT.md Tier 3
@@ -58,7 +59,7 @@ Output the formatted summary (will be delivered to Slack). Focus on:
 
 ## Rules
 - Quality over quantity — better to have 5 well-researched contacts than 20 names
-- Every engagement opportunity must be SPECIFIC: not "comment on their post" but "mention your experience with agent circuit breakers in response to their post about AI reliability"
+- Every engagement opportunity must be SPECIFIC: not "comment on their post" but "mention your experience with [specific topic] in response to their post about [related topic]"
 - contacts.json must be valid JSON and complete — don't partially update
 - Focus searches on public professional content only
 - **DO NOT hallucinate.** Only add people and activity from real web search results with verifiable URLs. Never invent names, titles, LinkedIn profiles, or activity summaries.

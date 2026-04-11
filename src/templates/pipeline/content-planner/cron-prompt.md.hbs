@@ -26,7 +26,7 @@ Read these (skip gracefully if file is empty/missing):
 2. Check intel briefing — is there a hot topic marked as 🔥 HOT OPPORTUNITY?
 3. If hot topic exists AND it's timely → override pillar balance, ride the trend
 4. Otherwise → choose the underrepresented pillar
-5. Within the chosen pillar, pick a SPECIFIC angle (not just "AI agents" but "why AI agents need circuit breakers after my trading bot lost money")
+5. Within the chosen pillar, pick a SPECIFIC angle (not just the pillar name but a concrete subtopic with a personal hook)
 
 **Engagement target selection:**
 1. Read contacts-active.json (already filtered to last 7 days)
@@ -74,14 +74,14 @@ For each agent workspace, write `queries.json` with search queries derived from 
 **Rules for query generation:**
 1. **5-8 queries per agent** — derived from the brief's key talking points, engagement targets, and intel
 2. **Platform-adapted** — same topic, different search phrasing per platform:
-   - Twitter: short phrases, can include account names ("AI native PM", "from:simonw MCP")
-   - Threads/Bluesky: **2-3 common words MAX** — these platforms have simple search with small user bases. No specific names (Andreessen), no multi-word phrases ("silver bullet excuse"), no jargon. Use broad terms real people use: "AI replacing jobs", "project manager career", "tech layoffs", "AI agents"
-   - Reddit: subreddit-aware ("AI project management" for r/projectmanagement)
-   - Dev.to/Medium: tag-focused ("ai", "project-management", "autonomous-agents")
-   - LinkedIn: professional phrasing ("AI project management leadership")
-   - Product Hunt: topic slugs ("artificial-intelligence", "developer-tools")
-   - Substack: newsletter-friendly, **3-4 words max** ("AI agents orchestration", "PM frameworks", "agentic AI governance")
-   - IH: builder-focused, **2-3 words max** — small community, simple search ("AI tools building", "PM side project", "AI agents")
+   - Twitter: short phrases, can include account names ("{{pillars.[0].name}}", "from:handle topic")
+   - Threads/Bluesky: **2-3 common words MAX** — these platforms have simple search with small user bases. No specific names, no multi-word phrases, no jargon. Use broad terms real people use.
+   - Reddit: subreddit-aware (match query to target subreddit's language)
+   - Dev.to/Medium: tag-focused (lowercase, hyphenated tags)
+   - LinkedIn: professional phrasing ("{{pillars.[0].name}} leadership")
+   - Product Hunt: topic slugs (lowercase, hyphenated)
+   - Substack: newsletter-friendly, **3-4 words max**
+   - IH: builder-focused, **2-3 words max** — small community, simple search
 3. **Include engagement target handles** from the brief — agents will search for their posts
 4. **Include 3-5 hashtags** from the brief's Hashtags section
 5. **All queries are fresh and relevant** — no rotation needed, agents use any/all of them

@@ -2,7 +2,7 @@
 
 ## Mission
 
-Predict what topics will trend today in AI, tech, and project management. Scan current momentum signals across platforms, identify rising topics, and find the best PM/AI angles before anyone else writes about them.
+Predict what topics will trend today in your domain. Scan current momentum signals across platforms, identify rising topics, and find the best angles before anyone else writes about them.
 
 Your predictions feed into the Content Planner, which decides whether to ride a trend or stick with pillar-based content.
 
@@ -18,14 +18,14 @@ Use `web_search` for all searches. Max 8 searches total.
 
 **1. Rising AI/PM topics** (2 searches)
 - Look for AI tools, launches, and discussions gaining traction in the last 24-48h
-- Focus on: AI agents, AI coworkers, PM tools, automation, AI in teams
+- Focus on: {{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}
 
 **2. Thought leader activity** (1 search)
 - Check what key voices (Ethan Mollick, Lenny Rachitsky, Marty Cagan, Anthropic team) are posting about
 - Their topics often signal what's going viral now
 
 **3. Reddit + HackerNews momentum** (2 searches)
-- Rising discussions on AI, project management, automation, developer tools
+- Rising discussions on {{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}
 - HN front page topics signal LinkedIn/Twitter trends for today
 
 **4. Product Hunt launches** (1 search)
@@ -67,17 +67,17 @@ For each relevant trend, score on:
 
 - **PM angle strength** (1-5): How naturally does this connect to {{display_name}}'s expertise?
   - 1 = tangential stretch (pure developer tool, no management angle)
-  - 2 = weak connection (general AI news, PM angle requires forcing)
+  - 2 = weak connection (generic news, angle requires forcing)
   - 3 = decent connection (AI tool that PMs use, career topic)
-  - 4 = strong fit (AI agents, team management, PM workflows)
+  - 4 = strong fit (matches your pillars directly)
   - 5 = perfect fit (AI agent management, PM role in AI era, exactly {{display_name}}'s lane)
 
-- **Content gap** (1-5): Is anyone making this point from a PM perspective?
+- **Content gap** (1-5): Is anyone making this point from your perspective?
   - 1 = many PM voices already on this, saturated
-  - 2 = some PM perspectives exist
-  - 3 = mostly developer/founder angles, PM angle underrepresented
-  - 4 = nobody has taken the PM angle yet
-  - 5 = wide open — the PM angle is non-obvious and would be first-mover
+  - 2 = some similar perspectives exist
+  - 3 = mostly other angles, your perspective underrepresented
+  - 4 = nobody has taken your angle yet
+  - 5 = wide open — your angle is non-obvious and would be first-mover
 
 - **Timing** (1-5): Will this peak today?
   - 1 = already peaked days ago, dying down
@@ -86,7 +86,7 @@ For each relevant trend, score on:
   - 4 = rising fast, today is the sweet spot
   - 5 = event/launch happens today, guaranteed peak
 
-**Total score = Momentum + PM angle + Content gap + Timing**
+**Total score = Momentum + Brand angle + Content gap + Timing**
 
 Only include trends scoring 12+ (out of 20).
 

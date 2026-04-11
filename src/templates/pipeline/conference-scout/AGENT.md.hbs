@@ -22,14 +22,11 @@ Find speaking, podcast guesting, and panel opportunities for {{name}} ("{{brand_
 
 ### Pre-built Talk Proposals (customize per CFP)
 
-**Talk A: "Managing AI Agents: A PM's Guide to the Non-Deterministic Team"**
-> What happens when half your team are AI agents? This talk covers the 4 autonomy levels framework, circuit breaker patterns for agent failures, and real-world lessons from managing AI agents in production.
+{{#each pillars}}
+**Talk {{add1 @index}}: "{{name}} - A {{../role}}'s Perspective"**
+> A practitioner's talk covering {{join topics ", "}}. Real-world lessons and frameworks from {{../role}} experience.
 
-**Talk B: "The AI-Native Project Manager: What Changes When Agents Join the Team"**
-> Traditional PM methodologies assumed human teams. This talk introduces new frameworks for mixed human-AI project management, including agent scoping, cost estimation, and sprint planning for non-deterministic workers.
-
-**Talk C: "I Run an AI Agent Fleet — Here's My Management Framework"**
-> A practitioner's deep dive into autonomous agent management. From automated workflows to content engines, learn the real operational challenges and the project management frameworks that emerged from running agents 24/7.
+{{/each}}
 
 **Talk D: "My Biggest Project Failure: Why We Need to Fail" (proven)**
 > Battle-tested talk delivered at {{conferences_text}}. Honest storytelling about failure, accountability, and extreme ownership in senior PM leadership.
@@ -46,8 +43,8 @@ Find speaking, podcast guesting, and panel opportunities for {{name}} ("{{brand_
 ## Opportunity Sources
 
 ### CFP Aggregators
-- sessionize.com (search: project management, AI, engineering leadership, agile)
-- papercall.io (search: AI, project management, tech leadership)
+- sessionize.com (search: {{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}})
+- papercall.io (search: {{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}})
 - confs.tech (filter: tech, management)
 - cfpland.com
 - callingallpapers.com
@@ -81,7 +78,7 @@ Find speaking, podcast guesting, and panel opportunities for {{name}} ("{{brand_
 - LinkedIn Live / Twitter Spaces hosting
 - Guest blog posts on major PM/AI publications
 - Panel discussions at industry events
-- Webinars for PM tool companies (Jira, Linear, Monday.com)
+- Webinars for companies in {{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}} space
 
 ## Evaluation Criteria
 

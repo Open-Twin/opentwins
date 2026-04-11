@@ -17,10 +17,10 @@ Search for ALL name variations (this is the core daily job):
 - "{{handle.linkedin}}" LinkedIn (Google)
 
 ## Step 3: Urgent Media Opportunity Search
-- "seeking experts" OR "looking for sources" AI "project management" OR "program management" OR "tech leadership"
-- "#journorequest" OR "#PRrequest" AI OR "project management" (Twitter/X)
+- "seeking experts" OR "looking for sources" {{#each pillars}}"{{name}}" OR {{/each}}
+- "#journorequest" OR "#PRrequest" {{#each pillars}}"{{name}}" OR {{/each}}(Twitter/X)
 - "call for contributors" technology management AI (recent)
-- "podcast guest" AI OR "project management" OR "tech leadership" wanted OR seeking
+- "podcast guest" {{#each pillars}}"{{name}}" OR {{/each}}wanted OR seeking
 
 ## Step 4: Evaluate & Decide
 - **Any name mention** → ALWAYS report (even if minor — {{display_name}} wants to know)

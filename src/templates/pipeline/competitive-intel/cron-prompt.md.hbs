@@ -21,32 +21,31 @@ Do not skip any category.
 
 🚨 **STRICT 24-HOUR WINDOW.** The `time_range: "day"` parameter filters at the API level, but still verify publication dates in results. If nothing qualifies in a category, that category is empty — do NOT backfill with older content.
 
-**Thought leaders & content (who's posting about AI+PM):**
-- "AI project management" article
-- "managing AI agents" team management
-- "AI-native project manager" (is anyone else using {{display_name}}'s positioning?)
-- "future of project management" AI
+**Thought leaders & content (who's posting about our topics):**
+{{#each pillars}}
+- "{{name}}" article
+{{/each}}
+- "{{brand_tagline}}" (is anyone else using {{display_name}}'s positioning?)
 
-**AI company activity:**
-- Anthropic blog announcement
-- OpenAI blog announcement
-- Google DeepMind announcement
-- AI company project manager program manager hiring
+**Industry activity:**
+{{#each pillars}}
+- {{name}} news announcement
+{{/each}}
 
-**Broader AI signals (relevant to {{display_name}}'s brand):**
-- agentic AI enterprise workforce
-- AI replacing jobs automation workforce
-- AI agent orchestration multi-agent
+**Broader signals (relevant to {{display_name}}'s brand):**
+{{#each pillars}}
+- {{join topics " "}}
+{{/each}}
 
 **Trending topics & content gaps:** (use `topic: "general"`)
-- AI agents management (`include_domains: ["news.ycombinator.com"]`)
-- AI workflow automation
-- AI project management managing agents (`include_domains: ["reddit.com"]`)
+{{#each pillars}}
+- {{name}} (`include_domains: ["news.ycombinator.com"]`)
+{{/each}}
 
 **Tools landscape:** (use `topic: "general"`)
-- AI project management tool launched
-- AI agent management dashboard platform
-- AI management PM tool (`include_domains: ["producthunt.com"]`)
+{{#each pillars}}
+- {{name}} tool launched (`include_domains: ["producthunt.com"]`)
+{{/each}}
 
 ## Step 2b: Verify Top Findings
 For your top 3-5 findings, use `tavily_extract` on the source URL to confirm:

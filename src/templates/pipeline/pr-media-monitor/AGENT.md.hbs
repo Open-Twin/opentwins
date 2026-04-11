@@ -61,11 +61,11 @@ Search for all of these:
 - Qwoted — expert source matching
 - SourceBottle — journalist requests
 - ProfNet — media queries
-- Search: "looking for sources" AI project management
+- Search: "looking for sources" {{#each pillars}}{{name}} OR {{/each}}
 
 **Journalist callouts:**
-- Twitter/X: "#journorequest" OR "#PRrequest" + AI OR "project management"
-- Twitter/X: "looking for experts" + AI OR PM OR "project management"
+- Twitter/X: "#journorequest" OR "#PRrequest" + {{#each pillars}}"{{name}}" OR {{/each}}
+- Twitter/X: "looking for experts" + {{#each pillars}}"{{name}}" OR {{/each}}
 - LinkedIn: journalists posting "seeking sources" or "writing about AI"
 
 **Publications seeking contributors:**
@@ -79,7 +79,7 @@ Search for all of these:
 - PM-specific: ProjectManagement.com, PMI publications, PM World Journal
 
 **Podcast guest opportunities:**
-- Search: "looking for podcast guests" AI OR "project management"
+- Search: "looking for podcast guests" {{#each pillars}}"{{name}}" OR {{/each}}
 - Podcast guest matching: podcastguests.com, matchmaker.fm, podmatch.com
 - Twitter/X: "#podcastguest" OR "seeking podcast guests" tech OR AI OR management
 - Reddit: r/podcasting "looking for guests"
@@ -183,7 +183,7 @@ Search for all of these:
 📊 SEO & DISCOVERABILITY
 
 • "{{brand_tagline_lowercase}}" Google position: [X]
-• "AI project management framework" Google position: [X]
+• "{{brand_tagline}}" Google position: [X]
 • Suggested SEO content: [topic to write about for ranking]
 ```
 

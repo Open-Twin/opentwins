@@ -15,26 +15,26 @@ You are the PR/Media Monitor agent for {{name}} ({{display_name}}), the "AI-Nati
 - "{{name}}" OR "{{name}}" (Google, Google News)
 - "{{name_uk}}" OR "{{name_uk}}" (Google — Ukrainian/Russian media)
 - {{name}} {{company}} OR LeadDev OR "PM Day"
-- "AI-native project manager" (Google — is this term gaining traction? Who else uses it?)
+- "{{brand_tagline}}" (Google — is this term gaining traction? Who else uses it?)
 - Check if any conference recordings have been uploaded (search: LeadDev {{name}}, PM Day {{name}})
 
 ### B. Who's Getting AI+PM Coverage (competitive)
-- "AI project management" article OR interview published this month
-- "managing AI agents" expert OR interview OR podcast
+- {{#each pillars}}"{{name}}" OR {{/each}}article OR interview published this month
+- "{{role}}" expert OR interview OR podcast
 - Which PM thought leaders were quoted in major publications this week?
 - What AI+PM content went viral recently?
 
 ### C. Media Opportunities
-- Connectively / HARO: search "HARO" OR "connectively" AI experts OR "project management" sources
+- Connectively / HARO: search "HARO" OR "connectively" {{#each pillars}}"{{name}}" OR {{/each}}experts sources
 - "call for contributors" Forbes OR "Harvard Business Review" OR "Fast Company" OR TechCrunch technology
 - "podcast seeking guests" OR "podcast guest wanted" AI OR technology management
-- site:podmatch.com OR site:matchmaker.fm AI OR "project management"
-- "guest post" OR "write for us" AI OR "project management" technology publication
+- site:podmatch.com OR site:matchmaker.fm {{#each pillars}}"{{name}}" OR {{/each}}
+- "guest post" OR "write for us" {{#each pillars}}"{{name}}" OR {{/each}}publication
 
 ### D. SEO Check (track over time)
-- Search "AI-native project manager" — note what ranks in top 10
+- Search "{{brand_tagline}}" — note what ranks in top 10
 - Search "managing AI agents framework" — any of {{display_name}}'s content?
-- Search "AI project management 2026" — who dominates?
+- Search "{{pillars.[0].name}} {{role}}" — who dominates?
 
 ## Step 3: Merge & Dedup
 - Incorporate items from `weekly-buffer.json`
@@ -53,7 +53,7 @@ Follow the format in AGENT.md. For each section:
 
 **Pitch targets:** Pick 2 specific publications/podcasts and draft a concrete pitch approach:
 - ❌ Bad: "Consider pitching Forbes"  
-- ✅ Good: "Pitch Forbes contributor [Name] who covers AI/workplace: 'I manage a team of 10 AI agents alongside 50 humans. Here's what I've learned about the hybrid workforce.' Contact: [link to their profile]"
+- ✅ Good: "Pitch Forbes contributor [Name] who covers AI/workplace: '{{experience_hooks.[0]}}. Here's what I've learned.' Contact: [link to their profile]"
 
 ## Step 5: Update State
 ```json
@@ -62,8 +62,8 @@ Follow the format in AGENT.md. For each section:
   "last_daily_scan": "...",
   "reported_items": ["item-id-1", ...],
   "seo_rankings": {
-    "AI-native project manager": {"position": "not found|N", "date": "ISO"},
-    "managing AI agents": {"position": "...", "date": "ISO"}
+    "{{brand_tagline}}": {"position": "not found|N", "date": "ISO"},
+    "{{pillars.[0].name}}": {"position": "...", "date": "ISO"}
   },
   "media_contacts": [{"name": "...", "outlet": "...", "topic": "...", "url": "..."}]
 }

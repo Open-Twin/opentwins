@@ -17,21 +17,23 @@ Before reporting ANYTHING, check `state.json → reported_ids[]`.
 Use web_search for EACH of these (do not skip any):
 
 **CFP aggregators:**
-- "call for papers" 2026 "project management" OR "AI" OR "engineering leadership"
-- site:sessionize.com open CFP AI OR management OR leadership 2026
-- site:papercall.io AI OR "project management" OR "engineering leadership"
-- "CFP open" conference 2026 AI agents OR automation OR "tech leadership"
+{{#each pillars}}
+- "call for papers" 2026 "{{name}}"
+{{/each}}
+- site:sessionize.com open CFP {{#each pillars}}{{name}} OR {{/each}}2026
+- site:papercall.io {{#each pillars}}"{{name}}" OR {{/each}}2026
 
 **S-Tier conferences (check EACH by name):**
-- "LeadDev" 2026 "call for papers" OR CFP OR "submit a talk"
-- "QCon" 2026 CFP OR "call for speakers"
-- "PMI Global Summit" 2026 CFP OR speakers
-- "AI Engineer Summit" 2026 CFP OR "call for speakers"
+{{#each conference_mentions}}
+- "{{this}}" 2026 "call for papers" OR CFP OR "submit a talk"
+{{/each}}
 
 **Broader searches:**
 - "call for speakers" 2026 technology conference deadline
-- "seeking speakers" AI OR "project management" OR "engineering leadership" 2026
-- podcast "looking for guests" AI OR "project management" OR "tech leadership"
+{{#each pillars}}
+- "seeking speakers" "{{name}}" 2026
+{{/each}}
+- podcast "looking for guests" {{#each pillars}}"{{name}}" OR {{/each}}2026
 
 ## Step 4: Evaluate & Score
 For each NEW opportunity found, score using criteria in AGENT.md (audience fit, visibility, prestige, effort, timing). Only report score 3.5+.
