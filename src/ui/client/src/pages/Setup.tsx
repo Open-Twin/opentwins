@@ -954,7 +954,7 @@ function StepReview({ draft, onBack }: {
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-3 pt-2">
+      <div className="sticky bottom-0 flex items-center justify-between gap-3 pt-4 pb-4 -mx-6 px-6" style={{ background: 'linear-gradient(to top, var(--c-bg) 70%, transparent)' }}>
         <button
           onClick={onBack}
           disabled={submitting}
@@ -984,6 +984,8 @@ function StepReview({ draft, onBack }: {
           )}
         </button>
       </div>
+      {/* Spacer so sticky bar doesn't overlap content */}
+      <div className="h-20" />
     </div>
   );
 }
