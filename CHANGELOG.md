@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026.4.11] - 2026-04-11
+
+### Changed
+- Switched to calendar versioning (CalVer): YYYY.M.D
+- Templatized all SOUL and HEARTBEAT files - domain content now driven by config
+- Rebuilt all platform agent templates from reference repo
+- Added browser cleanup worker to Bree scheduler
+- Open-source repo setup: LICENSE, CONTRIBUTING, CI, branch protection
+
 ## [0.1.0] - 2026-04-10
 
 ### Added
