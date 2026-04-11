@@ -7,7 +7,7 @@
 Navigate directly to `{{handle}}.substack.com/publish/post` — creates a new draft immediately.
 
 ```
-exec opentwins browser --browser-profile {{browser_profile}} navigate "https://{{handle}}.substack.com/publish/post" 2>&1
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://{{handle}}.substack.com/publish/post"}' 2>&1
 ```
 
 🚨 **Do NOT use "Create" button on dashboard** — it does not reliably open the post editor.

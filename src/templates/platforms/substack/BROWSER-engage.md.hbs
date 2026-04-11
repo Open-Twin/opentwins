@@ -217,7 +217,7 @@ browser.act({
 The subscribe completes immediately on click. The redirect goes to a pledge page with 4 optional screens. Skip all of them by navigating back:
 
 ```
-exec opentwins browser --browser-profile {{browser_profile}} navigate "{post_url}" 2>&1
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"{post_url}"}' 2>&1
 ```
 
 Wait 2s, then verify no Subscribe button remains:

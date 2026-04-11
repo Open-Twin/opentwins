@@ -1,9 +1,9 @@
 # BROWSER-core.md - Bluesky Global Rules & Shared Patterns
 
 **Profile:** `{{browser_profile}}` on EVERY browser call.
-**CLI syntax:** `opentwins browser --browser-profile {{browser_profile}} <subcommand> ...` (global flag BEFORE subcommand).
-**Navigate:** `opentwins browser --browser-profile {{browser_profile}} navigate "https://bsky.app/..."` (URL is a positional arg, NOT `--url`).
-**Open:** `opentwins browser --browser-profile {{browser_profile}} open "https://bsky.app/..."` (same — positional arg).
+**CLI syntax:** `curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}'`
+**Navigate:** `curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://bsky.app/..."}'`
+**Open:** `curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://bsky.app/..."}'`
 
 **Snapshot rules:** Always include `selector`, `compact: true`, `interactive: true`, `depth: 3`.
 

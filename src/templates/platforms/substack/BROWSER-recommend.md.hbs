@@ -57,7 +57,7 @@ browser.act({
 
 **Step 0 — Navigate to recommendations dashboard:**
 ```
-exec opentwins browser --browser-profile {{browser_profile}} navigate "https://{{handle}}.substack.com/publish/recommendations" 2>&1
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://{{handle}}.substack.com/publish/recommendations"}' 2>&1
 ```
 
 **Step 1 — Open the form:**

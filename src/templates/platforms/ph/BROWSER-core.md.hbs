@@ -6,7 +6,7 @@ All evaluate/snapshot calls MUST include `profile: "{{browser_profile}}"`.
 - `evaluate()` for data extraction, text input, state checks
 - `snapshot()` ONLY before clicks. CLI flags are booleans — NO values:
   ```
-  opentwins browser snapshot --browser-profile {{browser_profile}} --selector "..." --compact --interactive --depth 6 --json
+  curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/snapshot -H 'Content-Type: application/json' -d '{"selector":"...","compact":true,"interactive":true,"depth":6}'
   ```
   ❌ `--compact true` / `--interactive true` — these fail ("too many arguments")
   ✅ `--compact --interactive` — correct boolean flag syntax
@@ -15,29 +15,29 @@ All evaluate/snapshot calls MUST include `profile: "{{browser_profile}}"`.
 - PH editor = TipTap/ProseMirror (`.tiptap.ProseMirror`). NEVER set `textContent`/`innerHTML`/`value` — use `execCommand('insertText')`
 - `click` takes ref as **positional argument**, not an option:
   ```
-  opentwins browser click --browser-profile {{browser_profile}} e1 --json
+  curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/click -H 'Content-Type: application/json' -d '{"selector":"e1"}'
   ```
   ❌ `click --ref e1` — fails ("unknown option --ref")
   ✅ `click e1` — correct positional argument
-- ❌ NEVER use `browser.act({ kind: "navigate" })` — "navigate" is NOT a valid kind. Use `opentwins browser open "URL"` via exec
+- ❌ NEVER use `browser.act({ kind: "navigate" })` — "navigate" is NOT a valid kind. Use `curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -d '{"url":"URL"}'`
 - ❌ NEVER use separate `exec sleep N` for page load waits — combine waits into the NEXT evaluate call using a leading `await new Promise(r => setTimeout(r, 3000));` or simply accept that the evaluate will run immediately (PH pages load fast)
 - `evaluate --fn` takes **inline code**, not a file path. Pass the function body directly:
   ```
-  opentwins browser evaluate --browser-profile {{browser_profile}} --fn 'function(){return document.title;}' --json
+  curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d '{"fn":"function(){return document.title;}"}'
   ```
   ❌ `--fn /tmp/script.js` — fails (reads literal string, not file)
   ❌ heredoc piped to `--fn` — fails ("Invalid regular expression flags")
   ✅ `--fn 'function(){...}'` — correct inline syntax
 - `open` for navigation, NOT `navigate`:
   ```
-  opentwins browser open --browser-profile {{browser_profile}} "https://example.com" --json
+  curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://example.com"}'
   ```
   ❌ `navigate --url "..."` — fails ("missing required argument 'url'")
   ✅ `open "URL"` — correct positional argument
 
 ## Recovery Rules
 
-- Browser timeout → close tab, reopen URL. If fails → `exec opentwins browser start --profile {{browser_profile}}`, wait 3s, retry once. NEVER use `browser.stop()`.
+- Browser timeout → close tab, reopen URL. If fails → `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/start`, wait 3s, retry once. NEVER use `browser.stop()`.
 - "matched N elements" error → snapshot selector too broad, use narrower selector
 - evaluate() unexpected data → 1 snapshot to inspect DOM, use discovered selector
 - Click fails after snapshot → retry snapshot with narrower selector, retry click

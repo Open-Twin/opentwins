@@ -1,6 +1,6 @@
 # HEARTBEAT.md - Medium Agent
 
-**CLI syntax:** `exec opentwins browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
+**CLI syntax:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}' 2>&1`
 - **evaluate:** `... evaluate --fn 'async () => { ... }' 2>&1` (JS after `--fn`)
 - **open/close:** `... open "URL" 2>&1` / `... close 2>&1`
 - 🚨 **Keep evaluate JS under 1000 chars.** If longer, split into 2 evaluates. The CLI truncates/breaks JS over ~1500 chars.
@@ -75,7 +75,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 
 ## § 2. Browser Startup (with retry)
 
-1. `exec opentwins browser --browser-profile {{browser_profile}} open "https://medium.com/me/notifications" 2>&1`
+1. `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://medium.com/me/notifications"}' 2>&1`
 2. If CDP error:
    - Wait 3s, retry once
    - Still fails -> skip all browser tasks, log error, return HEARTBEAT_OK

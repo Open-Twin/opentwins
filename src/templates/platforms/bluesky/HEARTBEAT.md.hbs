@@ -2,7 +2,7 @@
 
 Read every heartbeat: `limits.json`, `schedule.json`, `BROWSER-core.md`. Other BROWSER-*.md on-demand per task.
 
-**CLI syntax:** `exec opentwins browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
+**CLI syntax:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}' 2>&1`
 - **evaluate:** `... evaluate --fn 'async () => { ... }' 2>&1` (JS goes after `--fn`)
 - **open/navigate/close:** `... open "URL" 2>&1` / `... navigate "URL" 2>&1` / `... close 2>&1`
 - 🚨 **Tab reuse:** Use `open` ONLY for the FIRST page. Use `navigate` for ALL subsequent pages.
@@ -41,7 +41,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 
 ## 2. Browser Startup (with retry)
 
-1. `exec opentwins browser --browser-profile {{browser_profile}} open "https://bsky.app/notifications" 2>&1`
+1. `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://bsky.app/notifications"}' 2>&1`
 2. If CDP error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
 
 ## 3. Reply Check (MANDATORY FIRST)

@@ -1,6 +1,6 @@
 # HEARTBEAT.md - Dev.to Agent
 
-**CLI syntax:** `exec opentwins browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
+**CLI syntax:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}' 2>&1`
 - **evaluate:** `... evaluate --fn 'async () => { ... }' 2>&1` (JS after `--fn`)
 - **open/navigate/close:** `... open "URL" 2>&1` / `... navigate "URL" 2>&1` / `... close 2>&1`
 - 🚨 **Tab reuse:** Use `open` ONLY for the FIRST page. Use `navigate` for ALL subsequent pages. Opening new tabs wastes resources and causes close errors.
@@ -83,7 +83,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 
 ## 2. Browser Startup (with retry)
 
-1. `exec opentwins browser --browser-profile {{browser_profile}} open "https://dev.to/notifications/comments" 2>&1`
+1. `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://dev.to/notifications/comments"}' 2>&1`
 2. If CDP error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
 
 ---
@@ -262,7 +262,7 @@ Read PLAYBOOK.md -> "Memory Update"
 
 ## 7. Close Browser
 
-`exec opentwins browser --browser-profile {{browser_profile}} close 2>&1`
+`exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/close 2>&1`
 NEVER use `browser.stop` or `pkill`.
 
 ---
