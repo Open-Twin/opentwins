@@ -116,7 +116,7 @@
     body { background: #080b12; color: #e2e8f0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
     .font-mono { font-family: 'JetBrains Mono', monospace; }
     .nav-blur { backdrop-filter: blur(12px); background: rgba(8,11,18,0.85); }
-    .prose h2 { color: #fff; font-size: 1.5rem; font-weight: 700; margin-top: 2.5rem; margin-bottom: 1rem; }
+    .prose h2 { color: #fff; font-size: 1.6rem; font-weight: 700; margin-top: 3rem; margin-bottom: 1.25rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
     .prose h3 { color: #e2e8f0; font-size: 1.2rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; }
     .prose p { color: #94a3b8; line-height: 1.8; margin-bottom: 1.25rem; }
     .prose ul, .prose ol { color: #94a3b8; margin-bottom: 1.25rem; padding-left: 1.5rem; }
@@ -169,18 +169,18 @@
     </div>
   </nav>
 
-  <main class="pt-32 pb-24">
+  <main style="padding-top:10rem; padding-bottom:6rem;">
     <article class="max-w-3xl mx-auto px-6">
-      <header class="mb-12">
-        <div class="flex items-center gap-3 mb-4">
-          <a href="/blog/" class="font-mono text-xs text-teal-400/60 hover:text-teal-400 transition-colors">&larr; Blog</a>
-          <span class="text-slate-600">-</span>
-          <span class="font-mono text-xs text-slate-500">April 1, 2026</span>
-          <span class="text-slate-600">-</span>
-          <span class="font-mono text-xs text-slate-500">14 min read</span>
+      <header style="margin-bottom:3rem;">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+          <a href="/blog/" style="font-family:JetBrains Mono,monospace; font-size:12px; color:rgba(45,212,191,0.6); text-decoration:none;">&larr; Blog</a>
+          <span style="color:#475569;">·</span>
+          <span style="font-family:JetBrains Mono,monospace; font-size:12px; color:#64748b;">April 1, 2026</span>
+          <span style="color:#475569;">·</span>
+          <span style="font-family:JetBrains Mono,monospace; font-size:12px; color:#64748b;">14 min read</span>
         </div>
-        <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-6">How OpenTwins Works: Architecture Deep Dive</h1>
-        <p class="text-lg text-slate-400">A technical walkthrough of the systems behind OpenTwins. How agents decide what to engage with, how browser automation works and how everything connects.</p>
+        <h1 style="font-size:2.5rem; font-weight:800; line-height:1.15; margin-bottom:1.5rem; color:#fff;">How OpenTwins Works: Architecture Deep Dive</h1>
+        <p style="font-size:1.125rem; color:#94a3b8; line-height:1.7;">A technical walkthrough of the systems behind OpenTwins. How agents decide what to engage with, how browser automation works and how everything connects.</p>
       </header>
 
       <!-- Key Takeaways -->
@@ -195,9 +195,9 @@
         </ul>
       </div>
 
-      <div class="toc mb-12 p-6 rounded-xl bg-slate-800/20 border border-white/5">
-        <div class="font-mono text-xs uppercase tracking-[0.15em] text-slate-500 mb-4">Table of Contents</div>
-        <ol class="space-y-2 text-sm list-decimal list-inside">
+      <div class="toc" style="margin-bottom:3rem; padding:24px 28px; border-radius:12px; background:rgba(30,41,59,0.2); border:1px solid rgba(255,255,255,0.05);">
+        <div style="font-family:JetBrains Mono,monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.15em; color:#64748b; margin-bottom:16px;">Table of Contents</div>
+        <ol style="list-style:decimal; list-style-position:inside; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; font-size:14px;">
           <li><a href="#system-overview">System Overview</a></li>
           <li><a href="#agent-loop">The Agent Loop</a></li>
           <li><a href="#browser-automation">Browser Automation Layer</a></li>

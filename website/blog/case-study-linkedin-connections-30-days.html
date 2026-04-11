@@ -115,7 +115,7 @@
     body { background: #080b12; color: #e2e8f0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
     .font-mono { font-family: 'JetBrains Mono', monospace; }
     .nav-blur { backdrop-filter: blur(12px); background: rgba(8,11,18,0.85); }
-    .prose h2 { color: #fff; font-size: 1.5rem; font-weight: 700; margin-top: 2.5rem; margin-bottom: 1rem; }
+    .prose h2 { color: #fff; font-size: 1.6rem; font-weight: 700; margin-top: 3rem; margin-bottom: 1.25rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
     .prose h3 { color: #e2e8f0; font-size: 1.2rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; }
     .prose p { color: #94a3b8; line-height: 1.8; margin-bottom: 1.25rem; }
     .prose ul, .prose ol { color: #94a3b8; margin-bottom: 1.25rem; padding-left: 1.5rem; }
@@ -131,7 +131,7 @@
     .toc a { color: #64748b; text-decoration: none; transition: color 0.2s; }
     .toc a:hover { color: #2dd4bf; }
     .cta-box { background: rgba(45,212,191,0.05); border: 1px solid rgba(45,212,191,0.15); border-radius: 12px; }
-    .tldr-box { background: rgba(45,212,191,0.05); border: 1px solid rgba(45,212,191,0.12); border-radius: 12px; }
+    .tldr-box { background: rgba(45,212,191,0.04); border: 1px solid rgba(45,212,191,0.12); border-radius: 16px; padding: 28px 32px; }
     .metric-card { background: rgba(30,41,59,0.4); border: 1px solid rgba(45,212,191,0.1); border-radius: 8px; padding: 1rem; text-align: center; }
     .metric-card .number { font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 700; color: #2dd4bf; }
     .metric-card .label { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
@@ -172,24 +172,24 @@
     </div>
   </nav>
 
-  <main class="pt-32 pb-24">
+  <main style="padding-top:10rem; padding-bottom:6rem;">
     <article class="max-w-3xl mx-auto px-6">
-      <header class="mb-12">
-        <div class="flex items-center gap-3 mb-4">
-          <a href="/blog/" class="font-mono text-xs text-teal-400/60 hover:text-teal-400 transition-colors">&larr; Blog</a>
-          <span class="text-slate-600">-</span>
-          <span class="font-mono text-xs text-slate-500">April 9, 2026</span>
-          <span class="text-slate-600">-</span>
-          <span class="font-mono text-xs text-slate-500">14 min read</span>
+      <header style="margin-bottom:3rem;">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+          <a href="/blog/" style="font-family:JetBrains Mono,monospace; font-size:12px; color:rgba(45,212,191,0.6); text-decoration:none;">&larr; Blog</a>
+          <span style="color:#475569;">·</span>
+          <span style="font-family:JetBrains Mono,monospace; font-size:12px; color:#64748b;">April 9, 2026</span>
+          <span style="color:#475569;">·</span>
+          <span style="font-family:JetBrains Mono,monospace; font-size:12px; color:#64748b;">14 min read</span>
         </div>
-        <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-6">Case Study: From 0 to 1,000 LinkedIn Connections in 30 Days with OpenTwins</h1>
-        <p class="text-lg text-slate-400">A week-by-week breakdown of how a tech leader used OpenTwins to build a LinkedIn presence from scratch. Includes exact configuration settings, daily metrics and lessons learned.</p>
+        <h1 style="font-size:2.5rem; font-weight:800; line-height:1.15; margin-bottom:1.5rem; color:#fff;">Case Study: From 0 to 1,000 LinkedIn Connections in 30 Days with OpenTwins</h1>
+        <p style="font-size:1.125rem; color:#94a3b8; line-height:1.7;">A week-by-week breakdown of how a tech leader used OpenTwins to build a LinkedIn presence from scratch. Includes exact configuration settings, daily metrics and lessons learned.</p>
       </header>
 
       <!-- TL;DR / Key Takeaways -->
       <div class="tldr-box p-6 mb-10">
-        <div class="font-mono text-xs uppercase tracking-[0.15em] text-teal-400/80 mb-4">Key Takeaways</div>
-        <ul class="space-y-2 text-sm text-slate-300">
+        <div style="font-family:JetBrains Mono,monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.15em; color:rgba(45,212,191,0.8); margin-bottom:16px;">Key Takeaways</div>
+        <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; font-size:14px; color:#cbd5e1;">
           <li>- In a 30-day test, an OpenTwins user grew from 0 to 1,047 LinkedIn connections while posting 4 times per week and commenting on 8 posts per day.</li>
           <li>- The user spent 2.5 hours per week on LinkedIn with OpenTwins, compared to an estimated 8-10 hours for equivalent manual engagement.</li>
           <li>- Original posts averaged 6.8% engagement rate by week 4, more than double the LinkedIn average of 2-3%.</li>
@@ -218,9 +218,9 @@
         </div>
       </div>
 
-      <div class="toc mb-12 p-6 rounded-xl bg-slate-800/20 border border-white/5">
-        <div class="font-mono text-xs uppercase tracking-[0.15em] text-slate-500 mb-4">Table of Contents</div>
-        <ol class="space-y-2 text-sm list-decimal list-inside">
+      <div class="toc" style="margin-bottom:3rem; padding:24px 28px; border-radius:12px; background:rgba(30,41,59,0.2); border:1px solid rgba(255,255,255,0.05);">
+        <div style="font-family:JetBrains Mono,monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.15em; color:#64748b; margin-bottom:16px;">Table of Contents</div>
+        <ol style="list-style:decimal; list-style-position:inside; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; font-size:14px;">
           <li><a href="#background">Background: The Starting Point</a></li>
           <li><a href="#setup">OpenTwins Configuration and Setup</a></li>
           <li><a href="#week-1">Week 1: Foundation and Calibration</a></li>
