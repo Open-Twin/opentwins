@@ -175,7 +175,7 @@ export function summarizeSession(sessionFile: string, platform: string): Session
   if (events.length === 0) return null;
 
   const startedAt = events[0].ts || '';
-  const endedAt = events[events.length - 1].ts || startedAt;
+  const endedAt = events.findLast((e) => e.ts)?.ts || startedAt;
   const durationMs = startedAt && endedAt
     ? Math.max(0, new Date(endedAt).getTime() - new Date(startedAt).getTime())
     : 0;

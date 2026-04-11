@@ -146,7 +146,16 @@ export function handleGetAgent(req: Request, res: Response): void {
     },
     api_keys: platformConfig?.api_keys || {},
     requiredApiKeys: PLATFORM_API_KEYS[platform as keyof typeof PLATFORM_API_KEYS] || null,
-    lastRun: agentLogs[platform] || null,
+    lastRun: agentLogs[platform] || (() => {
+      // Fall back to last heartbeat file timestamp if server was restarted
+      const hbFile = getLastHeartbeatFile(platform);
+      if (!existsSync(hbFile)) return null;
+      try {
+        const ts = parseInt(readFileSync(hbFile, 'utf-8').trim());
+        if (!ts) return null;
+        return { output: '', startedAt: new Date(ts).toISOString(), completedAt: new Date(ts).toISOString(), exitCode: 0 };
+      } catch { return null; }
+    })(),
   });
 }
 

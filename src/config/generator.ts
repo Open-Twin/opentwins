@@ -307,10 +307,12 @@ export async function generateAgentFiles(config: OpenTwinsConfig): Promise<{ gen
       }
     }
 
-    // Write limits.json from config
+    // Write limits.json from config (only if it doesn't exist — preserve runtime counters)
     const limitsPath = join(outputDir, 'limits.json');
-    writeFileSync(limitsPath, JSON.stringify(buildLimitsJson(platformAccount), null, 2) + '\n', 'utf-8');
-    generated.push(limitsPath);
+    if (!existsSync(limitsPath)) {
+      writeFileSync(limitsPath, JSON.stringify(buildLimitsJson(platformAccount), null, 2) + '\n', 'utf-8');
+      generated.push(limitsPath);
+    }
 
     // Create empty schedule.json
     const schedulePath = join(outputDir, 'schedule.json');
