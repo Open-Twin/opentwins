@@ -81,9 +81,6 @@ export function App() {
             <span className="text-sm font-semibold tracking-wide hidden sm:inline" style={{ color: 'var(--c-text)' }}>
               OPENTWINS
             </span>
-            <span className="mono text-[13px] px-2 py-0.5 rounded hidden lg:inline" style={{ color: 'var(--c-teal-dim)', background: 'var(--c-teal-glow)' }}>
-              v0.1.0
-            </span>
           </div>
 
           {/* Nav */}
