@@ -119,28 +119,7 @@
   </script>
 
   <link rel="stylesheet" href="/styles.css">
-  <style>
-    body { background: #080b12; color: #e2e8f0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-    .font-mono { font-family: 'JetBrains Mono', monospace; }
-    .nav-blur { backdrop-filter: blur(12px); background: rgba(8,11,18,0.85); }
-    .prose h2 { color: #fff; font-size: 1.6rem; font-weight: 700; margin-top: 3rem; margin-bottom: 1.25rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
-    .prose h3 { color: #e2e8f0; font-size: 1.2rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; }
-    .prose p { color: #94a3b8; line-height: 1.8; margin-bottom: 1.25rem; }
-    .prose ul, .prose ol { color: #94a3b8; margin-bottom: 1.25rem; padding-left: 1.5rem; }
-    .prose li { margin-bottom: 0.5rem; line-height: 1.7; }
-    .prose a { color: #2dd4bf; text-decoration: underline; text-decoration-color: rgba(45,212,191,0.3); }
-    .prose a:hover { text-decoration-color: #2dd4bf; }
-    .prose strong { color: #e2e8f0; }
-    .prose code { font-family: 'JetBrains Mono', monospace; background: rgba(30,41,59,0.5); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: #2dd4bf; }
-    .prose pre { background: rgba(30,41,59,0.5); border: 1px solid rgba(45,212,191,0.1); border-radius: 8px; padding: 1rem 1.25rem; overflow-x: auto; margin-bottom: 1.5rem; }
-    .prose pre code { background: none; padding: 0; }
-    .prose blockquote { border-left: 3px solid rgba(45,212,191,0.3); padding-left: 1rem; margin: 1.5rem 0; }
-    .prose blockquote p { color: #cbd5e1; font-style: italic; }
-    .toc a { color: #64748b; text-decoration: none; transition: color 0.2s; }
-    .toc a:hover { color: #2dd4bf; }
-    .cta-box { background: rgba(45,212,191,0.05); border: 1px solid rgba(45,212,191,0.15); border-radius: 12px; }
-    .tldr-box { background: rgba(45,212,191,0.04); border: 1px solid rgba(45,212,191,0.12); border-radius: 16px; padding: 28px 32px; }
-  </style>
+  <link rel="stylesheet" href="/blog/article.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -177,24 +156,24 @@
     </div>
   </nav>
 
-  <main style="padding-top:10rem; padding-bottom:6rem;">
+  <main class="article-main">
     <article class="max-w-3xl mx-auto px-6">
-      <header style="margin-bottom:3rem;">
-        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
-          <a href="/blog/" style="font-family:JetBrains Mono,monospace; font-size:12px; color:rgba(45,212,191,0.6); text-decoration:none;">&larr; Blog</a>
-          <span style="color:#475569;">·</span>
-          <span style="font-family:JetBrains Mono,monospace; font-size:12px; color:#64748b;">April 9, 2026</span>
-          <span style="color:#475569;">·</span>
-          <span style="font-family:JetBrains Mono,monospace; font-size:12px; color:#64748b;">13 min read</span>
+      <header class="article-header" style="margin-bottom:3rem">
+        <div class="article-meta">
+          <a href="/blog/" class="back-link">&larr; Blog</a>
+          <span class="dot">·</span>
+          <span class="date">April 9, 2026</span>
+          <span class="dot">·</span>
+          <span class="date">13 min read</span>
         </div>
-        <h1 style="font-size:2.5rem; font-weight:800; line-height:1.15; margin-bottom:1.5rem; color:#fff;">The Ethical AI Twin: How OpenTwins Ensures Authenticity in Automated Engagement</h1>
-        <p style="font-size:1.125rem; color:#94a3b8; line-height:1.7;">The number one concern with AI social media automation is trust. Here is how OpenTwins approaches ethical engagement through voice calibration, behavioral guardrails and transparent design.</p>
+        <h1 class="article-title">The Ethical AI Twin: How OpenTwins Ensures Authenticity in Automated Engagement</h1>
+        <p class="article-subtitle">The number one concern with AI social media automation is trust. Here is how OpenTwins approaches ethical engagement through voice calibration, behavioral guardrails and transparent design.</p>
       </header>
 
       <!-- TL;DR / Key Takeaways -->
-      <div class="tldr-box p-6 mb-10">
-        <div style="font-family:JetBrains Mono,monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.15em; color:rgba(45,212,191,0.8); margin-bottom:16px;">Key Takeaways</div>
-        <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; font-size:14px; color:#cbd5e1;">
+      <div class="tldr-box">
+        <div class="label">Key Takeaways</div>
+        <ul class="">
           <li>- OpenTwins is an open-source tool that deploys AI agents to engage on social media platforms using the user's own voice and identity.</li>
           <li>- Authenticity is maintained through voice calibration, style variation, disagreement targets and configurable rate limits.</li>
           <li>- Unlike spam bots, OpenTwins uses real browser automation and generates original contextual responses - not templates.</li>
@@ -203,9 +182,9 @@
         </ul>
       </div>
 
-      <div class="toc" style="margin-bottom:3rem; padding:24px 28px; border-radius:12px; background:rgba(30,41,59,0.2); border:1px solid rgba(255,255,255,0.05);">
-        <div style="font-family:JetBrains Mono,monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.15em; color:#64748b; margin-bottom:16px;">Table of Contents</div>
-        <ol style="list-style:decimal; list-style-position:inside; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; font-size:14px;">
+      <div class="toc">
+        <div class="label">Table of Contents</div>
+        <ol class="">
           <li><a href="#what-is-opentwins">What Is OpenTwins?</a></li>
           <li><a href="#authenticity-problem">The Authenticity Problem in AI Automation</a></li>
           <li><a href="#voice-calibration">How Does OpenTwins Maintain Authenticity?</a></li>
