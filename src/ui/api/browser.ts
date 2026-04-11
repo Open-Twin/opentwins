@@ -24,7 +24,7 @@ async function ensureChrome(profile: string): Promise<void> {
 }
 
 export async function handleBrowserStart(req: Request, res: Response): Promise<void> {
-  const profile = req.params.profile;
+  const profile = req.params.profile as string;
   try {
     await ensureChrome(profile);
     res.json({ ok: true, profile });
@@ -34,7 +34,7 @@ export async function handleBrowserStart(req: Request, res: Response): Promise<v
 }
 
 export async function handleBrowserStop(req: Request, res: Response): Promise<void> {
-  const profile = req.params.profile;
+  const profile = req.params.profile as string;
   try {
     const stopped = stopChrome(profile);
     res.json({ ok: stopped, profile });
@@ -44,7 +44,7 @@ export async function handleBrowserStop(req: Request, res: Response): Promise<vo
 }
 
 export async function handleBrowserOpen(req: Request, res: Response): Promise<void> {
-  const profile = req.params.profile;
+  const profile = req.params.profile as string;
   const url = req.body?.url || 'about:blank';
   try {
     await ensureChrome(profile);
@@ -56,7 +56,7 @@ export async function handleBrowserOpen(req: Request, res: Response): Promise<vo
 }
 
 export async function handleBrowserNavigate(req: Request, res: Response): Promise<void> {
-  const profile = req.params.profile;
+  const profile = req.params.profile as string;
   const url = req.body?.url;
   if (!url) { res.status(400).json({ error: 'url is required' }); return; }
   try {
@@ -69,7 +69,7 @@ export async function handleBrowserNavigate(req: Request, res: Response): Promis
 }
 
 export async function handleBrowserClose(req: Request, res: Response): Promise<void> {
-  const profile = req.params.profile;
+  const profile = req.params.profile as string;
   const tabId = req.body?.tabId;
   try {
     const result = JSON.parse(await closeTab(profile, tabId));
@@ -80,7 +80,7 @@ export async function handleBrowserClose(req: Request, res: Response): Promise<v
 }
 
 export async function handleBrowserEvaluate(req: Request, res: Response): Promise<void> {
-  const profile = req.params.profile;
+  const profile = req.params.profile as string;
   const fn = req.body?.fn;
   if (!fn) { res.status(400).json({ error: 'fn is required' }); return; }
   try {
@@ -93,7 +93,7 @@ export async function handleBrowserEvaluate(req: Request, res: Response): Promis
 }
 
 export async function handleBrowserClick(req: Request, res: Response): Promise<void> {
-  const profile = req.params.profile;
+  const profile = req.params.profile as string;
   const selector = req.body?.selector;
   if (!selector) { res.status(400).json({ error: 'selector is required' }); return; }
   try {
@@ -106,7 +106,7 @@ export async function handleBrowserClick(req: Request, res: Response): Promise<v
 }
 
 export async function handleBrowserSnapshot(req: Request, res: Response): Promise<void> {
-  const profile = req.params.profile;
+  const profile = req.params.profile as string;
   const { selector, compact, interactive, depth } = req.body || {};
   try {
     await ensureChrome(profile);
@@ -122,7 +122,7 @@ export async function handleBrowserSnapshot(req: Request, res: Response): Promis
 }
 
 export async function handleBrowserTabs(req: Request, res: Response): Promise<void> {
-  const profile = req.params.profile;
+  const profile = req.params.profile as string;
   try {
     const result = JSON.parse(await getTabInfo(profile));
     res.json(result);
