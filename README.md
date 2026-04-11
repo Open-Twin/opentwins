@@ -32,8 +32,9 @@ opentwins browser setup twitter
 opentwins browser setup linkedin
 # ... repeat for each platform
 
-# Start everything (scheduler + dashboard)
-opentwins start --ui
+# Start the scheduler in background and open the dashboard
+opentwins start -d   # background daemon
+opentwins ui         # dashboard at http://localhost:3847
 ```
 
 `opentwins init` checks prerequisites, starts the dashboard, and opens a setup wizard at `http://localhost:3847/setup`. The wizard walks you through authentication, identity, platforms, voice, and schedule — no CLI prompts.
@@ -70,9 +71,8 @@ opentwins --version
 opentwins init              Launch the web setup wizard (default)
 opentwins init --cli        Interactive CLI setup (fallback, headless-friendly)
 opentwins init --force      Overwrite an existing config
-opentwins start             Start the agent scheduler
-opentwins start --ui        Start scheduler + web dashboard
-opentwins start -d          Start as background daemon
+opentwins start             Start the scheduler (foreground)
+opentwins start -d          Start the scheduler as background daemon
 opentwins stop              Stop the daemon
 opentwins status            Show agent states and schedule
 
@@ -124,7 +124,7 @@ Runs daily to generate fresh content for all platforms:
 
 ### Web Dashboard
 
-Access at `http://localhost:3847` when running `opentwins start --ui` or `opentwins ui`.
+Access at `http://localhost:3847` when running `opentwins ui`. The dashboard can control the scheduler daemon via the Automation On/Off button.
 
 - **Command** — Mission control: KPI cards (agents, runs, tool calls, automation), platform agent cards, recent runs table, content pipeline flow
 - **Agents** — Per-agent controls with hero panel (run/stop/remove), today's stats, limits with progress bars, behavior tuning, today's schedule, live activity feed from the latest Claude session
