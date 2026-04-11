@@ -75,9 +75,7 @@ export function App() {
         <div className="max-w-[1400px] mx-auto px-6 flex items-center justify-between h-12">
           {/* Logo */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'var(--c-teal-glow)', border: '1px solid var(--c-teal-dim)' }}>
-              <span className="mono text-sm font-bold" style={{ color: 'var(--c-teal)' }}>OT</span>
-            </div>
+            <img src="/logo.svg" alt="OpenTwins" className="w-7 h-7 rounded-md" />
             <span className="text-sm font-semibold tracking-wide hidden sm:inline" style={{ color: 'var(--c-text)' }}>
               OPENTWINS
             </span>
