@@ -4,7 +4,7 @@ body { background: #080b12; color: #e2e8f0; font-family: 'Inter', system-ui, -ap
 .nav-blur { backdrop-filter: blur(12px); background: rgba(8,11,18,0.85); }
 
 /* Article layout */
-.article-main { padding-top: 10rem; padding-bottom: 6rem; }
+.article-main { padding-top: 6.5rem; padding-bottom: 6rem; }
 .article-wrap { max-width: 860px; margin: 0 auto; padding: 0 32px; }
 
 /* Article header */
