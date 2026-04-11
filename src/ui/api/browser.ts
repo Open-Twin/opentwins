@@ -10,6 +10,17 @@ export async function handleBrowserStart(req: Request, res: Response): Promise<v
   const profile = req.params.profile;
   try {
     const instance = await launchChrome(profile);
+
+    // Close stale tabs from previous sessions, keep only 1
+    try {
+      const tabs = JSON.parse(await getTabInfo(profile)) as Array<{ id: string }>;
+      if (tabs.length > 1) {
+        for (const tab of tabs.slice(1)) {
+          await closeTab(profile, tab.id).catch(() => {});
+        }
+      }
+    } catch { /* best effort */ }
+
     res.json({ ok: true, pid: instance.pid, port: instance.port, profile });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to start Chrome' });
