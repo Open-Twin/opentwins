@@ -124,7 +124,7 @@ Promo pre-check: `current >= limit` → mark done.
    ```
    If "SKIP" → pick next tweet (already replied, cheaper than browser navigation)
 6. MANDATORY: Like target tweet via evaluate BEFORE replying (BROWSER-core.md § 5) — NO snapshot for liking
-7. 🚨 **MANDATORY: Apply Reply Quality Rules** (BROWSER-engage.md §A/B/C/E/F) — check if defaulting to reframe+PM angle, enforce 30-word cap (20 for 200+ likes tweets), ban "X is the new Y", run anti-AI check, no company mentions
+7. 🚨 **MANDATORY: Apply Reply Quality Rules** (BROWSER-engage.md §A/B/C/E/F) — check if defaulting to reframe+professional angle, enforce 30-word cap (20 for 200+ likes tweets), ban "X is the new Y", run anti-AI check, no company mentions
 8. 🚨 **Navigate to tweet page FIRST** → write reply (SOUL.md) → post via CDP (BROWSER-core.md § 1)
    🚨 NEVER reply from search results — clicking reply button on search redirects to `/compose/post` (generic compose, loses reply context). Always navigate to individual tweet URL first.
 9. **After successful reply:** `exec echo "{tweet_id}" >> memory/commented_posts.txt`
@@ -153,7 +153,7 @@ Promo pre-check: `current >= limit` → mark done.
    - 🚨 **Skip `isMemeLikely: true` tweets** (image/video + text < 80 chars). These are memes, jokes, or visual content — you can't see the image and will reply with wrong tone. Pick the next tweet instead.
 6. 🚨 **Grep pre-check:** `exec grep -q "^{tweet_id}$" memory/commented_posts.txt && echo "SKIP" || echo "OK"` — if "SKIP" → pick next
 7. **Like + read context + dedup** — BROWSER-core.md § 5 (ONE evaluate: like + read text + media check + dedup). If `alreadyReplied` → track + skip. If `hasMedia && text < 80 chars` → skip (meme).
-8. 🚨 **MANDATORY: Apply Reply Quality Rules** (BROWSER-engage.md §A/B/C/F) — check if defaulting to reframe+PM angle, enforce 35-word cap (20 for 200+ likes), ban "X is the new Y", run anti-AI check, no company mentions
+8. 🚨 **MANDATORY: Apply Reply Quality Rules** (BROWSER-engage.md §A/B/C/F) — check if defaulting to reframe+professional angle, enforce 35-word cap (20 for 200+ likes), ban "X is the new Y", run anti-AI check, no company mentions
 9. Write genuinely valuable reply — NO product mention, NO links (SOUL.md § Strategic)
 10. Post via CDP (BROWSER-core.md § 1)
 11. **After successful reply:** `exec echo "{tweet_id}" >> memory/commented_posts.txt`

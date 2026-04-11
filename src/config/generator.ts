@@ -29,24 +29,22 @@ Handlebars.registerHelper('ifEq', function (this: unknown, a: unknown, b: unknow
   return a === b ? options.fn(this) : options.inverse(this);
 });
 
-Handlebars.registerHelper('pillarsFormatted', (pillars: OpenTwinsConfig['pillars']) =>
-  pillars
-    .map((p, i) => `${i + 1}. ${p.name} (${p.topics.join(', ')})`)
-    .join('\n')
+Handlebars.registerHelper('pillarsFormatted', (pillars: unknown) =>
+  Array.isArray(pillars)
+    ? pillars.map((p, i) => `${i + 1}. ${p.name} (${p.topics.join(', ')})`).join('\n')
+    : ''
 );
 
-Handlebars.registerHelper('mentionTemplatesFormatted', (pillars: OpenTwinsConfig['pillars']) =>
-  pillars
-    .filter((p) => p.mention_templates.length > 0)
-    .map((p) => `- ${p.name}: "${p.mention_templates[0]}"`)
-    .join('\n')
+Handlebars.registerHelper('mentionTemplatesFormatted', (pillars: unknown) =>
+  Array.isArray(pillars)
+    ? pillars.filter((p) => p.mention_templates?.length > 0).map((p) => `- ${p.name}: "${p.mention_templates[0]}"`).join('\n')
+    : ''
 );
 
-Handlebars.registerHelper('pillarDistribution', (pillars: OpenTwinsConfig['pillars']) =>
-  pillars
-    .filter((p) => p.target_percentage > 0)
-    .map((p) => `  - ${p.target_percentage}% ${p.name}`)
-    .join('\n')
+Handlebars.registerHelper('pillarDistribution', (pillars: unknown) =>
+  Array.isArray(pillars)
+    ? pillars.filter((p) => p.target_percentage > 0).map((p) => `  - ${p.target_percentage}% ${p.name}`).join('\n')
+    : ''
 );
 
 interface TemplateContext {
