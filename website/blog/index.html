@@ -46,9 +46,13 @@
     .nav-blur { backdrop-filter: blur(12px); background: rgba(8,11,18,0.85); }
     .blog-card { background: rgba(30,41,59,0.25); border: 1px solid rgba(45,212,191,0.06); border-radius: 16px; transition: all 0.25s ease; }
     .blog-card:hover { border-color: rgba(45,212,191,0.2); background: rgba(30,41,59,0.45); transform: translateY(-3px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
-    .blog-card .card-tag { background: rgba(45,212,191,0.08); color: rgba(45,212,191,0.7); border: 1px solid rgba(45,212,191,0.12); }
+    .card-tag { display: inline-block; background: rgba(45,212,191,0.08); color: rgba(45,212,191,0.7); border: 1px solid rgba(45,212,191,0.12); font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 2px 10px; border-radius: 9999px; }
+    .card-meta { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #64748b; }
+    .card-readtime { font-size: 12px; font-weight: 500; color: rgba(45,212,191,0.6); margin-top: 16px; display: inline-block; }
     .featured-card { background: linear-gradient(135deg, rgba(45,212,191,0.06), rgba(96,165,250,0.04)); border: 1px solid rgba(45,212,191,0.15); }
     .featured-card:hover { border-color: rgba(45,212,191,0.3); }
+    .blog-card h2 { color: #fff; }
+    .blog-card p { color: #94a3b8; }
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -99,9 +103,9 @@
       <!-- Featured post -->
       <a href="/blog/ethical-ai-twin-authenticity-automated-engagement.html" class="featured-card blog-card block rounded-2xl p-8 md:p-10 mb-10">
         <div class="flex flex-wrap items-center gap-3 mb-4">
-          <span class="card-tag font-mono text-[11px] px-2.5 py-1 rounded-full">Featured</span>
-          <span class="font-mono text-xs text-slate-500">April 9, 2026</span>
-          <span class="font-mono text-xs text-slate-600">13 min read</span>
+          <span class="card-tag">Featured</span>
+          <span class="card-meta">April 9, 2026</span>
+          <span class="card-meta">13 min read</span>
         </div>
         <h2 class="text-2xl md:text-3xl font-bold mb-3 text-white">The Ethical AI Twin: How OpenTwins Ensures Authenticity in Automated Engagement</h2>
         <p class="text-slate-400 md:text-lg leading-relaxed max-w-3xl">How OpenTwins maintains authenticity through voice calibration, style variation, disagreement targets and ethical guardrails. The anti-spam approach to AI engagement.</p>
@@ -112,62 +116,62 @@
 
         <a href="/blog/case-study-linkedin-connections-30-days.html" class="blog-card block p-7">
           <div class="flex items-center gap-3 mb-4">
-            <span class="card-tag font-mono text-[11px] px-2.5 py-1 rounded-full">Case Study</span>
-            <span class="font-mono text-xs text-slate-500">April 9, 2026</span>
+            <span class="card-tag">Case Study</span>
+            <span class="card-meta">April 9, 2026</span>
           </div>
           <h2 class="text-lg font-bold mb-2 text-white leading-snug">Case Study: From 0 to 1,000 LinkedIn Connections in 30 Days</h2>
           <p class="text-sm text-slate-400 leading-relaxed">A week-by-week breakdown of building a LinkedIn presence from scratch. Exact configuration settings, daily metrics and lessons learned.</p>
-          <span class="inline-block mt-4 text-xs font-medium text-teal-400/70">14 min read</span>
+          <span class="card-readtime">14 min read</span>
         </a>
 
         <a href="/blog/grow-linkedin-presence-ai-agents.html" class="blog-card block p-7">
           <div class="flex items-center gap-3 mb-4">
-            <span class="card-tag font-mono text-[11px] px-2.5 py-1 rounded-full">Guide</span>
-            <span class="font-mono text-xs text-slate-500">April 7, 2026</span>
+            <span class="card-tag">Guide</span>
+            <span class="card-meta">April 7, 2026</span>
           </div>
           <h2 class="text-lg font-bold mb-2 text-white leading-snug">How to Grow Your LinkedIn Presence with AI Agents</h2>
           <p class="text-sm text-slate-400 leading-relaxed">A step-by-step framework for using AI agents to build genuine LinkedIn authority. Content strategy, engagement patterns and measuring real ROI.</p>
-          <span class="inline-block mt-4 text-xs font-medium text-teal-400/70">12 min read</span>
+          <span class="card-readtime">12 min read</span>
         </a>
 
         <a href="/blog/build-in-public-without-time-cost.html" class="blog-card block p-7">
           <div class="flex items-center gap-3 mb-4">
-            <span class="card-tag font-mono text-[11px] px-2.5 py-1 rounded-full">Strategy</span>
-            <span class="font-mono text-xs text-slate-500">April 5, 2026</span>
+            <span class="card-tag">Strategy</span>
+            <span class="card-meta">April 5, 2026</span>
           </div>
           <h2 class="text-lg font-bold mb-2 text-white leading-snug">Build in Public Without the Time Cost</h2>
           <p class="text-sm text-slate-400 leading-relaxed">How founders can share their journey across multiple platforms without spending hours each day on social media. Automation strategies that keep authenticity intact.</p>
-          <span class="inline-block mt-4 text-xs font-medium text-teal-400/70">11 min read</span>
+          <span class="card-readtime">11 min read</span>
         </a>
 
         <a href="/blog/ai-social-media-engagement-guide.html" class="blog-card block p-7">
           <div class="flex items-center gap-3 mb-4">
-            <span class="card-tag font-mono text-[11px] px-2.5 py-1 rounded-full">Guide</span>
-            <span class="font-mono text-xs text-slate-500">April 3, 2026</span>
+            <span class="card-tag">Guide</span>
+            <span class="card-meta">April 3, 2026</span>
           </div>
           <h2 class="text-lg font-bold mb-2 text-white leading-snug">AI-Powered Social Media Engagement: A Practical Guide</h2>
           <p class="text-sm text-slate-400 leading-relaxed">Everything you need to know about using AI for social media engagement in 2026. Choosing the right tools, measuring results and avoiding common pitfalls.</p>
-          <span class="inline-block mt-4 text-xs font-medium text-teal-400/70">13 min read</span>
+          <span class="card-readtime">13 min read</span>
         </a>
 
         <a href="/blog/opentwins-architecture-deep-dive.html" class="blog-card block p-7">
           <div class="flex items-center gap-3 mb-4">
-            <span class="card-tag font-mono text-[11px] px-2.5 py-1 rounded-full">Technical</span>
-            <span class="font-mono text-xs text-slate-500">April 1, 2026</span>
+            <span class="card-tag">Technical</span>
+            <span class="card-meta">April 1, 2026</span>
           </div>
           <h2 class="text-lg font-bold mb-2 text-white leading-snug">How OpenTwins Works: Architecture Deep Dive</h2>
           <p class="text-sm text-slate-400 leading-relaxed">A technical walkthrough of OpenTwins internals: the agent loop, browser automation layer, Claude integration, content strategy engine and dashboard.</p>
-          <span class="inline-block mt-4 text-xs font-medium text-teal-400/70">14 min read</span>
+          <span class="card-readtime">14 min read</span>
         </a>
 
         <a href="/blog/social-media-automation-without-getting-banned.html" class="blog-card block p-7">
           <div class="flex items-center gap-3 mb-4">
-            <span class="card-tag font-mono text-[11px] px-2.5 py-1 rounded-full">Safety</span>
-            <span class="font-mono text-xs text-slate-500">March 29, 2026</span>
+            <span class="card-tag">Safety</span>
+            <span class="card-meta">March 29, 2026</span>
           </div>
           <h2 class="text-lg font-bold mb-2 text-white leading-snug">Social Media Automation That Doesn't Get You Banned</h2>
           <p class="text-sm text-slate-400 leading-relaxed">Platform detection is smarter than ever. How to automate your social media presence safely by understanding what triggers flags and what doesn't.</p>
-          <span class="inline-block mt-4 text-xs font-medium text-teal-400/70">11 min read</span>
+          <span class="card-readtime">11 min read</span>
         </a>
 
       </div>
@@ -187,7 +191,7 @@
       <div class="flex items-center gap-3">
         <img src="/logo-clean.svg" alt="OpenTwins" class="w-6 h-6 rounded-md">
         <span class="text-sm text-slate-400">OpenTwins</span>
-        <span class="font-mono text-xs text-slate-600">MIT License</span>
+        <span class="card-meta">MIT License</span>
       </div>
       <div class="flex items-center gap-6">
         <a href="https://github.com/Open-Twin/opentwins" target="_blank" rel="noopener noreferrer" class="text-sm text-slate-500 hover:text-teal-400 transition-colors">GitHub</a>
