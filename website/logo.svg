@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="248" fill="#0f0f1a" />
+  <circle cx="256" cy="256" r="248" fill="none" stroke="url(#grad3)" stroke-width="3" opacity="0.4" />
+
+  <!-- Left twin figure -->
+  <!-- Head -->
+  <circle cx="160" cy="110" r="68" fill="url(#grad1)" />
+  <!-- Body -->
+  <path d="M160 178 C160 178 90 210 90 290 L90 410 C90 428 104 442 122 442 L198 442 C216 442 230 428 230 410 L230 290 C230 210 160 178 160 178Z" fill="url(#grad1)" />
+  <!-- Circuit dots on body -->
+  <circle cx="160" cy="280" r="5" fill="#c4b5fd" opacity="0.8" />
+  <circle cx="134" cy="326" r="4" fill="#c4b5fd" opacity="0.6" />
+  <circle cx="186" cy="326" r="4" fill="#c4b5fd" opacity="0.6" />
+  <line x1="160" y1="285" x2="160" y2="312" stroke="#c4b5fd" stroke-width="2" opacity="0.5" />
+  <line x1="160" y1="312" x2="134" y2="326" stroke="#c4b5fd" stroke-width="2" opacity="0.5" />
+  <line x1="160" y1="312" x2="186" y2="326" stroke="#c4b5fd" stroke-width="2" opacity="0.5" />
+
+  <!-- Right twin figure -->
+  <!-- Head -->
+  <circle cx="352" cy="110" r="68" fill="url(#grad2)" />
+  <!-- Body -->
+  <path d="M352 178 C352 178 282 210 282 290 L282 410 C282 428 296 442 314 442 L390 442 C408 442 422 428 422 410 L422 290 C422 210 352 178 352 178Z" fill="url(#grad2)" />
+  <!-- Circuit dots on body -->
+  <circle cx="352" cy="280" r="5" fill="#a5f3fc" opacity="0.8" />
+  <circle cx="326" cy="326" r="4" fill="#a5f3fc" opacity="0.6" />
+  <circle cx="378" cy="326" r="4" fill="#a5f3fc" opacity="0.6" />
+  <line x1="352" y1="285" x2="352" y2="312" stroke="#a5f3fc" stroke-width="2" opacity="0.5" />
+  <line x1="352" y1="312" x2="326" y2="326" stroke="#a5f3fc" stroke-width="2" opacity="0.5" />
+  <line x1="352" y1="312" x2="378" y2="326" stroke="#a5f3fc" stroke-width="2" opacity="0.5" />
+
+  <!-- Connection beam between twins -->
+  <line x1="226" y1="270" x2="286" y2="270" stroke="url(#grad3)" stroke-width="3" opacity="0.6" />
+  <line x1="230" y1="300" x2="282" y2="300" stroke="url(#grad3)" stroke-width="2.5" opacity="0.4" />
+  <line x1="226" y1="330" x2="286" y2="330" stroke="url(#grad3)" stroke-width="3" opacity="0.6" />
+
+  <!-- Center sync symbol -->
+  <circle cx="256" cy="300" r="18" fill="none" stroke="url(#grad3)" stroke-width="3" />
+  <path d="M248 296 L256 288 L264 296" fill="none" stroke="url(#grad3)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M264 304 L256 312 L248 304" fill="none" stroke="url(#grad3)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+
+</svg>
