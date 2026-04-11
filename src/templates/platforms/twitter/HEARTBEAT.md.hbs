@@ -2,9 +2,9 @@
 
 **CLI syntax:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}' 2>&1`
 - **evaluate:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d '{"fn":"async () => { ... }"}' 2>&1`
-- **snapshot:** `... snapshot --selector '...' --compact --interactive 2>&1`
-- **type:** `... type e1 "text here" 2>&1` (ref is positional — NOT `--ref e1`)
-- **click:** `... click e1 2>&1` (ref is positional)
+- **snapshot:** `curl -s -X POST .../snapshot -d '{"selector":"...","compact":true,"interactive":true}'`
+- **type:** `curl -s -X POST .../evaluate -d '{"fn":"..."}'` (use evaluate to type into elements)
+- **click:** `curl -s -X POST .../click -d '{"selector":"..."}'`
 - **open/navigate/close:** `... open "URL" 2>&1`
 
 ## Tool Roles
