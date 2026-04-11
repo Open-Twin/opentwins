@@ -6,30 +6,28 @@ import { openTab, navigateTo, closeTab, evaluate, clickElement, snapshot, getTab
 // Used by agent templates via curl to control Chrome.
 // Each handler wraps a cdp.ts/chrome.ts function.
 
-// Auto-start Chrome if not running. Called by open/navigate/evaluate/click/snapshot.
+// Auto-start Chrome if not running and clean stale tabs.
 async function ensureChrome(profile: string): Promise<void> {
   const port = getProfilePort(profile);
   if (!isPortInUse(port)) {
     await launchChrome(profile);
   }
+  // Close stale tabs from previous sessions, keep only 1
+  try {
+    const tabs = JSON.parse(await getTabInfo(profile)) as Array<{ id: string }>;
+    if (tabs.length > 1) {
+      for (const tab of tabs.slice(1)) {
+        await closeTab(profile, tab.id).catch(() => {});
+      }
+    }
+  } catch { /* best effort */ }
 }
 
 export async function handleBrowserStart(req: Request, res: Response): Promise<void> {
   const profile = req.params.profile;
   try {
-    const instance = await launchChrome(profile);
-
-    // Close stale tabs from previous sessions, keep only 1
-    try {
-      const tabs = JSON.parse(await getTabInfo(profile)) as Array<{ id: string }>;
-      if (tabs.length > 1) {
-        for (const tab of tabs.slice(1)) {
-          await closeTab(profile, tab.id).catch(() => {});
-        }
-      }
-    } catch { /* best effort */ }
-
-    res.json({ ok: true, pid: instance.pid, port: instance.port, profile });
+    await ensureChrome(profile);
+    res.json({ ok: true, profile });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to start Chrome' });
   }
