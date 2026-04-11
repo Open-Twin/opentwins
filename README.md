@@ -7,7 +7,7 @@
 
 Your autonomous digital twins across every social platform. [opentwins.ai](https://opentwins.ai)
 
-> Deploy AI agents that engage on LinkedIn, Twitter/X, Reddit, Bluesky, Threads, Medium, Substack, Dev.to, Product Hunt, and Indie Hackers - using your identity, voice, and content strategy. Powered by Claude and OpenClaw.
+> Deploy AI agents that engage on LinkedIn, Twitter/X, Reddit, Bluesky, Threads, Medium, Substack, Dev.to, Product Hunt, and Indie Hackers - using your identity, voice, and content strategy. Powered by Claude.
 
 OpenTwins deploys AI agents that engage on Reddit, Twitter/X, LinkedIn, Bluesky, Threads, Medium, Substack, Dev.to, Product Hunt, and Indie Hackers - using your identity, voice, and content strategy.
 
@@ -15,7 +15,7 @@ OpenTwins deploys AI agents that engage on Reddit, Twitter/X, LinkedIn, Bluesky,
 
 - [Node.js](https://nodejs.org/) 18+
 - [Claude Code](https://github.com/anthropics/claude-code) CLI (`npm install -g @anthropic-ai/claude-code`)
-- [OpenClaw](https://github.com/nicepkg/openclaw) CLI for browser automation (`npm install -g openclaw`)
+
 
 ## Quick Start
 
@@ -150,7 +150,7 @@ Access at `http://localhost:3847` when running `opentwins start --ui` or `opentw
 
 OpenTwins uses:
 - **Claude Code** as the AI brain (runs agents via `claude` CLI)
-- **OpenClaw** for browser automation (CDP-based)
+- **Chrome CDP** for browser automation (built-in)
 - **Bree** for in-process job scheduling
 - **SQLite** for activity tracking and quality metrics
 - **Handlebars** templates for identity-swappable agent configs

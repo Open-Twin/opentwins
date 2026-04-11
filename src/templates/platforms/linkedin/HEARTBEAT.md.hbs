@@ -2,9 +2,9 @@
 
 ## Critical Rules (read once, apply everywhere)
 
-**CLI syntax:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
-- **evaluate:** `... evaluate --fn 'async () => { ... }' 2>&1` (JS after `--fn`)
-- **open/navigate/close:** `... open "URL" 2>&1` / `... navigate "URL" 2>&1` / `... close 2>&1`
+**CLI syntax:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}' 2>&1`
+- **evaluate:** `curl -s -X POST .../evaluate -d '{"fn":"async () => { ... }"}'`
+- **open/navigate/close:** `curl -s -X POST .../open -d '{"url":"URL"}'` / `.../navigate -d '{"url":"URL"}'` / `.../close`
 - **NEVER** use `args` param in evaluate — inline via template literals
 - **evaluate()** for data extraction, clicks, typing. **snapshot()** only as last resort for clicks evaluate can't handle
 - **NEVER** `snapshot({ selector: "button" })` — always matches 20+ elements → strict mode violation. Use evaluate to find buttons by text
@@ -17,6 +17,7 @@
 - **NEVER** snapshot for search/feed extraction (27k token bloat). Use evaluate only
 
 **File loading:** BROWSER-core.md is ALWAYS read. Other BROWSER-*.md files are read ON-DEMAND only when needed:
+🚨 **NEVER write your own browser JavaScript.** The BROWSER-*.md files contain exact, tested evaluate functions for every action (extract, click, type, navigate, like). Copy-paste them verbatim. Do NOT improvise selectors, write custom querySelectorAll, or modify the provided JS. If a function does not exist for what you need, skip the action.
 - BROWSER-notifications.md → notification/reply tasks
 - BROWSER-engage.md → search/feed/comment/like/article tasks
 - BROWSER-post.md → poll/post/repost creation tasks (shadow DOM)
@@ -58,7 +59,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 
 ## 2. Browser Startup (with retry)
 
-1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://www.linkedin.com/notifications/" 2>&1`
+1. `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://www.linkedin.com/notifications/"}' 2>&1`
 2. If CDP error:
    - Wait 3s, retry once
    - Still fails: skip browser tasks, log error, return HEARTBEAT_OK
@@ -312,7 +313,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
 
 ## 7. Close Browser (MANDATORY)
 
-1. `exec openclaw browser --browser-profile {{browser_profile}} close 2>&1`
+1. `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/close 2>&1`
 2. If close fails → retry once.
 
 Never leave browser open.

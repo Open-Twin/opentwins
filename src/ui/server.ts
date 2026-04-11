@@ -11,6 +11,7 @@ import { handleUpdateConfig } from './api/config.js';
 import { handleListAgents, handleGetAgent, handleRunAgent, handleStopAgent, handleUpdateLimits, handleUpdateAgent, handleGetAgentFeed, handleBrowserSetup, handleBrowserConfirm } from './api/agents.js';
 import { handleSetup, handleSetupStatus, handleValidateAuth } from './api/setup.js';
 import { handleHealth } from './api/health.js';
+import { handleBrowserStart, handleBrowserStop, handleBrowserOpen, handleBrowserNavigate, handleBrowserClose, handleBrowserEvaluate, handleBrowserClick, handleBrowserSnapshot, handleBrowserTabs } from './api/browser.js';
 import { handleUsage } from './api/usage.js';
 import { getSessions } from '../util/session-parser.js';
 import * as log from '../util/logger.js';
@@ -167,7 +168,7 @@ export async function startDashboard(port: number): Promise<void> {
   app.post('/api/setup/validate-auth', (req, res) => { handleValidateAuth(req, res); });
   app.post('/api/setup', (req, res) => { handleSetup(req, res); });
 
-  // Live health monitor — OpenClaw gateway + Claude service status
+  // Live health monitor — Browser profiles + Claude service status
   app.get('/api/health', (req, res) => { handleHealth(req, res); });
 
   // Token usage & cost report
@@ -213,6 +214,17 @@ export async function startDashboard(port: number): Promise<void> {
   app.post('/api/agents/:platform/stop', (req, res) => handleStopAgent(req, res));
   app.put('/api/agents/:platform/limits', (req, res) => handleUpdateLimits(req, res));
   app.put('/api/agents/:platform', (req, res) => handleUpdateAgent(req, res));
+
+  // Browser control API (used by agent templates via curl)
+  app.post('/api/browser/:profile/start', (req, res) => { handleBrowserStart(req, res); });
+  app.post('/api/browser/:profile/stop', (req, res) => { handleBrowserStop(req, res); });
+  app.post('/api/browser/:profile/open', (req, res) => { handleBrowserOpen(req, res); });
+  app.post('/api/browser/:profile/navigate', (req, res) => { handleBrowserNavigate(req, res); });
+  app.post('/api/browser/:profile/close', (req, res) => { handleBrowserClose(req, res); });
+  app.post('/api/browser/:profile/evaluate', (req, res) => { handleBrowserEvaluate(req, res); });
+  app.post('/api/browser/:profile/click', (req, res) => { handleBrowserClick(req, res); });
+  app.post('/api/browser/:profile/snapshot', (req, res) => { handleBrowserSnapshot(req, res); });
+  app.get('/api/browser/:profile/tabs', (req, res) => { handleBrowserTabs(req, res); });
 
   // Serve static client files - find client dist by walking up to package root
   let clientDir = '';

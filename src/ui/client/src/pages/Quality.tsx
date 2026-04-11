@@ -230,7 +230,11 @@ export function Quality() {
                       paddingAngle={3}
                       dataKey="value"
                       stroke="none"
-                      label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                      label={({ name, percent, x, y }) => (
+                        <text x={x} y={y} fill="#e2e8f0" fontSize={12} fontFamily="JetBrains Mono, monospace" textAnchor="middle" dominantBaseline="central">
+                          {`${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                        </text>
+                      )}
                       labelLine={false}
                     >
                       {styleData.map((_, i) => (

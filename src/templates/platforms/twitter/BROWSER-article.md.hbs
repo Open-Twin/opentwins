@@ -152,24 +152,24 @@ Check `window.location.href` contains `/status/`. Extract article URL by replaci
 ## Example Article HTML
 
 ```html
-<p>Six months ago I started running daily standups for my AI agents. Not metaphorical standups. Actual structured check-ins.</p>
+<p>Six months ago I changed how I approach {{pillars.[0].name}}. Not a small tweak. A fundamental shift in how I think about the problem.</p>
 
-<h2>The monitoring gap nobody talks about</h2>
-<p>Most teams deploying AI agents track one thing: did it run? <a href="https://x.com/OpenAI">@OpenAI</a> published their <a href="https://openai.com/index/how-we-monitor-internal-coding-agents-misalignment/">agent monitoring playbook</a> - they moved from log-watching to <strong>reasoning inspection</strong>.</p>
-<p>As <a href="https://x.com/GergelyOrosz">@GergelyOrosz</a> noted, the PM role is shifting fast.</p>
+<h2>The gap nobody talks about</h2>
+<p>Most people in {{role}} roles focus on the obvious metrics. But the real insight comes from looking at <strong>the process underneath</strong>.</p>
+<p>As a {{role}}, I have seen this pattern play out repeatedly.</p>
 
-<h2>Three things every PM needs</h2>
+<h2>Three things that changed my approach</h2>
 <ul>
-<li>A definition of <em>done</em> that is observable</li>
-<li>A circuit breaker for runaway behavior</li>
-<li>A weekly review cadence treating agent output like sprint demos</li>
+<li>A clear definition of <em>done</em> that everyone can observe</li>
+<li>A feedback loop that catches problems early</li>
+<li>A regular review cadence that keeps things on track</li>
 </ul>
 
-<blockquote>Managing AI agents is not an engineering problem wearing a PM hat. It is a genuine project management discipline.</blockquote>
+<blockquote>{{brand_tagline}}</blockquote>
 
-<p>If you are a PM and you have not tried managing even one AI agent yet, start small. Automate one workflow. Build the monitoring. Run the review cycle.</p>
+<p>If you work in {{pillars.[0].name}} and have not tried this approach yet, start small. Pick one area. Build the habit. Iterate from there.</p>
 
-<p>#AIAgents #ProductManagement #BuildInPublic</p>
+<p>{{#each pillars}}#{{@key}}{{#unless @last}} {{/unless}}{{/each}} #BuildInPublic</p>
 ```
 
 ---

@@ -1,12 +1,13 @@
 # HEARTBEAT.md - Threads Agent
 
 **Read every heartbeat:** `limits.json`, `schedule.json`, `BROWSER-core.md`
+🚨 **NEVER write your own browser JavaScript.** The BROWSER-*.md files contain exact, tested evaluate functions for every action (extract, click, type, navigate, like). Copy-paste them verbatim. Do NOT improvise selectors, write custom querySelectorAll, or modify the provided JS. If a function does not exist for what you need, skip the action.
 
 **File loading:** BROWSER-core.md is ALWAYS read. Other BROWSER-*.md files are read ON-DEMAND only when needed.
 
-**CLI syntax:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
-- **evaluate:** `exec openclaw browser --browser-profile {{browser_profile}} evaluate --fn 'async () => { ... }' 2>&1` (JS goes after `--fn`)
-- **open/navigate/close:** `exec openclaw browser --browser-profile {{browser_profile}} open "URL" 2>&1`
+**CLI syntax:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}' 2>&1`
+- **evaluate:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d '{"fn":"async () => { ... }"}' 2>&1` (JS goes after `--fn`)
+- **open/navigate/close:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"URL"}' 2>&1`
 - 🚨 **Tab reuse:** Use `open` ONLY for the FIRST page. Use `navigate` for ALL subsequent pages. Opening new tabs wastes resources and causes close errors.
 - 🚨 Embed waits at START of evaluate fn. NEVER `sessions_spawn` or sub-sessions.
 
@@ -58,7 +59,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 
 ## 2. Browser Startup (with retry)
 
-1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://www.threads.net/activity/replies" 2>&1`
+1. `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://www.threads.net/activity/replies"}' 2>&1`
 2. If CDP error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
 
 ## 3. Reply Check (MANDATORY FIRST)
@@ -218,7 +219,7 @@ NEVER `browser.stop()` (kills Chrome).
 2. Update `schedule.json` (mark completed tasks "done")
 3. Append `memory/{today}.md` daily log
 4. Output Slack summary
-5. Close browser: `exec openclaw browser --browser-profile {{browser_profile}} close 2>&1`
+5. Close browser: `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/close 2>&1`
    🚨 NEVER use `navigate "about:blank"` — use `close` to properly release the tab.
 
 NEVER close browser first -- timeout = limits/schedule not saved.

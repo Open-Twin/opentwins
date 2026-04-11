@@ -110,16 +110,3 @@ export async function isClaudeInstalled(): Promise<boolean> {
   }
 }
 
-export async function isOpenClawInstalled(): Promise<boolean> {
-  try {
-    const result = await execaCommand('openclaw --version', {
-      timeout: 5000,
-      shell: true,
-      reject: false,
-      env: extendedEnv(),
-    });
-    return result.exitCode === 0;
-  } catch {
-    return false;
-  }
-}

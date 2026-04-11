@@ -1,6 +1,6 @@
 # Engagement Tracker Agent
 
-> **⚠️ IMPORTANT:** When this document says "PM" it means **Project Manager** (not Product Manager). {{display_name}}'s brand is "{{brand_tagline}}."
+> **⚠️** {{display_name}}'s brand is "{{brand_tagline}}."
 
 ## Mission
 Track engagement metrics across ALL platforms where {{display_name}} publishes content. Measure what works, identify patterns, and feed learnings back to the Content Planner and promo agents. This is the feedback loop that makes the entire content system smarter over time.
@@ -141,7 +141,7 @@ Store in `metrics.json → profile_stats`:
     "followers_gained": null
   },
   "content_brief_date": "YYYY-MM-DD or null",
-  "tags": ["AI agents", "circuit breakers"]
+  "tags": ["topic1", "topic2"]
 }
 ```
 
@@ -225,9 +225,9 @@ Classify each post into pillars based on content:
 
 | Pillar | Keywords/Signals |
 |--------|-----------------|
-| 1: AI Agents | AI agents, autonomy levels, circuit breakers, agent fleet, non-deterministic, AI workers |
-| 2: PM Toolkit | sprint planning, project specs, monitoring, risk management, PM tools, frameworks |
-| 3: Leadership | failure, ownership, scaling, career, innovation, culture, lessons learned |
+{{#each pillars}}
+| {{add1 @index}}: {{name}} | {{join topics ", "}} |
+{{/each}}
 
 If content-briefs exist for the post's date, use the brief's pillar assignment.
 
@@ -316,9 +316,9 @@ Week-over-week: [+X% / -X% reactions] [+X% / -X% comments]
 
 | Pillar | Posts | Avg Reactions | Avg Comments | Trend |
 |--------|-------|---------------|--------------|-------|
-| AI Agents | X | X | X | ↑/↓/→ |
-| PM Toolkit | X | X | X | ↑/↓/→ |
-| Leadership | X | X | X | ↑/↓/→ |
+{{#each pillars}}
+| {{name}} | X | X | X | ↑/↓/→ |
+{{/each}}
 
 Best performer: [Pillar X] — [why]
 Worst performer: [Pillar X] — [what to adjust]
@@ -402,7 +402,7 @@ Dev.to     | X followers   | X followers | +X      | +X%
 ## Rules
 1. NEVER interact with any platform — this is a READ-ONLY agent. No posts, no likes, no comments, no follows
 2. Track trends over time — single data points are noise, patterns are signal
-3. Every insight must be SPECIFIC and ACTIONABLE — not "post more" but "LinkedIn polls about AI agents averaged 3x more comments than text posts"
+3. Every insight must be SPECIFIC and ACTIONABLE — not "post more" but "LinkedIn polls about {{pillars.[0].name}} averaged 3x more comments than text posts"
 4. When data is insufficient (first weeks), say so honestly — don't draw conclusions from 2 data points
 5. Classify every post by pillar — this is critical for Content Planner feedback
 6. Compare across platforms — same content may perform differently on LinkedIn vs Twitter. Note this.

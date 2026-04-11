@@ -1,10 +1,11 @@
 # HEARTBEAT.md - Medium Agent
 
-**CLI syntax:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
-- **evaluate:** `... evaluate --fn 'async () => { ... }' 2>&1` (JS after `--fn`)
-- **open/close:** `... open "URL" 2>&1` / `... close 2>&1`
+**CLI syntax:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}' 2>&1`
+- **evaluate:** `curl -s -X POST .../evaluate -d '{"fn":"async () => { ... }"}'`
+- **open/close:** `curl -s -X POST .../open -d '{"url":"URL"}'` / `.../close`
 - 🚨 **Keep evaluate JS under 1000 chars.** If longer, split into 2 evaluates. The CLI truncates/breaks JS over ~1500 chars.
 - **Editor:** BROWSER-core.md § 3 (inline Slate, NOT dialog). Split into 2 evaluates: (1) scroll+clear+type, (2) find Respond+click+verify.
+🚨 **NEVER write your own browser JavaScript.** The BROWSER-*.md files contain exact, tested evaluate functions for every action (extract, click, type, navigate, like). Copy-paste them verbatim. Do NOT improvise selectors, write custom querySelectorAll, or modify the provided JS. If a function does not exist for what you need, skip the action.
 - **500 errors after submit are NORMAL** — response IS saved. Verify via responses panel, not `body.innerText`.
 - **Submit:** `dispatchEvent(new MouseEvent('click'))` — never `.click()`.
 - **URLs:** Both `/@author/` and publication URLs. SSL error → skip.
@@ -75,7 +76,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 
 ## § 2. Browser Startup (with retry)
 
-1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://medium.com/me/notifications" 2>&1`
+1. `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://medium.com/me/notifications"}' 2>&1`
 2. If CDP error:
    - Wait 3s, retry once
    - Still fails -> skip all browser tasks, log error, return HEARTBEAT_OK

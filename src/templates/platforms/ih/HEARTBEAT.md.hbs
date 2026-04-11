@@ -1,9 +1,9 @@
 # HEARTBEAT.md - Indie Hackers Agent
 
 ## Global Rules
-**CLI syntax:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
-- **evaluate:** `... evaluate --fn 'async () => { ... }' 2>&1` (JS after `--fn`)
-- **open/close:** `... open "URL" 2>&1` / `... close 2>&1`
+**CLI syntax:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}' 2>&1`
+- **evaluate:** `curl -s -X POST .../evaluate -d '{"fn":"async () => { ... }"}'`
+- **open/close:** `curl -s -X POST .../open -d '{"url":"URL"}'` / `.../close`
 - `evaluate()` for data extraction; `snapshot()` only for clickable refs
 - `compact: true`, `interactive: true` on snapshots; scope with `selector: "main"`
 - Never `screenshot`; never `args` in evaluate (inline via template literals)
@@ -20,6 +20,7 @@
 - Zero snapshots for engagement. All selectors in BROWSER-*.md — never explore DOM.
 
 **File loading:** BROWSER-core.md is ALWAYS read. Other BROWSER-*.md files are read ON-DEMAND only when needed.
+🚨 **NEVER write your own browser JavaScript.** The BROWSER-*.md files contain exact, tested evaluate functions for every action (extract, click, type, navigate, like). Copy-paste them verbatim. Do NOT improvise selectors, write custom querySelectorAll, or modify the provided JS. If a function does not exist for what you need, skip the action.
 
 ## Decision Tree
 ```
@@ -76,7 +77,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 
 ## 2. Browser Startup (with retry)
 
-1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://www.indiehackers.com/" 2>&1`
+1. `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://www.indiehackers.com/"}' 2>&1`
 2. If CDP error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
 3. **Dismiss cookie banner** (first evaluate after page load):
    ```javascript
@@ -279,7 +280,7 @@ Safety net: `Thursday+ AND weekly.posts.current==0` -> publish_now()
 
 ## 6. Close Browser (MANDATORY)
 
-`exec openclaw browser --browser-profile {{browser_profile}} close 2>&1`. If close fails → retry once.
+`exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/close 2>&1`. If close fails → retry once.
 
 ---
 

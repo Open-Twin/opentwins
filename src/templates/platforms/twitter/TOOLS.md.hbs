@@ -28,21 +28,19 @@ Read only when: (a) schedule gen, (b) original content, (c) debug
 
 | Topic | Queries |
 |-------|---------|
-| AI Project Management | "AI project management", "using AI for PM", "AI in project planning", "GPT project manager", "AI sprint planning", "automate project management" |
-| Managing AI Agents | "managing AI agents", "AI agent workflows", "running multiple AI agents", "AI agent orchestration", "autonomous agents in production", "AI agents for work" |
-| PM Tools & Frameworks | "best PM tools 2026", "project management framework", "agile vs waterfall", "sprint retrospective tips", "roadmap prioritization", "stakeholder management tips" |
-| Conference Speaking | "project management conference", "PM summit", "tech conference speaker", "speaking at conferences tips", "PMI conference", "agile conference 2026" |
-| PM Career | "how to become a PM", "PMP certification worth it", "director of product management", "PM career path", "senior PM advice", "PM interview tips" |
+{{#each pillars}}
+| {{name}} | {{join topics ", "}} |
+{{/each}}
 
 ## Competitor / Thought Leader Monitoring
 
-Organic entry — engage with PM community and tool users.
+Organic entry — engage with community and tool users.
 
 | Category | Queries |
 |----------|---------|
-| PM Tool Chatter | "Monday.com alternative", "Jira alternative", "Asana frustrating", "ClickUp vs", "Linear alternative", "PM tool recommendation" |
-| PM Thought Leaders | "project management advice", "PM hot take", "agile is dead", "scrum master debate", "PM lessons learned" |
-| AI+PM Intersection | "AI replacing project managers", "AI for sprint planning", "ChatGPT for PMs", "AI backlog grooming", "AI standup notes" |
+{{#each pillars}}
+| {{name}} Chatter | {{join mention_templates ", "}} |
+{{/each}}
 
 Engage with empathy, share experience. Position as practitioner, not seller.
 
@@ -54,7 +52,7 @@ Engage with empathy, share experience. Position as practitioner, not seller.
 |-------|------|
 | Fresh | < 48h |
 | **Engagement** | **20+ likes minimum** (prefer 50+) |
-| Relevant | Matches PM+AI brand angle |
+| Relevant | Matches brand angle ({{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}) |
 | Crowded | Skip 100+ replies |
 | Real | Skip bots, corps, farmers |
 | Sweet spot | 50-200 likes, < 30 replies, < 12h = IDEAL promo target |
@@ -91,7 +89,7 @@ Engage with empathy, share experience. Position as practitioner, not seller.
 |-------|------|
 | Account size | 5K-50K ideal (larger OK if < 50 replies) |
 | Tweet engagement | 100+ likes minimum |
-| Relevance | Must be in our niche (AI/dev, PM, productivity, building) |
+| Relevance | Must be in our niche ({{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}) |
 | Crowded | < 50 replies (our reply still visible) |
 | Fresh | < 24h |
 
@@ -104,14 +102,14 @@ Engage with empathy, share experience. Position as practitioner, not seller.
 **Purpose:** Keep feed active, show engagement, amplify niche content.
 
 **What to retweet:**
-- Viral tweets in our niches (AI, dev, PM, productivity)
-- Industry news relevant to PM+AI brand
-- Relatable dev/maker content
+- Viral tweets in our niches ({{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}})
+- Industry news relevant to {{brand_tagline}}
+- Relatable content from our community
 - Complementary tools (NOT competitors)
 - Founder stories and building-in-public moments
 
 **What NOT to retweet:**
-- Direct competitors in PM tools space (unless adding value)
+- Direct competitors (unless adding value)
 - Controversial/political content
 - Low-engagement tweets (< 50 likes)
 - Crypto/NFT/forex
@@ -130,17 +128,21 @@ Engage with empathy, share experience. Position as practitioner, not seller.
 - Don't use same hashtags every tweet — rotate from pools
 - Check `queries.json → hashtag_pools` for available hashtags
 
-**Topic hashtags:** Pick 1 from topic pool (if tweet relates to PM, AI agents, conferences, etc.)
-**Generic hashtags:** Pick 1-2 from generic pool (#BuildInPublic, #ProjectManagement, #AIAgents, etc.)
-
-**Example:** "ran my morning standup through an AI agent today. it flagged 3 blockers the team hadn't surfaced yet. the future of PM isn't replacing humans — it's giving them better signal #ProjectManagement #AIAgents"
+**Topic hashtags:** Pick 1 from topic pool matching the tweet's pillar.
+{{#if behavior.hashtags}}
+**Hashtag pools:**
+{{#each behavior.hashtags}}
+- **{{@key}}:** {{join this ", "}}
+{{/each}}
+{{/if}}
+**Generic hashtags:** Pick 1-2 from generic pool in `queries.json → hashtag_pools`.
 
 ## Trending
 
 Check https://x.com/explore/tabs/trending before promo.
 
 1. Scan top 10-15
-2. Match: project management → PM frameworks, AI/automation → AI agents in practice, productivity → PM tools, leadership → PM career, tech conferences → speaking
+2. Match trending topics to our pillars: {{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}
 3. Match → override rotation, search trend + topic queries
 4. Max 2/day, don't force
 
@@ -164,21 +166,27 @@ Promo + original tweets → peak. Strategic replies + likes/RTs anytime. Mention
 
 | Type | Details |
 |------|---------|
-| Original | PM+AI insights, building-in-public, tech opinions, conference takeaways. 280 chars, **2-3 hashtags** (from hashtag_pools, at END), engagement hook, peak hours. Apply time-of-day voice (SOUL.md). |
+| Original | Insights on {{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}, building-in-public. 280 chars, **2-3 hashtags** (from hashtag_pools, at END), engagement hook, peak hours. Apply time-of-day voice (SOUL.md). |
 | Quote | **1/day Tue-Fri** (5/week). When: viral (500+ likes), hot take, stat, founder story, **10K+ accounts priority** (borrowed audience). How: lead with take, 280 chars, brand tie-in optional, peak hours. Types: agree+amplify, disagree, data add, hot take. |
 | Thread | Hook → 3-4 value tweets → CTA tweet. **2/week Wed+Thu** peak. < 280/tweet, specifics not vague, self-review all. |
 | Strategic | **Pure value reply** to 10K+ accounts. NO product. Expert insight, personal experience. 3-5/day. |
 | Retweet | Amplify niche content. 3-5/day. Industry news, maker content, complementary tools. |
 
 ### Thread Topics
-"I run 10+ AI agents daily as a PM. Here's what I learned", "How I use AI agents to manage sprints and stakeholders", "The real cost of AI in project management", "PM frameworks that actually survived 3 months in production", "What {{certifications}} doesn't teach you about AI-native PM", "Building open-source PM tools as a {{role}}"
+Build thread topics from pillars and experience hooks:
+{{#each pillars}}
+- **{{name}}:** Pick a topic from [{{join topics ", "}}] and share personal experience or lessons learned.
+{{/each}}
+{{#if experience_hooks}}
+Experience angles to weave in: {{join experience_hooks ", "}}
+{{/if}}
 
 ### Quote Tweet Discovery
 1. Browse https://x.com/explore/tabs/trending
 2. Check target accounts in `queries.json → target_accounts`
 3. Search growth queries: "building in public", "shipped today", "just launched"
-4. Find tweets with 500+ likes in our niches
-5. Quote with hot take + optional PM+AI brand tie-in
+4. Find tweets with 500+ likes in our niches ({{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}})
+5. Quote with hot take + optional brand tie-in
 
 ## Follow-Back
 

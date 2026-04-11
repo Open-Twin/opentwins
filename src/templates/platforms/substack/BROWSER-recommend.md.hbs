@@ -57,7 +57,7 @@ browser.act({
 
 **Step 0 — Navigate to recommendations dashboard:**
 ```
-exec openclaw browser --browser-profile {{browser_profile}} navigate "https://{{handle}}.substack.com/publish/recommendations" 2>&1
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://{{handle}}.substack.com/publish/recommendations"}' 2>&1
 ```
 
 **Step 1 — Open the form:**
@@ -109,7 +109,7 @@ browser.act({
 
 **Step 3 — Fill reason and submit:**
 
-🚨 **Reason guidelines:** Write from your PM perspective. Explain WHY this publication matters for your audience (PMs navigating AI adoption). Keep it 1-2 sentences, specific, not generic praise. Mention what makes them unique.
+🚨 **Reason guidelines:** Write from your {{role}} perspective. Explain WHY this publication matters for your audience. Keep it 1-2 sentences, specific, not generic praise. Mention what makes them unique.
 
 ```javascript
 browser.act({

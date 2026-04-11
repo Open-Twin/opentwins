@@ -44,7 +44,7 @@ Rules:
 - Post to most relevant sub (not biggest)
 - Best time: Saturday morning Kyiv (Friday evening US)
 
-Subs: r/productivity (workflow), r/cursor (AI/dev tools), r/SaaS (build-in-public), r/projectmanagement (PM craft), r/PMPExam (PM community)
+Subs: Use `queries.json → subreddits[]` for active subreddit list.
 
 Checklist:
 - [ ] Title honest, not clickbait
@@ -86,7 +86,7 @@ Rules:
 - Target rising posts (100-500 upvotes)
 - First 10-20 commenters get most upvotes
 - Short, genuine, relatable > long essays
-- Help in r/learnprogramming, r/programming — builds karma + authenticity
+- Help in relevant programming/community subs — builds karma + authenticity
 - Never mention products
 - Track karma every Sunday
 - Milestones: 100 → 250 → 500 → 1000
@@ -97,9 +97,9 @@ Rules:
 
 Search for pain points — best promo opportunities.
 
-**r/productivity:** "Todoist", "Notion alternative", "meeting app", "PM tools"
-**r/cursor, r/ChatGPT:** "AI agent building", "autonomous coding", "AI for project management"
-**r/projectmanagement:** "AI tools for PM", "project management automation", "agile AI"
+{{#each pillars}}
+**{{name}}:** {{join mention_templates ", "}}
+{{/each}}
 
 Strategy:
 - Search "[competitor] alternative" or "[competitor] frustrating"
@@ -113,12 +113,8 @@ Strategy:
 ## User Flair
 
 **Set flair in active subreddits** (makes account recognizable, builds topical authority):
-- r/productivity: "{{brand_tagline}} | Building PM tools"
-- r/cursor: "{{brand_tagline}} | {{role}}"
-- r/projectmanagement: "{{role}} | {{certifications}}"
-- r/PMPExam: "{{certifications}} | {{role}}"
-- r/Entrepreneur: "PM Tools Builder"
-- r/startups: BANNED — do not interact
+Set flair matching `{{brand_tagline}}` and `{{role}}` for each active subreddit in `queries.json`.
+{{#if certifications_text}}Include certifications where relevant: {{certifications_text}}{{/if}}
 
 **Checked:** Weekly during update_memory task. If no flair set → set appropriate flair for that sub.
 

@@ -1,10 +1,10 @@
 # HEARTBEAT.md - Twitter/X Agent
 
-**CLI syntax:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
-- **evaluate:** `exec openclaw browser --browser-profile {{browser_profile}} evaluate --fn 'async () => { ... }' 2>&1`
-- **snapshot:** `... snapshot --selector '...' --compact --interactive 2>&1`
-- **type:** `... type e1 "text here" 2>&1` (ref is positional — NOT `--ref e1`)
-- **click:** `... click e1 2>&1` (ref is positional)
+**CLI syntax:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}' 2>&1`
+- **evaluate:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d '{"fn":"async () => { ... }"}' 2>&1`
+- **snapshot:** `curl -s -X POST .../snapshot -d '{"selector":"...","compact":true,"interactive":true}'`
+- **type:** `curl -s -X POST .../evaluate -d '{"fn":"..."}'` (use evaluate to type into elements)
+- **click:** `curl -s -X POST .../click -d '{"selector":"..."}'`
 - **open/navigate/close:** `... open "URL" 2>&1`
 
 ## Tool Roles
@@ -12,6 +12,7 @@
 - `snapshot()` → MANDATORY for typing + submitting (CDP type/click)
 - NEVER use execCommand/textContent/innerHTML for typing — React won't register it
 - See BROWSER-core.md § 1 for correct CDP typing pattern
+🚨 **NEVER write your own browser JavaScript.** The BROWSER-*.md files contain exact, tested evaluate functions for every action (extract, click, type, navigate, like). Copy-paste them verbatim. Do NOT improvise selectors, write custom querySelectorAll, or modify the provided JS. If a function does not exist for what you need, skip the action.
 
 NEVER `exec sleep` — embed waits in evaluate: `new Promise(r => setTimeout(() => { r(result); }, 2000))`
 
@@ -50,7 +51,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 
 ## § 2. Browser Startup (retry)
 
-1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://x.com/notifications/mentions" 2>&1`
+1. `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://x.com/notifications/mentions"}' 2>&1`
 2. If CDP error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
 
 ## § 3. Notification Check (FIRST)
@@ -115,7 +116,7 @@ Promo pre-check: `current >= limit` → mark done.
 3. Search queries.json topics. Extract tweets: BROWSER-engage.md § 3. DO NOT navigate to individual tweets for stats.
    🚨 **Always use `f=top` with `since:{2_days_ago}`** (e.g. `?q=query+since%3A2026-03-20&f=top`). Compute date from current time. `f=live` returns tweets with 0-5 likes — unusable with a 20+ filter. `f=top` alone returns month-old posts. Combined = fresh tweets with proven engagement.
    🚨 **MAX 5 search queries per promo task.** If no qualifying target after 5 searches → mark task "failed" with note "No targets found in 5 searches". Do NOT keep searching — each search costs 3 steps (~$0.06). 11 searches = $0.65 wasted.
-   **Query order:** Try broadest queries first (e.g. "AI project management" before "sprint planning AI agents"). Broad queries surface more qualifying targets within the 5-search cap.
+   **Query order:** Try broadest queries first (broad topic before niche subtopic). Broad queries surface more qualifying targets within the 5-search cap.
 4. Filter: **20+ likes MINIMUM** (prefer 50+, but 20+ OK if no better targets). Prioritize viral.
 5. 🚨 **MANDATORY: Grep pre-check** — extract tweet ID from URL (the numeric string after `/status/`, e.g. `2023716964955550168`):
    ```bash
@@ -123,7 +124,7 @@ Promo pre-check: `current >= limit` → mark done.
    ```
    If "SKIP" → pick next tweet (already replied, cheaper than browser navigation)
 6. MANDATORY: Like target tweet via evaluate BEFORE replying (BROWSER-core.md § 5) — NO snapshot for liking
-7. 🚨 **MANDATORY: Apply Reply Quality Rules** (BROWSER-engage.md §A/B/C/E/F) — check if defaulting to reframe+PM angle, enforce 30-word cap (20 for 200+ likes tweets), ban "X is the new Y", run anti-AI check, no company mentions
+7. 🚨 **MANDATORY: Apply Reply Quality Rules** (BROWSER-engage.md §A/B/C/E/F) — check if defaulting to reframe+professional angle, enforce 30-word cap (20 for 200+ likes tweets), ban "X is the new Y", run anti-AI check, no company mentions
 8. 🚨 **Navigate to tweet page FIRST** → write reply (SOUL.md) → post via CDP (BROWSER-core.md § 1)
    🚨 NEVER reply from search results — clicking reply button on search redirects to `/compose/post` (generic compose, loses reply context). Always navigate to individual tweet URL first.
 9. **After successful reply:** `exec echo "{tweet_id}" >> memory/commented_posts.txt`
@@ -152,7 +153,7 @@ Promo pre-check: `current >= limit` → mark done.
    - 🚨 **Skip `isMemeLikely: true` tweets** (image/video + text < 80 chars). These are memes, jokes, or visual content — you can't see the image and will reply with wrong tone. Pick the next tweet instead.
 6. 🚨 **Grep pre-check:** `exec grep -q "^{tweet_id}$" memory/commented_posts.txt && echo "SKIP" || echo "OK"` — if "SKIP" → pick next
 7. **Like + read context + dedup** — BROWSER-core.md § 5 (ONE evaluate: like + read text + media check + dedup). If `alreadyReplied` → track + skip. If `hasMedia && text < 80 chars` → skip (meme).
-8. 🚨 **MANDATORY: Apply Reply Quality Rules** (BROWSER-engage.md §A/B/C/F) — check if defaulting to reframe+PM angle, enforce 35-word cap (20 for 200+ likes), ban "X is the new Y", run anti-AI check, no company mentions
+8. 🚨 **MANDATORY: Apply Reply Quality Rules** (BROWSER-engage.md §A/B/C/F) — check if defaulting to reframe+professional angle, enforce 35-word cap (20 for 200+ likes), ban "X is the new Y", run anti-AI check, no company mentions
 9. Write genuinely valuable reply — NO product mention, NO links (SOUL.md § Strategic)
 10. Post via CDP (BROWSER-core.md § 1)
 11. **After successful reply:** `exec echo "{tweet_id}" >> memory/commented_posts.txt`
@@ -244,7 +245,7 @@ Read PLAYBOOK.md → "Memory Update". Done.
 
 ## § 8. Close Browser (MANDATORY)
 
-`exec openclaw browser --browser-profile {{browser_profile}} close 2>&1`
+`exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/close 2>&1`
 If fails → retry once. NEVER browser.stop() or pkill.
 
 ## § 9. HEARTBEAT_OK

@@ -29,24 +29,22 @@ Handlebars.registerHelper('ifEq', function (this: unknown, a: unknown, b: unknow
   return a === b ? options.fn(this) : options.inverse(this);
 });
 
-Handlebars.registerHelper('pillarsFormatted', (pillars: OpenTwinsConfig['pillars']) =>
-  pillars
-    .map((p, i) => `${i + 1}. ${p.name} (${p.topics.join(', ')})`)
-    .join('\n')
+Handlebars.registerHelper('pillarsFormatted', (pillars: unknown) =>
+  Array.isArray(pillars)
+    ? pillars.map((p, i) => `${i + 1}. ${p.name} (${p.topics.join(', ')})`).join('\n')
+    : ''
 );
 
-Handlebars.registerHelper('mentionTemplatesFormatted', (pillars: OpenTwinsConfig['pillars']) =>
-  pillars
-    .filter((p) => p.mention_templates.length > 0)
-    .map((p) => `- ${p.name}: "${p.mention_templates[0]}"`)
-    .join('\n')
+Handlebars.registerHelper('mentionTemplatesFormatted', (pillars: unknown) =>
+  Array.isArray(pillars)
+    ? pillars.filter((p) => p.mention_templates?.length > 0).map((p) => `- ${p.name}: "${p.mention_templates[0]}"`).join('\n')
+    : ''
 );
 
-Handlebars.registerHelper('pillarDistribution', (pillars: OpenTwinsConfig['pillars']) =>
-  pillars
-    .filter((p) => p.target_percentage > 0)
-    .map((p) => `  - ${p.target_percentage}% ${p.name}`)
-    .join('\n')
+Handlebars.registerHelper('pillarDistribution', (pillars: unknown) =>
+  Array.isArray(pillars)
+    ? pillars.filter((p) => p.target_percentage > 0).map((p) => `  - ${p.target_percentage}% ${p.name}`).join('\n')
+    : ''
 );
 
 interface TemplateContext {
@@ -252,7 +250,7 @@ function ensureDir(dir: string): void {
 function cleanWorkspaceDir(dir: string): void {
   if (!existsSync(dir)) return;
   // Remove generated .md files but preserve memory/, schedule.json, and agent runtime data
-  const preserve = new Set(['memory', 'schedule.json', 'queries.json', 'limits.json', '.openclaw']);
+  const preserve = new Set(['memory', 'schedule.json', 'queries.json', 'limits.json']);
   for (const entry of readdirSync(dir)) {
     if (preserve.has(entry)) continue;
     const entryPath = join(dir, entry);
@@ -307,10 +305,12 @@ export async function generateAgentFiles(config: OpenTwinsConfig): Promise<{ gen
       }
     }
 
-    // Write limits.json from config
+    // Write limits.json from config (only if it doesn't exist — preserve runtime counters)
     const limitsPath = join(outputDir, 'limits.json');
-    writeFileSync(limitsPath, JSON.stringify(buildLimitsJson(platformAccount), null, 2) + '\n', 'utf-8');
-    generated.push(limitsPath);
+    if (!existsSync(limitsPath)) {
+      writeFileSync(limitsPath, JSON.stringify(buildLimitsJson(platformAccount), null, 2) + '\n', 'utf-8');
+      generated.push(limitsPath);
+    }
 
     // Create empty schedule.json
     const schedulePath = join(outputDir, 'schedule.json');

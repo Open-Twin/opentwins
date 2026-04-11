@@ -45,7 +45,7 @@ Reply handling: HEARTBEAT.md | Self-review: SOUL.md § "What Got Us Caught on HN
 
 Check memory for "Article Published" in last 14 days. If none, write one.
 
-**Topics:** (1) Vibe coding, (2) AI-assisted dev, (3) Building in public, (4) Dev productivity, (5) Project deep-dives, (6) Autonomous AI agents
+**Topics:** {{#each pillars}}({{add1 @index}}) {{name}}{{#unless @last}}, {{/unless}}{{/each}}
 
 **Series:** Pick from queries.json series[] based on topic:
 - "Vibe Coding Lessons" — AI-assisted dev topics

@@ -9,7 +9,8 @@
   <meta name="author" content="OpenTwins">
   <meta name="theme-color" content="#2dd4bf">
   <link rel="canonical" href="https://opentwins.ai/blog/case-study-linkedin-connections-30-days.html">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23080b12'/><text x='16' y='22' font-size='16' font-weight='bold' font-family='monospace' fill='%232dd4bf' text-anchor='middle'>OT</text></svg>">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 
   <meta property="og:title" content="Case Study: 0 to 1000 LinkedIn Connections in 30 Days">
   <meta property="og:description" content="How a tech leader used OpenTwins to grow from 0 to 1,047 LinkedIn connections in 30 days with AI-powered engagement.">
@@ -110,31 +111,7 @@
   </script>
 
   <link rel="stylesheet" href="/styles.css">
-  <style>
-    body { background: #080b12; color: #e2e8f0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-    .font-mono { font-family: 'JetBrains Mono', monospace; }
-    .nav-blur { backdrop-filter: blur(12px); background: rgba(8,11,18,0.85); }
-    .prose h2 { color: #fff; font-size: 1.5rem; font-weight: 700; margin-top: 2.5rem; margin-bottom: 1rem; }
-    .prose h3 { color: #e2e8f0; font-size: 1.2rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; }
-    .prose p { color: #94a3b8; line-height: 1.8; margin-bottom: 1.25rem; }
-    .prose ul, .prose ol { color: #94a3b8; margin-bottom: 1.25rem; padding-left: 1.5rem; }
-    .prose li { margin-bottom: 0.5rem; line-height: 1.7; }
-    .prose a { color: #2dd4bf; text-decoration: underline; text-decoration-color: rgba(45,212,191,0.3); }
-    .prose a:hover { text-decoration-color: #2dd4bf; }
-    .prose strong { color: #e2e8f0; }
-    .prose code { font-family: 'JetBrains Mono', monospace; background: rgba(30,41,59,0.5); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: #2dd4bf; }
-    .prose pre { background: rgba(30,41,59,0.5); border: 1px solid rgba(45,212,191,0.1); border-radius: 8px; padding: 1rem 1.25rem; overflow-x: auto; margin-bottom: 1.5rem; }
-    .prose pre code { background: none; padding: 0; }
-    .prose blockquote { border-left: 3px solid rgba(45,212,191,0.3); padding-left: 1rem; margin: 1.5rem 0; }
-    .prose blockquote p { color: #cbd5e1; font-style: italic; }
-    .toc a { color: #64748b; text-decoration: none; transition: color 0.2s; }
-    .toc a:hover { color: #2dd4bf; }
-    .cta-box { background: rgba(45,212,191,0.05); border: 1px solid rgba(45,212,191,0.15); border-radius: 12px; }
-    .tldr-box { background: rgba(45,212,191,0.05); border: 1px solid rgba(45,212,191,0.12); border-radius: 12px; }
-    .metric-card { background: rgba(30,41,59,0.4); border: 1px solid rgba(45,212,191,0.1); border-radius: 8px; padding: 1rem; text-align: center; }
-    .metric-card .number { font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 700; color: #2dd4bf; }
-    .metric-card .label { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
-  </style>
+  <link rel="stylesheet" href="/blog/article.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -152,35 +129,43 @@
   <nav class="fixed top-0 left-0 right-0 z-50 nav-blur border-b border-white/5">
     <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
       <a href="/" class="flex items-center gap-3 group">
-        <div class="w-8 h-8 rounded-lg flex items-center justify-center border border-teal-400/20 bg-teal-400/5 group-hover:bg-teal-400/10 transition-colors"><span class="font-mono text-sm font-bold text-teal-400">OT</span></div>
+        <img src="/logo-clean.svg" alt="OpenTwins" class="w-8 h-8 rounded-lg">
         <span class="text-lg font-semibold tracking-wide">OpenTwins</span>
       </a>
-      <div class="flex items-center gap-6">
-        <a href="/" class="text-sm text-slate-400 hover:text-teal-400 transition-colors">Home</a>
+      <div class="hidden md:flex items-center gap-8">
+        <a href="/#for-you" class="text-sm text-slate-400 hover:text-teal-400 transition-colors">Use Cases</a>
+        <a href="/#results" class="text-sm text-slate-400 hover:text-teal-400 transition-colors">Results</a>
+        <a href="/#how-it-works" class="text-sm text-slate-400 hover:text-teal-400 transition-colors">How It Works</a>
         <a href="/blog/" class="text-sm text-teal-400 font-medium">Blog</a>
-        <a href="https://github.com/Open-Twin/opentwins" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">GitHub</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="https://github.com/Open-Twin/opentwins" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors" aria-label="GitHub">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </a>
+        <a href="/#get-started" class="hidden sm:inline-flex px-4 py-2 rounded-lg text-sm font-medium bg-teal-400/10 text-teal-400 border border-teal-400/25 hover:bg-teal-400/20 transition-all">Get Started</a>
       </div>
     </div>
   </nav>
 
-  <main class="pt-32 pb-24">
-    <article class="max-w-3xl mx-auto px-6">
-      <header class="mb-12">
-        <div class="flex items-center gap-3 mb-4">
-          <a href="/blog/" class="font-mono text-xs text-teal-400/60 hover:text-teal-400 transition-colors">&larr; Blog</a>
-          <span class="text-slate-600">-</span>
-          <span class="font-mono text-xs text-slate-500">April 9, 2026</span>
-          <span class="text-slate-600">-</span>
-          <span class="font-mono text-xs text-slate-500">14 min read</span>
+  <main class="article-main">
+    <article class="article-wrap">
+      <header class="article-header" style="margin-bottom:3rem">
+        <div class="article-meta">
+          <a href="/blog/" class="back-link">&larr; Blog</a>
+          <span class="dot">·</span>
+          <span class="date">April 9, 2026</span>
+          <span class="dot">·</span>
+          <span class="date">14 min read</span>
         </div>
-        <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-6">Case Study: From 0 to 1,000 LinkedIn Connections in 30 Days with OpenTwins</h1>
-        <p class="text-lg text-slate-400">A week-by-week breakdown of how a tech leader used OpenTwins to build a LinkedIn presence from scratch. Includes exact configuration settings, daily metrics and lessons learned.</p>
+        <h1 class="article-title">Case Study: From 0 to 1,000 LinkedIn Connections in 30 Days with OpenTwins</h1>
+        <p class="article-subtitle">A week-by-week breakdown of how a tech leader used OpenTwins to build a LinkedIn presence from scratch. Includes exact configuration settings, daily metrics and lessons learned.</p>
       </header>
 
       <!-- TL;DR / Key Takeaways -->
-      <div class="tldr-box p-6 mb-10">
-        <div class="font-mono text-xs uppercase tracking-[0.15em] text-teal-400/80 mb-4">Key Takeaways</div>
-        <ul class="space-y-2 text-sm text-slate-300">
+      <div class="tldr-box">
+        <div class="label">Key Takeaways</div>
+        <ul class="">
           <li>- In a 30-day test, an OpenTwins user grew from 0 to 1,047 LinkedIn connections while posting 4 times per week and commenting on 8 posts per day.</li>
           <li>- The user spent 2.5 hours per week on LinkedIn with OpenTwins, compared to an estimated 8-10 hours for equivalent manual engagement.</li>
           <li>- Original posts averaged 6.8% engagement rate by week 4, more than double the LinkedIn average of 2-3%.</li>
@@ -209,9 +194,9 @@
         </div>
       </div>
 
-      <div class="toc mb-12 p-6 rounded-xl bg-slate-800/20 border border-white/5">
-        <div class="font-mono text-xs uppercase tracking-[0.15em] text-slate-500 mb-4">Table of Contents</div>
-        <ol class="space-y-2 text-sm list-decimal list-inside">
+      <div class="toc">
+        <div class="label">Table of Contents</div>
+        <ol class="">
           <li><a href="#background">Background: The Starting Point</a></li>
           <li><a href="#setup">OpenTwins Configuration and Setup</a></li>
           <li><a href="#week-1">Week 1: Foundation and Calibration</a></li>
@@ -524,7 +509,7 @@
   <footer class="py-12 border-t border-white/5">
     <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
       <div class="flex items-center gap-3">
-        <div class="w-6 h-6 rounded-md flex items-center justify-center border border-teal-400/20 bg-teal-400/5"><span class="font-mono text-xs font-bold text-teal-400">OT</span></div>
+        <img src="/logo-clean.svg" alt="OpenTwins" class="w-6 h-6 rounded-md">
         <span class="text-sm text-slate-400">OpenTwins</span>
         <span class="font-mono text-xs text-slate-600">MIT License</span>
       </div>

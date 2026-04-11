@@ -22,7 +22,7 @@ OpenTwins deploys autonomous AI agents ("digital twins") that comment, post, rea
 ## Tech stack
 
 - Claude Code (AI brain for all agents)
-- OpenClaw (browser automation via CDP)
+- Chrome CDP (built-in browser automation)
 - Bree (in-process job scheduling)
 - SQLite (activity and quality tracking)
 - Node.js 18+

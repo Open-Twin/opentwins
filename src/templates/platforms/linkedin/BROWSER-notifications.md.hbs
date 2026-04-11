@@ -16,7 +16,7 @@ browser.act({
       var isLike = text.includes('reacted to') || text.includes('liked');
       var profileLink = links.find(function(a) { return a.href.includes('/in/'); });
       var activityLink = links.find(function(a) { return a.href.includes('/feed/update/') || a.href.includes('/activity/'); });
-      var username = profileLink ? (profileLink.href.match(/\/in\/([^/?]+)/) || [])[1] : null;
+      var username = profileLink ? decodeURIComponent((profileLink.href.match(/\/in\/([^/?]+)/) || [])[1] || '') : null;
       // Keep full URL for navigation (has commentUrn for thread targeting) but store base URL for tracking
       var fullUrl = activityLink ? activityLink.href : null;
       var baseUrl = fullUrl ? fullUrl.split('?')[0] : null;
@@ -230,8 +230,8 @@ Navigate back to profile URL, wait 3s, check for "Pending" in page text.
 - Keep casual, genuine — not salesy
 - Template: "hey {firstName}, {specific thing you noticed about them}. {brief connection to your work}. would be great to connect"
 - Examples:
-  - "hey Daniel, loved your take on product execution at scale. would be great to connect and exchange notes on PM leadership"
-  - "hey Sarah, your post about AI in product management resonated. been running 10+ AI agents as part of my PM workflow and would love to exchange notes"
+  - "hey Daniel, loved your take on {topic}. would be great to connect and exchange notes on {{role}} perspective"
+  - "hey Sarah, your post about {topic} resonated. would love to exchange notes on our approaches"
 
 - If `sent: true` → log `Type=Connection Request`, update `weekly.connection_requests`
 - If `sent: false` → log `Type=Connection Skipped, Reason={error}`, continue

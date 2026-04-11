@@ -16,7 +16,7 @@ Single-platform agent. See SOUL.md for identity/style.
 
 ## Model
 
-Sonnet (configured in openclaw.json)
+Sonnet (configured in opentwins.json)
 
 ## Execution
 

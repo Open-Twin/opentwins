@@ -37,7 +37,7 @@ Script: `{{opentwins_home}}/scripts/ph-api.sh`
 
 **Pre-check steps:**
 1. Run `ph-api.sh today 15` + `ph-api.sh newest 10`
-2. Filter for relevant topics (vibe coding, AI, productivity, AI agents)
+2. Filter for relevant topics ({{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}})
 3. Identify 2-3 launches worth commenting on (5+ votes, relevant topic)
 4. THEN open browser to comment and upvote
 
@@ -56,7 +56,7 @@ Script: `{{opentwins_home}}/scripts/ph-api.sh`
 Skip any launch that fails:
 1. Fresh (from today only)
 2. Has traction (5+ upvotes minimum)
-3. Relevant topic (AI, AI agents, PM tools, productivity, dev tools)
+3. Relevant topic ({{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}})
 4. Not too crowded (skip 50+ comments)
 5. Sweet spot (3-20 comments ideal)
 
@@ -98,16 +98,15 @@ PH notifications persist for hours/days after replying. **Tracking-file-first** 
 
 PH collections are highly visible curated lists. Creating collections = authority.
 
-**Collections to create:**
-1. "Vibe Coding Stack 2026" → tools for AI-assisted development
-2. "AI Project Management Tools" → AI-powered PM dashboards, sprint planners, team coordination tools
-3. "Open Source PM Dashboards" → open-source alternatives for project management and tracking
-4. "AI-Native Team Tools" → tools for managing AI agents as team members, orchestration, monitoring
+**Collections to create:** Build collections around pillars:
+{{#each pillars}}
+{{add1 @index}}. **{{name}}** → curate tools related to [{{join topics ", "}}]
+{{/each}}
 
 **Rules:**
 - 8-12 products per collection (not just yours)
 - Genuine descriptions for each product
-- Your PM tools included naturally among others
+- Your tools included naturally among others
 - Update monthly
 
 ---
@@ -118,7 +117,7 @@ PH collections are highly visible curated lists. Creating collections = authorit
 - 10:00 Kyiv: `browse_and_engage` — API pre-check → top launches, comment on 2-3
 - 14:00 Kyiv: `browse_and_engage` — newest launches, comment on 1-2
 - 17:00 Kyiv: `browse_and_engage` — rising launches, engage with 1-2
-- Wed/Fri: Look for vibe coding / AI agent launches
+- Wed/Fri: Look for launches matching top pillars
 
 **Tue/Thu:**
 - 15:00 Kyiv: `forum_engagement` — browse PH discussions, comment on 1 thread
