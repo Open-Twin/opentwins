@@ -90,7 +90,7 @@ End-of-day / on-demand. DO NOT load on routine heartbeats. Read sections as need
 {
   "action": "search_and_promo_reply",
   "config": {
-    "topic": "AI Project Management",
+    "topic": "{{pillars.[0].name}}",
     "max_replies": 1,
     "trending_check": true,
     "angle": "{{role}} {{join experience_hooks ", "}}",
@@ -144,7 +144,7 @@ End-of-day / on-demand. DO NOT load on routine heartbeats. Read sections as need
   "action": "article",
   "config": {
     "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/twitter-article.md",
-    "pillar": "AI Agent Management",
+    "pillar": "{{pillars.[0].name}}",
     "word_target": "500-800",
     "hashtags": false
   }
