@@ -128,7 +128,7 @@ export async function handleSetup(req: Request, res: Response): Promise<void> {
       platforms: (body.platforms || []).map((p) => ({
         platform: p.platform as PlatformType,
         handle: p.handle,
-        profile_url: `${PLATFORM_URLS[p.platform as PlatformType] || ''}${p.handle}`,
+        profile_url: p.handle.startsWith('http') ? p.handle : `${PLATFORM_URLS[p.platform as PlatformType] || ''}${p.handle}`,
         enabled: true,
         limits: DEFAULT_LIMITS[p.platform as PlatformType] || { daily: {} },
       })),
