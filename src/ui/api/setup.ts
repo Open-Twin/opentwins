@@ -4,7 +4,8 @@ import { ZodError } from 'zod';
 import { configExists, saveConfig } from '../../config/loader.js';
 import { OpenTwinsConfigSchema, type OpenTwinsConfig } from '../../config/schema.js';
 import { generateAgentFiles } from '../../config/generator.js';
-import { validateAuth, isClaudeInstalled, isOpenClawInstalled } from '../../util/claude.js';
+import { validateAuth, isClaudeInstalled } from '../../util/claude.js';
+import { isChromeInstalled } from '../../browser/chrome.js';
 import { getOpenTwinsHome } from '../../util/paths.js';
 import { DEFAULT_LIMITS } from '../../config/defaults.js';
 import { PLATFORM_URLS } from '../../util/platform-types.js';
@@ -15,15 +16,15 @@ import type { PlatformType } from '../../util/platform-types.js';
 
 export async function handleSetupStatus(_req: Request, res: Response): Promise<void> {
   try {
-    const [claude, openclaw] = await Promise.all([
+    const [claude, chrome] = await Promise.all([
       isClaudeInstalled(),
-      isOpenClawInstalled(),
+      Promise.resolve(isChromeInstalled()),
     ]);
     res.json({
       configured: configExists(),
       prereqs: {
         claude,
-        openclaw,
+        chrome,
       },
     });
   } catch (err) {

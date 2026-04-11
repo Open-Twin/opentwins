@@ -2,7 +2,7 @@
 
 All calls require `profile: "{{browser_profile}}"`. Never use `args` in evaluate -- inline via template literals.
 
-**Navigate:** `openclaw browser navigate <url> --browser-profile {{browser_profile}}` (positional `<url>`, NOT `--url`).
+**Navigate:** `opentwins browser navigate <url> --browser-profile {{browser_profile}}` (positional `<url>`, NOT `--url`).
 
 **Wait pattern (embedded):** All waits MUST be `await new Promise(r => setTimeout(r, N))` or `new Promise(function(resolve) { setTimeout(function() { ... }, N); })` INSIDE evaluate. NEVER use separate `exec sleep N` — each adds ~6-8s overhead.
 
@@ -27,7 +27,7 @@ All calls require `profile: "{{browser_profile}}"`. Never use `args` in evaluate
 
 ## Recovery Rules
 
-- **Browser timeout**: close tab, reopen URL. If fails: `exec openclaw browser start --profile {{browser_profile}}`, wait 3s, retry once. Still fails: skip browser tasks. NEVER use `browser.stop()`.
+- **Browser timeout**: close tab, reopen URL. If fails: `exec opentwins browser start --profile {{browser_profile}}`, wait 3s, retry once. Still fails: skip browser tasks. NEVER use `browser.stop()`.
 - **"matched N elements" error**: snapshot selector too broad. Use narrower selector. Not a gateway issue.
 - **Unexpected evaluate() data**: 1 snapshot to inspect DOM, use discovered selector for rest of heartbeat.
 - **Click fails after snapshot**: retry snapshot once with narrower selector. If retry fails: skip, log Type="Error", next task.

@@ -2,7 +2,7 @@
 
 ## Rules
 
-- **CLI:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
+- **CLI:** `exec opentwins browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
 - **evaluate:** `... evaluate --fn 'async () => { ... }' 2>&1` (JS after `--fn`)
 - **open/navigate/close:** `... open "URL" 2>&1` / `... navigate "URL" 2>&1` / `... close 2>&1`
 - 🚨 **Tab reuse:** Use `open` ONLY for the FIRST page. Use `navigate` for ALL subsequent pages.
@@ -80,7 +80,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 
 ## SS 2. Browser Startup (with retry)
 
-1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://substack.com/activity" 2>&1`
+1. `exec opentwins browser --browser-profile {{browser_profile}} open "https://substack.com/activity" 2>&1`
 2. If error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK.
 
 ---

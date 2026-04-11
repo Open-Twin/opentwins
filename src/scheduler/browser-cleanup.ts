@@ -25,19 +25,19 @@ function log(file: string, msg: string): void {
   appendFileSync(resolve(getLogDir(), file), `${ts} - ${msg}\n`, 'utf-8');
 }
 
-// ── Read ot-* profiles from openclaw.json ────────────────────
+// ── Read ot-* profiles from OpenTwins config ─────────────────
 
 interface ProfileEntry { name: string; cdpPort: number }
 
 function getOpenTwinsProfiles(): ProfileEntry[] {
-  const configPath = resolve(homedir(), '.openclaw', 'openclaw.json');
-  if (!existsSync(configPath)) return [];
+  // Read from ~/.opentwins/chrome-profiles/ports.json
+  const portsPath = resolve(homedir(), '.opentwins', 'chrome-profiles', 'ports.json');
+  if (!existsSync(portsPath)) return [];
   try {
-    const cfg = JSON.parse(readFileSync(configPath, 'utf-8'));
-    const profiles = cfg.browser?.profiles || {};
-    return Object.entries(profiles)
+    const ports = JSON.parse(readFileSync(portsPath, 'utf-8')) as Record<string, number>;
+    return Object.entries(ports)
       .filter(([name]) => name.startsWith('ot-'))
-      .map(([name, val]) => ({ name, cdpPort: (val as { cdpPort?: number }).cdpPort || 0 }))
+      .map(([name, port]) => ({ name, cdpPort: port }))
       .filter((p) => p.cdpPort > 0);
   } catch {
     return [];

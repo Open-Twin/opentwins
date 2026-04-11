@@ -167,7 +167,7 @@ export async function startDashboard(port: number): Promise<void> {
   app.post('/api/setup/validate-auth', (req, res) => { handleValidateAuth(req, res); });
   app.post('/api/setup', (req, res) => { handleSetup(req, res); });
 
-  // Live health monitor — OpenClaw gateway + Claude service status
+  // Live health monitor — Browser profiles + Claude service status
   app.get('/api/health', (req, res) => { handleHealth(req, res); });
 
   // Token usage & cost report

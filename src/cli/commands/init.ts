@@ -9,7 +9,8 @@ import { OpenTwinsConfigSchema, type OpenTwinsConfig, type AuthConfig, type Cont
 import { saveConfig, configExists } from '../../config/loader.js';
 import { generateAgentFiles } from '../../config/generator.js';
 import { DEFAULT_LIMITS } from '../../config/defaults.js';
-import { isClaudeInstalled, isOpenClawInstalled, validateAuth } from '../../util/claude.js';
+import { isClaudeInstalled, validateAuth } from '../../util/claude.js';
+import { isChromeInstalled } from '../../browser/chrome.js';
 import { getOpenTwinsHome } from '../../util/paths.js';
 import { PLATFORM_TYPES, PLATFORM_DISPLAY_NAMES, PLATFORM_HANDLE_LABELS, PLATFORM_URLS } from '../../util/platform-types.js';
 import type { PlatformType } from '../../util/platform-types.js';
@@ -31,20 +32,16 @@ async function checkPrereqs(): Promise<boolean> {
   }
   log.success('Claude Code CLI found');
 
-  const openclawOk = await isOpenClawInstalled();
-  if (!openclawOk) {
-    log.error('OpenClaw CLI not found.');
+  if (!isChromeInstalled()) {
+    log.error('Google Chrome not found.');
     console.log('');
-    console.log('  OpenClaw provides browser automation for platform agents.');
-    console.log('  Without it, agents cannot interact with social platforms.');
+    console.log('  Chrome is required for browser automation.');
+    console.log('  Install Google Chrome from https://www.google.com/chrome/');
     console.log('');
-    console.log('  Install OpenClaw:');
-    console.log(chalk.cyan('    npm install -g openclaw'));
-    console.log('');
-    console.log('  Then run `opentwins init` again.');
+    console.log('  Or set CHROME_PATH env var to your Chrome/Chromium binary.');
     return false;
   }
-  log.success('OpenClaw CLI found');
+  log.success('Google Chrome found');
   return true;
 }
 

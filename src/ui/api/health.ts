@@ -1,39 +1,37 @@
 import type { Request, Response } from 'express';
+import { getProfilePort, isPortInUse } from '../../browser/chrome.js';
+import { getBrowserProfilesConfigPath } from '../../util/paths.js';
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { homedir } from 'node:os';
 
-// ── OpenClaw gateway probe ────────────────────────────────────
+// ── Browser health probe ─────────────────────────────────────
 
-interface OpenclawHealth {
+interface BrowserHealth {
   running: boolean;
-  port: number;
+  activeProfiles: number;
+  totalProfiles: number;
   error?: string;
 }
 
-function getOpenclawGatewayPort(): number {
-  const configPath = resolve(homedir(), '.openclaw', 'openclaw.json');
-  if (!existsSync(configPath)) return 18789;
+function checkBrowserHealth(): BrowserHealth {
+  const configPath = getBrowserProfilesConfigPath();
+  if (!existsSync(configPath)) {
+    return { running: false, activeProfiles: 0, totalProfiles: 0 };
+  }
   try {
     const config = JSON.parse(readFileSync(configPath, 'utf-8'));
-    return config?.gateway?.port || 18789;
-  } catch {
-    return 18789;
-  }
-}
-
-async function checkOpenclawGateway(): Promise<OpenclawHealth> {
-  const port = getOpenclawGatewayPort();
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2500);
-    const res = await fetch(`http://127.0.0.1:${port}/health`, { signal: controller.signal });
-    clearTimeout(timeout);
-    return { running: res.ok, port };
+    const profiles = config.profiles || [];
+    let active = 0;
+    for (const p of profiles) {
+      const name = p.browserProfile || `ot-${p.platform}`;
+      const port = getProfilePort(name);
+      if (isPortInUse(port)) active++;
+    }
+    return { running: active > 0, activeProfiles: active, totalProfiles: profiles.length };
   } catch (err) {
     return {
       running: false,
-      port,
+      activeProfiles: 0,
+      totalProfiles: 0,
       error: err instanceof Error ? err.message : 'probe failed',
     };
   }
@@ -57,7 +55,6 @@ let claudeStatusCache: { data: ClaudeStatus | null; fetchedAt: number } = {
 const CLAUDE_STATUS_CACHE_MS = 60_000;
 
 async function checkClaudeStatus(): Promise<ClaudeStatus | null> {
-  // Serve from cache if fresh
   if (Date.now() - claudeStatusCache.fetchedAt < CLAUDE_STATUS_CACHE_MS && claudeStatusCache.data) {
     return claudeStatusCache.data;
   }
@@ -89,7 +86,6 @@ async function checkClaudeStatus(): Promise<ClaudeStatus | null> {
     claudeStatusCache = { data: parsed, fetchedAt: Date.now() };
     return parsed;
   } catch {
-    // Cache the failure briefly so we don't hammer the endpoint
     claudeStatusCache = { data: null, fetchedAt: Date.now() };
     return null;
   }
@@ -98,9 +94,9 @@ async function checkClaudeStatus(): Promise<ClaudeStatus | null> {
 // ── GET /api/health ───────────────────────────────────────────
 
 export async function handleHealth(_req: Request, res: Response): Promise<void> {
-  const [openclaw, claude] = await Promise.all([
-    checkOpenclawGateway(),
+  const [browser, claude] = await Promise.all([
+    Promise.resolve(checkBrowserHealth()),
     checkClaudeStatus(),
   ]);
-  res.json({ openclaw, claude });
+  res.json({ browser, claude });
 }

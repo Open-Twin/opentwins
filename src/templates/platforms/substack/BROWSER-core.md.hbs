@@ -36,7 +36,7 @@ browser.act({
 
 **Step 0 — Navigate to comments page:**
 ```
-exec openclaw browser --browser-profile {{browser_profile}} navigate "{post_url}/comments" 2>&1
+exec opentwins browser --browser-profile {{browser_profile}} navigate "{post_url}/comments" 2>&1
 ```
 Wait 3s (embed in next evaluate).
 
@@ -179,7 +179,7 @@ Note pages show threaded comments. Each has its own `Comment` button (`aria-labe
 
 **Step 0 — Navigate to the notification URL:**
 ```
-exec openclaw browser --browser-profile {{browser_profile}} navigate "{notification_url}" 2>&1
+exec opentwins browser --browser-profile {{browser_profile}} navigate "{notification_url}" 2>&1
 ```
 
 **Step 1 — Find the replier's Comment button and click it:**

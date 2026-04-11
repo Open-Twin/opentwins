@@ -61,7 +61,7 @@ function summarizeToolCall(name: string, input: Record<string, unknown>): { summ
     case 'Bash': {
       const cmd = String(input.command || '');
       const desc = input.description ? String(input.description) : '';
-      if (cmd.includes('openclaw browser')) {
+      if (cmd.includes('opentwins browser')) {
         if (cmd.includes(' open ')) return { summary: `🌐 Opening browser page`, detail: cmd.match(/open\s+"([^"]+)"/)?.[1] };
         if (cmd.includes(' navigate ')) return { summary: `🧭 Navigating`, detail: cmd.match(/navigate\s+"([^"]+)"/)?.[1] };
         if (cmd.includes(' evaluate ')) return { summary: `⚡ ${desc || 'Evaluating page JS'}`, detail: cmd.slice(0, 400) };
@@ -69,7 +69,7 @@ function summarizeToolCall(name: string, input: Record<string, unknown>): { summ
         if (cmd.includes(' click')) return { summary: `🖱️ Clicking element`, detail: desc };
         if (cmd.includes(' type')) return { summary: `⌨️ Typing`, detail: desc };
         if (cmd.includes(' close')) return { summary: `❌ Closing tab`, detail: desc };
-        return { summary: `🦞 OpenClaw: ${desc || cmd.slice(0, 80)}` };
+        return { summary: `🦞 Browser: ${desc || cmd.slice(0, 80)}` };
       }
       return { summary: `💻 ${desc || 'Bash'}`, detail: cmd.slice(0, 400) };
     }

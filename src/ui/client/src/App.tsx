@@ -12,7 +12,7 @@ import { useHealth } from './contexts/HealthContext.tsx';
 
 interface SetupStatus {
   configured: boolean;
-  prereqs: { claude: boolean; openclaw: boolean };
+  prereqs: { claude: boolean; chrome: boolean };
 }
 
 const navItems = [
@@ -141,10 +141,11 @@ interface PillState {
   statusLabel: string;
 }
 
-function openclawPillState(openclaw: ReturnType<typeof useHealth>['openclaw'], loading: boolean): PillState {
-  if (loading && !openclaw) return { color: 'var(--c-text-muted)', bg: 'rgba(148,163,184,0.08)', border: 'var(--c-border-dim)', dot: 'pending', statusLabel: 'checking…' };
-  if (!openclaw || !openclaw.running) return { color: 'var(--c-red)', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.35)', dot: 'offline', statusLabel: 'down' };
-  return { color: 'var(--c-green)', bg: 'rgba(52,211,153,0.1)', border: 'rgba(52,211,153,0.3)', dot: 'online', statusLabel: 'online' };
+function browserPillState(browser: ReturnType<typeof useHealth>['browser'], loading: boolean): PillState {
+  if (loading && !browser) return { color: 'var(--c-text-muted)', bg: 'rgba(148,163,184,0.08)', border: 'var(--c-border-dim)', dot: 'pending', statusLabel: 'checking...' };
+  if (!browser || browser.totalProfiles === 0) return { color: 'var(--c-text-muted)', bg: 'rgba(148,163,184,0.08)', border: 'var(--c-border-dim)', dot: 'pending', statusLabel: 'no profiles' };
+  if (browser.activeProfiles > 0) return { color: 'var(--c-green)', bg: 'rgba(52,211,153,0.1)', border: 'rgba(52,211,153,0.3)', dot: 'online', statusLabel: `${browser.activeProfiles} active` };
+  return { color: 'var(--c-text-muted)', bg: 'rgba(148,163,184,0.08)', border: 'var(--c-border-dim)', dot: 'pending', statusLabel: 'idle' };
 }
 
 function claudePillState(claude: ReturnType<typeof useHealth>['claude'], loading: boolean): PillState {
@@ -214,24 +215,24 @@ function HealthPill({
 }
 
 function HealthPills() {
-  const { openclaw, claude, loading, lastChecked, refetch } = useHealth();
-  const oc = openclawPillState(openclaw, loading);
+  const { browser, claude, loading, lastChecked, refetch } = useHealth();
+  const br = browserPillState(browser, loading);
   const cl = claudePillState(claude, loading);
 
-  const openclawSubtitle = openclaw?.error
-    ? `Probe failed: ${openclaw.error}`
-    : openclaw?.running
-      ? `Gateway on port ${openclaw.port}`
-      : 'Gateway is not reachable';
+  const browserSubtitle = browser?.error
+    ? `Probe failed: ${browser.error}`
+    : browser?.totalProfiles
+      ? `${browser.activeProfiles}/${browser.totalProfiles} profiles active`
+      : 'No browser profiles configured';
 
   const claudeSubtitle = claude?.description || 'Status unavailable';
 
   return (
     <div className="flex items-center gap-2">
       <HealthPill
-        label="OpenClaw"
-        state={oc}
-        subtitle={openclawSubtitle}
+        label="Browser"
+        state={br}
+        subtitle={browserSubtitle}
         onClick={refetch}
         checkedAt={lastChecked}
       />

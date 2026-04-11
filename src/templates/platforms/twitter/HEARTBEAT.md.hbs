@@ -1,7 +1,7 @@
 # HEARTBEAT.md - Twitter/X Agent
 
-**CLI syntax:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
-- **evaluate:** `exec openclaw browser --browser-profile {{browser_profile}} evaluate --fn 'async () => { ... }' 2>&1`
+**CLI syntax:** `exec opentwins browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
+- **evaluate:** `exec opentwins browser --browser-profile {{browser_profile}} evaluate --fn 'async () => { ... }' 2>&1`
 - **snapshot:** `... snapshot --selector '...' --compact --interactive 2>&1`
 - **type:** `... type e1 "text here" 2>&1` (ref is positional — NOT `--ref e1`)
 - **click:** `... click e1 2>&1` (ref is positional)
@@ -50,7 +50,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 
 ## § 2. Browser Startup (retry)
 
-1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://x.com/notifications/mentions" 2>&1`
+1. `exec opentwins browser --browser-profile {{browser_profile}} open "https://x.com/notifications/mentions" 2>&1`
 2. If CDP error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
 
 ## § 3. Notification Check (FIRST)
@@ -244,7 +244,7 @@ Read PLAYBOOK.md → "Memory Update". Done.
 
 ## § 8. Close Browser (MANDATORY)
 
-`exec openclaw browser --browser-profile {{browser_profile}} close 2>&1`
+`exec opentwins browser --browser-profile {{browser_profile}} close 2>&1`
 If fails → retry once. NEVER browser.stop() or pkill.
 
 ## § 9. HEARTBEAT_OK

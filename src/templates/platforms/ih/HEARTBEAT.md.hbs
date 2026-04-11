@@ -1,7 +1,7 @@
 # HEARTBEAT.md - Indie Hackers Agent
 
 ## Global Rules
-**CLI syntax:** `exec openclaw browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
+**CLI syntax:** `exec opentwins browser --browser-profile {{browser_profile}} <subcommand> 2>&1`
 - **evaluate:** `... evaluate --fn 'async () => { ... }' 2>&1` (JS after `--fn`)
 - **open/close:** `... open "URL" 2>&1` / `... close 2>&1`
 - `evaluate()` for data extraction; `snapshot()` only for clickable refs
@@ -76,7 +76,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 
 ## 2. Browser Startup (with retry)
 
-1. `exec openclaw browser --browser-profile {{browser_profile}} open "https://www.indiehackers.com/" 2>&1`
+1. `exec opentwins browser --browser-profile {{browser_profile}} open "https://www.indiehackers.com/" 2>&1`
 2. If CDP error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
 3. **Dismiss cookie banner** (first evaluate after page load):
    ```javascript
@@ -279,7 +279,7 @@ Safety net: `Thursday+ AND weekly.posts.current==0` -> publish_now()
 
 ## 6. Close Browser (MANDATORY)
 
-`exec openclaw browser --browser-profile {{browser_profile}} close 2>&1`. If close fails → retry once.
+`exec opentwins browser --browser-profile {{browser_profile}} close 2>&1`. If close fails → retry once.
 
 ---
 

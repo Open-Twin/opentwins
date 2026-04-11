@@ -18,7 +18,7 @@ Read fresh every heartbeat:
 
 ## Model
 
-**Sonnet** — configured in openclaw.json.
+**Sonnet** — configured in opentwins.json.
 
 ## Heartbeats
 

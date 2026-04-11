@@ -7,7 +7,7 @@ interface SetupStatus {
   configured: boolean;
   prereqs: {
     claude: boolean;
-    openclaw: boolean;
+    chrome: boolean;
   };
 }
 
@@ -188,7 +188,7 @@ function StepWelcome({ status, draft, update, onNext }: {
   const { mutate: validate, loading: validating } = useMutation<unknown, { ok: boolean; error?: string }>('/api/setup/validate-auth', 'POST');
   const [error, setError] = useState<string | null>(null);
 
-  const allPrereqs = status.prereqs.claude && status.prereqs.openclaw;
+  const allPrereqs = status.prereqs.claude && status.prereqs.chrome;
 
   const hasToken = draft.auth.mode === 'subscription'
     ? (draft.auth.claude_token?.length || 0) >= 20
@@ -235,7 +235,7 @@ function StepWelcome({ status, draft, update, onNext }: {
           </div>
           <div className="space-y-3">
             <PrereqRow label="Claude Code CLI" ok={status.prereqs.claude} install="npm install -g @anthropic-ai/claude-code" />
-            <PrereqRow label="OpenClaw CLI"    ok={status.prereqs.openclaw} install="npm install -g openclaw" />
+            <PrereqRow label="Google Chrome"    ok={status.prereqs.chrome} install="npm install -g chrome" />
           </div>
           <button
             onClick={() => window.location.reload()}
@@ -262,7 +262,7 @@ function StepWelcome({ status, draft, update, onNext }: {
         </div>
         <div className="space-y-3">
           <PrereqRow label="Claude Code CLI" ok={status.prereqs.claude} install="npm install -g @anthropic-ai/claude-code" />
-          <PrereqRow label="OpenClaw CLI"    ok={status.prereqs.openclaw} install="npm install -g openclaw" />
+          <PrereqRow label="Google Chrome"    ok={status.prereqs.chrome} install="npm install -g chrome" />
         </div>
       </div>
 

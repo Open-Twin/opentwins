@@ -322,7 +322,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
     if (result?.ok) {
       setBrowserSetupOpen(true);
     } else {
-      setBrowserSetupError(result?.error || 'Browser setup failed. Check that OpenClaw gateway is running.');
+      setBrowserSetupError(result?.error || 'Browser setup failed. Check that Chrome is installed.');
     }
   };
 
@@ -968,7 +968,7 @@ function BrowserSetupModal({ platform, color, onDone, onCancel }: {
             background: 'rgba(255,255,255,0.015)',
             border: '1px solid var(--c-border-dim)',
           }}>
-            OpenClaw manages a dedicated browser profile for this platform. You only need to log in once — the session persists across agent runs.
+            OpenTwins manages a dedicated Chrome profile for this platform. You only need to log in once — the session persists across agent runs.
           </div>
 
           {/* Actions */}

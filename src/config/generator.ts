@@ -252,7 +252,7 @@ function ensureDir(dir: string): void {
 function cleanWorkspaceDir(dir: string): void {
   if (!existsSync(dir)) return;
   // Remove generated .md files but preserve memory/, schedule.json, and agent runtime data
-  const preserve = new Set(['memory', 'schedule.json', 'queries.json', 'limits.json', '.openclaw']);
+  const preserve = new Set(['memory', 'schedule.json', 'queries.json', 'limits.json']);
   for (const entry of readdirSync(dir)) {
     if (preserve.has(entry)) continue;
     const entryPath = join(dir, entry);
