@@ -150,13 +150,21 @@
   <nav class="fixed top-0 left-0 right-0 z-50 nav-blur border-b border-white/5">
     <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
       <a href="/" class="flex items-center gap-3 group">
-        <div class="w-8 h-8 rounded-lg flex items-center justify-center border border-teal-400/20 bg-teal-400/5 group-hover:bg-teal-400/10 transition-colors"><span class="font-mono text-sm font-bold text-teal-400">OT</span></div>
+        <img src="/logo-clean.svg" alt="OpenTwins" class="w-8 h-8 rounded-lg">
         <span class="text-lg font-semibold tracking-wide">OpenTwins</span>
       </a>
-      <div class="flex items-center gap-6">
-        <a href="/" class="text-sm text-slate-400 hover:text-teal-400 transition-colors">Home</a>
+      <div class="hidden md:flex items-center gap-8">
+        <a href="/#for-you" class="text-sm text-slate-400 hover:text-teal-400 transition-colors">Use Cases</a>
+        <a href="/#results" class="text-sm text-slate-400 hover:text-teal-400 transition-colors">Results</a>
+        <a href="/#how-it-works" class="text-sm text-slate-400 hover:text-teal-400 transition-colors">How It Works</a>
         <a href="/blog/" class="text-sm text-teal-400 font-medium">Blog</a>
-        <a href="https://github.com/Open-Twin/opentwins" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">GitHub</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="https://github.com/Open-Twin/opentwins" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors" aria-label="GitHub">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </a>
+        <a href="/#get-started" class="hidden sm:inline-flex px-4 py-2 rounded-lg text-sm font-medium bg-teal-400/10 text-teal-400 border border-teal-400/25 hover:bg-teal-400/20 transition-all">Get Started</a>
       </div>
     </div>
   </nav>
@@ -450,7 +458,7 @@ opentwins init</code></pre>
   <footer class="py-12 border-t border-white/5">
     <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
       <div class="flex items-center gap-3">
-        <div class="w-6 h-6 rounded-md flex items-center justify-center border border-teal-400/20 bg-teal-400/5"><span class="font-mono text-xs font-bold text-teal-400">OT</span></div>
+        <img src="/logo-clean.svg" alt="OpenTwins" class="w-6 h-6 rounded-md">
         <span class="text-sm text-slate-400">OpenTwins</span>
         <span class="font-mono text-xs text-slate-600">MIT License</span>
       </div>
