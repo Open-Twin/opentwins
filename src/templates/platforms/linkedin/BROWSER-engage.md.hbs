@@ -51,7 +51,7 @@ Before posting any comment:
 1. **Opener check:** Does your comment start by quoting the author's phrase? → rewrite (Rule C)
 2. **Agreement check:** Did you use "exactly" or "exactly right"? → replace (Rule D)
 3. **Length check:** Over 35 words? → cut
-4. **Structure check:** If your last 2 comments both follow "agree + expand + PM angle" → write this one as short reaction, personal anecdote, or pushback
+4. **Structure check:** If your last 2 comments both follow "agree + expand + professional angle" → write this one as short reaction, personal anecdote, or pushback
 
 ### G. Hard Disagreement Rule (per-batch)
 
@@ -192,9 +192,9 @@ browser.act({
 })
 ```
 
-## SS 3b. Get Post URL from Feed (clipboard approach)
+## SS 3b. Posts with no URL
 
-🚨 **Feed posts have `postUrl: null`** — LinkedIn doesn't expose activity URNs in the feed DOM. Use the overflow menu "Copy link to post" to get the URL via clipboard. This replaces the expensive profile-hop approach (saves 4-6 steps per post).
+🚨 **Skip posts with `postUrl: null`.** Some feed posts don't have navigable URLs in LinkedIn's search DOM. Do NOT try to get the URL via clipboard (blocked by CDP), profile-hopping, or clicking into the post. Simply skip to the next post that has a URL. There are always enough pulse articles and feed posts with URLs to meet comment targets.
 
 **ONE async evaluate per post — returns postUrl and postId for grep dedup:**
 
@@ -594,7 +594,7 @@ browser.act({
 
 **Article body rules:**
 - Use `<p>` for paragraphs, `<strong>` for section headings
-- Include brand link as `<a href="https://linkedin.com/in/{{handle_slug}}">{{name}}</a>` or `<a href="https://github.com/{{handle_slug}}">open-source PM tools</a>` at least once in the article body
+- Include brand link as `<a href="https://linkedin.com/in/{{handle_slug}}">{{name}}</a>` or `<a href="https://github.com/{{handle_slug}}">{{brand_tagline}}</a>` at least once in the article body
 - Hashtags go in the share text (Step 4), NOT in article body
 - Keep HTML under 8000 chars to avoid evaluate payload bloat
 

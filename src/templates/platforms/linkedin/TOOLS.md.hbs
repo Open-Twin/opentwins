@@ -17,7 +17,7 @@ URLs: Feed `/feed/`, Notifications `/notifications/`, Profile `/in/{{handle_slug
 
 ## Post Quality Filter
 
-1. Fresh (24-48h), 10+ reactions, relevant (AI/PM/agents/tools)
+1. Fresh (24-48h), 10+ reactions, relevant ({{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}})
 2. Not crowded (<100 comments, 5-30 ideal)
 3. Like first (mandatory)
 4. ALWAYS `datePosted="past-week"` in search (NOT past-24h)
@@ -28,7 +28,7 @@ URLs: Feed `/feed/`, Notifications `/notifications/`, Profile `/in/{{handle_slug
 See POST-TEMPLATES.md. Pick unused template, self-review (SOUL.md), peak hours (15:00-17:00 Kyiv). 3-5 hashtags (read from `queries.json → hashtags` array — refreshed daily).
 
 ### Articles
-1000-2000 words, personal story. "{{role}} by day, AI-native builder by night." Topics: AI agents as team, sprint planning with AI, PM in AI era, running 10+ agents, conference insights. Tuesday + Friday (mandatory). End with question.
+1000-2000 words, personal story. "{{role}} by day, builder by night." Topics drawn from pillars: {{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}.{{#if conferences_text}} Conference insights from {{conferences_text}}.{{/if}} Tuesday + Friday (mandatory). End with question.
 
 ### Polls
 4 options (1 funny). No product in poll — only in follow-up comment. See BROWSER-post.md SS 9.

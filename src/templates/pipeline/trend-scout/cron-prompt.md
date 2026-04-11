@@ -10,16 +10,16 @@
 
 Use `web_search` for all searches. Use keyword-focused queries instead.
 
-**Scan 1: Rising AI/PM topics (2 searches)**
-- `"AI agents" OR "AI coworker" trending this week april 2026`
-- `"project management" AI tools trending new launch april 2026`
+**Scan 1: Rising topics in your domain (2 searches)**
+- `"{{pillars.[0].name}}" OR "{{pillars.[1].name}}" trending this week`
+- `"{{pillars.[0].name}}" tools trending new launch`
 
 **Scan 2: Thought leader activity (1 search)**
-- `Ethan Mollick OR "Lenny Rachitsky" OR "Marty Cagan" OR Anthropic AI latest post april 2026`
+- Search for key voices and thought leaders in your pillars
 
 **Scan 3: Reddit + HackerNews momentum (2 searches)**
 - `reddit artificial intelligence projectmanagement trending discussion april 2026`
-- `hacker news AI agents automation front page april 2026`
+- `hacker news {{pillars.[0].name}} front page`
 
 **Scan 4: Product launches (1 search)**
 - `product hunt AI productivity launch april {today_day} 2026`

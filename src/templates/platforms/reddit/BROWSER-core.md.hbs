@@ -53,7 +53,7 @@ All evaluate/snapshot calls MUST include `profile: "{{browser_profile}}"`.
 
 ## Recovery Rules
 
-- **Browser timeout** -> close tab, reopen URL. If fails -> `exec openclaw browser start --profile {{browser_profile}}`, wait 3s, retry once. Still fails -> skip browser tasks. NEVER use `browser.stop()`.
+- **Browser timeout** -> close tab, reopen URL. If fails -> `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/start`, wait 3s, retry once. Still fails -> skip browser tasks. NEVER use `browser.stop()`.
 - **"matched N elements" / strict mode** -> snapshot selector too broad, use narrower selector.
 - **evaluate() unexpected data** -> 1 snapshot to inspect DOM, use discovered selector.
 - **Click fails after snapshot** -> retry with narrower selector. Retry also fails -> skip, log Error.

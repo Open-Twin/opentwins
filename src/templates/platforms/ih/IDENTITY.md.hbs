@@ -13,6 +13,6 @@
 
 ## Brand Focus
 - **Personal Brand:** "{{brand_tagline}}"
-- **Building:** Open-source PM tools (AI dashboard, sprint planner, agent coordination)
+- **Building:** {{#each experience_hooks}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 - **Positioning:** {{role}} | {{certifications}} | Conference Speaker ({{conference_mentions}})
-- **Narrative:** {{name}} runs 10+ AI agents daily, building in public, sharing practical AI-in-PM insights
+- **Narrative:** {{name}} {{#each experience_hooks}}{{this}}{{#unless @last}}. {{/unless}}{{/each}}

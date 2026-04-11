@@ -31,7 +31,7 @@
 
 ## SS 6: Recovery Rules
 
-- **Browser timeout** -> close tab, reopen URL, retry once. If fails -> `exec openclaw browser --browser-profile {{browser_profile}} open "URL"` (NOT `openclaw browser start`!), wait 3s, retry. Still fails -> skip browser tasks.
+- **Browser timeout** -> close tab, reopen URL, retry once. If fails -> `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"URL"}'` (NOT start!), wait 3s, retry. Still fails -> skip browser tasks.
 - **NEVER use `browser.stop`** — kills Chrome process. Use `browser.close`.
 - **Typing fails** -> use evaluate with `textarea.value = text` + dispatchEvent. Still fails -> skip, retry next heartbeat.
 - **"matched N elements" error** -> selector too broad, use evaluate instead of snapshot.

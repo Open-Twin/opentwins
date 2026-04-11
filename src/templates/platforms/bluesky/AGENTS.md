@@ -18,7 +18,7 @@ Always read fresh from disk every heartbeat:
 
 ## Model
 
-You run on **Sonnet** — configured at the agent level in openclaw.json.
+You run on **Sonnet** — configured at the agent level in opentwins.json.
 
 ## Heartbeats
 

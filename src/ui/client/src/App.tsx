@@ -12,7 +12,7 @@ import { useHealth } from './contexts/HealthContext.tsx';
 
 interface SetupStatus {
   configured: boolean;
-  prereqs: { claude: boolean; openclaw: boolean };
+  prereqs: { claude: boolean; chrome: boolean };
 }
 
 const navItems = [
@@ -75,14 +75,9 @@ export function App() {
         <div className="max-w-[1400px] mx-auto px-6 flex items-center justify-between h-12">
           {/* Logo */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'var(--c-teal-glow)', border: '1px solid var(--c-teal-dim)' }}>
-              <span className="mono text-sm font-bold" style={{ color: 'var(--c-teal)' }}>OT</span>
-            </div>
+            <img src="/logo.svg" alt="OpenTwins" className="w-7 h-7 rounded-md" />
             <span className="text-sm font-semibold tracking-wide hidden sm:inline" style={{ color: 'var(--c-text)' }}>
               OPENTWINS
-            </span>
-            <span className="mono text-[13px] px-2 py-0.5 rounded hidden lg:inline" style={{ color: 'var(--c-teal-dim)', background: 'var(--c-teal-glow)' }}>
-              v0.1.0
             </span>
           </div>
 
@@ -144,10 +139,11 @@ interface PillState {
   statusLabel: string;
 }
 
-function openclawPillState(openclaw: ReturnType<typeof useHealth>['openclaw'], loading: boolean): PillState {
-  if (loading && !openclaw) return { color: 'var(--c-text-muted)', bg: 'rgba(148,163,184,0.08)', border: 'var(--c-border-dim)', dot: 'pending', statusLabel: 'checking…' };
-  if (!openclaw || !openclaw.running) return { color: 'var(--c-red)', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.35)', dot: 'offline', statusLabel: 'down' };
-  return { color: 'var(--c-green)', bg: 'rgba(52,211,153,0.1)', border: 'rgba(52,211,153,0.3)', dot: 'online', statusLabel: 'online' };
+function browserPillState(browser: ReturnType<typeof useHealth>['browser'], loading: boolean): PillState {
+  if (loading && !browser) return { color: 'var(--c-text-muted)', bg: 'rgba(148,163,184,0.08)', border: 'var(--c-border-dim)', dot: 'pending', statusLabel: 'checking...' };
+  if (!browser || browser.totalProfiles === 0) return { color: 'var(--c-text-muted)', bg: 'rgba(148,163,184,0.08)', border: 'var(--c-border-dim)', dot: 'pending', statusLabel: 'no profiles' };
+  if (browser.activeProfiles > 0) return { color: 'var(--c-green)', bg: 'rgba(52,211,153,0.1)', border: 'rgba(52,211,153,0.3)', dot: 'online', statusLabel: `${browser.activeProfiles} active` };
+  return { color: 'var(--c-text-muted)', bg: 'rgba(148,163,184,0.08)', border: 'var(--c-border-dim)', dot: 'pending', statusLabel: 'idle' };
 }
 
 function claudePillState(claude: ReturnType<typeof useHealth>['claude'], loading: boolean): PillState {
@@ -217,24 +213,24 @@ function HealthPill({
 }
 
 function HealthPills() {
-  const { openclaw, claude, loading, lastChecked, refetch } = useHealth();
-  const oc = openclawPillState(openclaw, loading);
+  const { browser, claude, loading, lastChecked, refetch } = useHealth();
+  const br = browserPillState(browser, loading);
   const cl = claudePillState(claude, loading);
 
-  const openclawSubtitle = openclaw?.error
-    ? `Probe failed: ${openclaw.error}`
-    : openclaw?.running
-      ? `Gateway on port ${openclaw.port}`
-      : 'Gateway is not reachable';
+  const browserSubtitle = browser?.error
+    ? `Probe failed: ${browser.error}`
+    : browser?.totalProfiles
+      ? `${browser.activeProfiles}/${browser.totalProfiles} profiles active`
+      : 'No browser profiles configured';
 
   const claudeSubtitle = claude?.description || 'Status unavailable';
 
   return (
     <div className="flex items-center gap-2">
       <HealthPill
-        label="OpenClaw"
-        state={oc}
-        subtitle={openclawSubtitle}
+        label="Browser"
+        state={br}
+        subtitle={browserSubtitle}
         onClick={refetch}
         checkedAt={lastChecked}
       />

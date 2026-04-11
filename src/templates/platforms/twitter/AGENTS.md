@@ -15,7 +15,7 @@ Read every heartbeat: `schedule.json`, `limits.json` (source of truth for counts
 
 ## Model
 
-Sonnet (configured in openclaw.json)
+Sonnet (configured in opentwins.json)
 
 ## Constraints
 

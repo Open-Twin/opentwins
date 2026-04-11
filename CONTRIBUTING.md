@@ -15,7 +15,7 @@ Thanks for your interest in contributing to OpenTwins! This guide will help you 
 **Prerequisites:**
 - Node.js 18+
 - Claude Code CLI (`npm install -g @anthropic-ai/claude-code`)
-- OpenClaw (`npm install -g openclaw`)
+
 
 **Build and test locally:**
 ```bash
@@ -46,7 +46,7 @@ src/
   cli/           # CLI commands (init, run, browser)
   config/        # Config schema, loader, generator
   scheduler/     # Bree job scheduler, agent runner
-  browser/       # OpenClaw browser profile management
+  browser/       # Chrome browser profile management
   templates/     # Handlebars templates per platform
   ui/            # Express API + React dashboard
     api/         # REST endpoints
