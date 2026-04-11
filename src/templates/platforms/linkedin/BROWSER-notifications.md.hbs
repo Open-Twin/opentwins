@@ -16,7 +16,7 @@ browser.act({
       var isLike = text.includes('reacted to') || text.includes('liked');
       var profileLink = links.find(function(a) { return a.href.includes('/in/'); });
       var activityLink = links.find(function(a) { return a.href.includes('/feed/update/') || a.href.includes('/activity/'); });
-      var username = profileLink ? (profileLink.href.match(/\/in\/([^/?]+)/) || [])[1] : null;
+      var username = profileLink ? decodeURIComponent((profileLink.href.match(/\/in\/([^/?]+)/) || [])[1] || '') : null;
       // Keep full URL for navigation (has commentUrn for thread targeting) but store base URL for tracking
       var fullUrl = activityLink ? activityLink.href : null;
       var baseUrl = fullUrl ? fullUrl.split('?')[0] : null;
