@@ -208,13 +208,13 @@ browser.act({
 })
 ```
 
-- If `alreadyReacted: true` → skip article. **Backfill:** `exec grep -qxF "{slug}" memory/reacted_articles.txt || echo "{slug}" >> memory/reacted_articles.txt`
+- If `alreadyReacted: true` → skip article. **Backfill:** `grep -qxF "{slug}" memory/reacted_articles.txt || echo "{slug}" >> memory/reacted_articles.txt`
 - If `is404: true` → wrong URL. Do NOT retry with guessed authors.
 - If `reactionsAdded: 2` → success. Track slug.
 
 Counting: each article = 2 reactions (Like+Unicorn). Update reactions_done += 2. For 15 daily -> ~8 articles.
 
-🚨 **After successful reaction:** `exec grep -qxF "{slug}" memory/reacted_articles.txt || echo "{slug}" >> memory/reacted_articles.txt` (slug only, NO author prefix). Dedup-safe append prevents duplicate entries.
+🚨 **After successful reaction:** `grep -qxF "{slug}" memory/reacted_articles.txt || echo "{slug}" >> memory/reacted_articles.txt` (slug only, NO author prefix). Dedup-safe append prevents duplicate entries.
 
 ---
 

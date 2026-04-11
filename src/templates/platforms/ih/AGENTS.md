@@ -25,5 +25,5 @@ Follow `HEARTBEAT.md`. Read fresh every heartbeat: `schedule.json`, `limits.json
 
 ## Memory Logging
 - Daily: `memory/YYYY-MM-DD.md` (append-only)
-- 🚨 **Never `read`/`edit` daily logs.** Use: `exec cat >> file <<'EOF'`
+- 🚨 **Never `read`/`edit` daily logs.** Use: `cat >> file <<'EOF'`
 - Logging mandatory on every action — just don't READ during routine heartbeats.

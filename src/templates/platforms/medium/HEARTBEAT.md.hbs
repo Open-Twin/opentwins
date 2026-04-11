@@ -55,7 +55,7 @@ available = limit - current
 
 Pre-load tracking (single exec):
 ```bash
-exec cat memory/replied_notifications_medium.txt memory/commented_posts.txt 2>/dev/null || echo "(empty)"
+cat memory/replied_notifications_medium.txt memory/commented_posts.txt 2>/dev/null || echo "(empty)"
 ```
 
 ---
@@ -71,7 +71,7 @@ Read `memory/today_summary.json`. Use tallies to inform comment decisions:
 
 If file doesn't exist or `date != today`, initialize:
 ```bash
-exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
 ```
 
 ## § 2. Browser Startup (with retry)
@@ -92,7 +92,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 3. Filter: process type="response" and type="note" only
 4. **MANDATORY batch grep pre-check** — build keys for ALL notifications and check at once:
    ```bash
-   exec printf '%s\n' "{type1}|{author1}|{url1}" "{type2}|{author2}|{url2}" ... | while read line; do grep -qF "$line" memory/replied_notifications_medium.txt && echo "SKIP: $line" || echo "NEW: $line"; done
+   printf '%s\n' "{type1}|{author1}|{url1}" "{type2}|{author2}|{url2}" ... | while read line; do grep -qF "$line" memory/replied_notifications_medium.txt && echo "SKIP: $line" || echo "NEW: $line"; done
    ```
    Only process lines prefixed with "NEW:".
 5. 🚨 **Loop through ALL new notifications** — do NOT stop after the first one:
@@ -103,7 +103,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
    - Write response (BROWSER-core.md § 3: scroll to inline editor → **clear** → type+submit → verify via responses panel) — 2-3 browser steps total (3 if 500 requires reload+re-verify)
    - After verified success: append to tracking:
      ```bash
-     exec printf '%s\n' '{type}|{author}|{articleUrl}|{ISO_TIMESTAMP}' >> memory/replied_notifications_medium.txt
+     printf '%s\n' '{type}|{author}|{articleUrl}|{ISO_TIMESTAMP}' >> memory/replied_notifications_medium.txt
      ```
    - Log: Type=Reply, Author, Article URL, Response (100 chars)
    - 🚨 **Do NOT update `responses.current`** — notification replies are unlimited. Only proactive responses (§ 5 browse_and_engage) count against the limit.
@@ -128,7 +128,7 @@ Filter: `status="pending" AND time<=now`, sort by time.
   2. Batch extract articles — BROWSER-engage.md § 5. **Extraction auto-filters:** `/@author/` URLs AND publication URLs (`medium.com/{pub}/slug-hash`) + articles ≤14 days old. Publication URLs may redirect to custom domains — this is normal. If any URL causes SSL error → skip immediately.
   3. **🚨 MANDATORY batch grep pre-check BEFORE navigating** — check ALL candidate URLs at once:
      ```bash
-     exec printf '%s\n' "slug1" "slug2" "slug3" | while read line; do grep -qF "$line" memory/commented_posts.txt && echo "SKIP: $line" || echo "OK: $line"; done
+     printf '%s\n' "slug1" "slug2" "slug3" | while read line; do grep -qF "$line" memory/commented_posts.txt && echo "SKIP: $line" || echo "OK: $line"; done
      ```
      Only navigate to "OK:" articles. Cheaper than browser navigation.
   4. Per selected article (grep returned "OK"): Navigate → **Read content + Clap in ONE evaluate** (BROWSER-core.md § 2 — combined, returns title + content + clapped count) → 🚨 **Apply Response Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) → respond if exceptional (BROWSER-core.md § 3) → 🚨 **MANDATORY: Follow author** (BROWSER-engage.md § 6, from article page, no navigation needed). Every engagement = follow.
@@ -136,7 +136,7 @@ Filter: `status="pending" AND time<=now`, sort by time.
      🚨 **Verification MUST use the responses panel** (BROWSER-core.md § 3 Step 2) — NEVER `document.body.innerText`. If the page 500'd after submit → reload, wait 5s, verify via responses panel. Only track after `verified: true` from the panel.
      ```bash
      # ONLY after Step 2 verified: true from responses panel
-     exec printf '%s\n' '{article_url}' >> memory/commented_posts.txt
+     printf '%s\n' '{article_url}' >> memory/commented_posts.txt
      ```
      ❌ NEVER track articles where only clap succeeded but response failed/skipped.
      ❌ NEVER track articles where verification used `document.body.innerText` (false positive risk).
@@ -188,7 +188,7 @@ Submit verify: Type -> click submit -> wait 2s -> verify reply visible -> log. N
 
 Append memory:
 ```bash
-exec cat >> memory/YYYY-MM-DD.md <<'EOF'
+cat >> memory/YYYY-MM-DD.md <<'EOF'
 ## YYYY-MM-DD HH:MM - Response
 - Article: URL
 - Writer: @name

@@ -7,7 +7,7 @@ Single-platform agent. See SOUL.md for identity and style.
 Load: `SOUL.md`, `IDENTITY.md`
 
 Never auto-load:
-- `memory/` — WRITE-ONLY during heartbeats. Read only for: schedule gen, original posts, debugging. Use `exec cat >> file <<'EOF'` only, never read/edit.
+- `memory/` — WRITE-ONLY during heartbeats. Read only for: schedule gen, original posts, debugging. Use `cat >> file <<'EOF'` only, never read/edit.
 - `INSIGHTS.md` — on-demand (schedule gen, engagement insights)
 
 Read fresh every heartbeat: `schedule.json`, `limits.json`

@@ -54,7 +54,7 @@ Read `memory/today_summary.json`. Use tallies to inform comment decisions:
 
 If file doesn't exist or `date != today`, initialize:
 ```bash
-exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
 ```
 
 ## 2. Browser Startup (with retry)
@@ -77,7 +77,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 
 For each unreplied post, extract post_id from URL (the code after `/post/`, e.g. `DUqc1LaCtOk`):
 ```bash
-exec printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/replied_posts.txt || true
+printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/replied_posts.txt || true
 ```
 🚨 **Interpreting the result:** Lines printed = NEW (not yet replied). **Empty output = ALL already tracked → skip to § 4.** NEVER `cat` or `read` the tracking file to verify — the grep result is authoritative. NEVER use `|| echo "all new"` as fallback.
 
@@ -91,7 +91,7 @@ Loop until no new unreplied posts:
 1. Run BROWSER-replies.md S 2 with `allowedIds` from step 3b → if `clicked=false`, stop
 2. Run BROWSER-core.md S 5 (Reply/Comment Flow — ONE evaluate: wait + type + submit)
 3. **If S 5 returns `no_dialog`:** Run BROWSER-replies.md S 3 (Retry — re-navigate to activity/replies and retry S 2 + S 5 once). If retry also fails → **skip this post** (remove from `allowedIds`, do NOT track as replied), move to next.
-4. **After successful reply:** `exec printf '%s\n' '{postId}' >> memory/replied_posts.txt` + remove from `allowedIds`
+4. **After successful reply:** `printf '%s\n' '{postId}' >> memory/replied_posts.txt` + remove from `allowedIds`
 5. Loop back to step 1 (S 5 already has 0.5s post-submit wait built in)
 
 Rules:
@@ -118,7 +118,7 @@ Filter `schedule.json`: `status="pending"` AND `time <= now`
    - 🚨 **Skip `isMemeLikely: true` posts** (image/video + text < 80 chars). These are memes/screenshots — you can't see the image and will reply with wrong tone.
 4. 🚨 **MANDATORY: Batch grep pre-check** — check ALL candidate post IDs at once:
    ```bash
-   exec printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/commented_posts.txt || true
+   printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/commented_posts.txt || true
    ```
    Only IDs NOT in file pass. Empty = all commented across ALL queries → skip task, mark done.
 6. Per candidate post:

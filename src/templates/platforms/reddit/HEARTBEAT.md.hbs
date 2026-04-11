@@ -44,7 +44,7 @@ Read `memory/today_summary.json`. Use tallies to inform comment decisions:
 
 If file doesn't exist or `date != today`, initialize:
 ```bash
-exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
 ```
 
 ## 2. Browser Startup (with retry)
@@ -65,7 +65,7 @@ On **https://www.reddit.com/notifications**:
 3. Filter: ONLY `messageType="COMMENT_REPLY"` or `"POST_REPLY"`. Skip `{{handle_slug}}`.
 4. Batch grep to filter handled IDs (ONE command for ALL notifications):
    ```bash
-   exec printf '%s\n' "UUID1" "UUID2" "UUID3" | grep -vxF -f memory/replied_notifications.txt || true
+   printf '%s\n' "UUID1" "UUID2" "UUID3" | grep -vxF -f memory/replied_notifications.txt || true
    ```
    Empty result → skip to § 4.
 5. **Process ALL new notifications** (loop through each, do NOT stop after first):
@@ -77,7 +77,7 @@ On **https://www.reddit.com/notifications**:
    - Language: ALWAYS English (Ukrainian only if comment is Ukrainian, per SOUL.md)
    - Use SOUL.md Anti-AI Detection guidelines
    - Log Type = "Reply" (unlimited, NOT counted against daily limit — do NOT update limits.json)
-   - After reply: `exec printf '%s\n' 'NOTIFICATION_UUID' >> memory/replied_notifications.txt`
+   - After reply: `printf '%s\n' 'NOTIFICATION_UUID' >> memory/replied_notifications.txt`
 
 ## 4. Schedule Check
 
@@ -98,7 +98,7 @@ Per due task:
 3. Pick qualifying post (5+ upvotes, <200 comments, 5-50 ideal)
 4. 🚨 **MANDATORY: Grep pre-check** — use `id` field from extraction (already stripped of `t3_` prefix):
    ```bash
-   exec grep -q "^{post_id}$" memory/commented_posts.txt && echo "SKIP" || echo "OK"
+   grep -q "^{post_id}$" memory/commented_posts.txt && echo "SKIP" || echo "OK"
    ```
    If "SKIP" → pick next post (already commented, cheaper than browser navigation)
 5. Navigate to post
@@ -123,7 +123,7 @@ Per due task:
    - 🚨 **Skip `isLinkOnly: true` posts on factual subs** (r/todayilearned, r/history, r/science) — body is just a URL to an external article. You can't read the article and will fabricate details. Only comment on these if sticking to pure reactions ("wild story", "that's insane"). Prefer text posts (`contentType: "text"`) or AskReddit questions where you can answer from experience.
 5. 🚨 **MANDATORY: Grep pre-check** — use `id` field from extraction:
    ```bash
-   exec grep -q "^{post_id}$" memory/commented_posts.txt && echo "SKIP" || echo "OK"
+   grep -q "^{post_id}$" memory/commented_posts.txt && echo "SKIP" || echo "OK"
    ```
    If "SKIP" → pick next post
 6. Navigate to post

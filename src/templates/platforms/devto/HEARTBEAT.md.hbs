@@ -42,11 +42,11 @@ All steps MANDATORY. Execute in order. SS 0 runs first every time.
 
 🚨 **NEVER generate a schedule for tomorrow.** Only generate for TODAY. Schedule generation happens once per day in the morning. If all today's tasks are done, return HEARTBEAT_OK — do NOT create a new schedule.
 
-1. `exec cat schedule.json | jq -r '.metadata.for_date'`
+1. `cat schedule.json | jq -r '.metadata.for_date'`
 2. `exec date +%Y-%m-%d`
 3. If dates match -> skip to SS 1
 4. If mismatch or missing:
-   a. Log to `memory/{today}.md` via `exec cat >> file <<'EOF'`
+   a. Log to `memory/{today}.md` via `cat >> file <<'EOF'`
    b. Read PLAYBOOK.md SS Memory Update, analyze yesterday's memory, update INSIGHTS.md
    c. Generate TODAY's schedule:
       - Read PLAYBOOK.md SS Generate Schedule
@@ -54,7 +54,7 @@ All steps MANDATORY. Execute in order. SS 0 runs first every time.
       - `day_of_week`: use `date +%A | tr '[:upper:]' '[:lower:]'` (NEVER guess)
       - CAPACITY MATCHING: sum `max_comments` = `limits.daily.comments.limit` (6); sum `max_reactions` = `limits.daily.reactions.limit` (15)
       - WRITE schedule.json (not optional)
-   d. Verify: `exec cat schedule.json | jq -r '.metadata.for_date'` must return today
+   d. Verify: `cat schedule.json | jq -r '.metadata.for_date'` must return today
       - Fail -> log ERROR + Slack alert + HEARTBEAT_OK
       - If INSIGHTS.md updated but schedule.json NOT written -> go back to 4c
 
@@ -79,7 +79,7 @@ Read `memory/today_summary.json`. Use tallies to inform comment decisions:
 
 If file doesn't exist or `date != today`, initialize:
 ```bash
-exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
 ```
 
 ## 2. Browser Startup (with retry)
@@ -106,7 +106,7 @@ Open `https://dev.to/notifications/comments` ONCE. Extract using BROWSER-notific
 
 Dedup check (NEVER use `read` tool on tracking file):
 ```bash
-exec printf '%s\n' "URL1" "URL2" "URL3" | grep -vxF -f memory/replied_comments.txt || true
+printf '%s\n' "URL1" "URL2" "URL3" | grep -vxF -f memory/replied_comments.txt || true
 ```
 🚨 Empty output = ALL already tracked → skip. Lines printed = NEW. NEVER cat/read the tracking file to verify — grep is authoritative.
 Only URLs NOT in file are new. If empty -> skip to SS 4.
@@ -114,7 +114,7 @@ Only URLs NOT in file are new. If empty -> skip to SS 4.
 For each new notification:
 1. Reply using BROWSER-notifications.md SS 2
    - If `skipped: true, reason: 'too_deep'` → append URL to tracking, move to next (depth >= 3 = no visibility)
-2. After success: `exec printf '%s\n' 'COMMENT_URL' >> memory/replied_comments.txt`
+2. After success: `printf '%s\n' 'COMMENT_URL' >> memory/replied_comments.txt`
 
 - **Comments on OUR articles:** dedup, ALWAYS reply in English (Ukrainian only if comment is Ukrainian), log Type="Reply"
 - **Replies to OUR comments:** dedup, respond, log Type="Reply"
@@ -133,7 +133,7 @@ Read schedule.json: filter pending + time<=now, sort by time.
 
 🚨 **jq query pattern for schedule tasks** (avoids pipe-through-string errors):
 ```bash
-exec cat schedule.json | jq --arg now "HH:MM" '[.tasks[] | select(.scheduled_at <= $now and (.status == null or .status == "pending")) | {id, type, scheduled_at, status}]'
+cat schedule.json | jq --arg now "HH:MM" '[.tasks[] | select(.scheduled_at <= $now and (.status == null or .status == "pending")) | {id, type, scheduled_at, status}]'
 ```
 NEVER pipe `.metadata.for_date` and `.tasks[]` in the same jq expression — the string output from `for_date` breaks `select()`. Query them separately or use `--arg`.
 
@@ -160,17 +160,17 @@ For each due task:
      Use column 4 (full URL) for navigation, column 2 (slug) for tracking files.
   5. 🚨 **MANDATORY: Batch grep pre-check AGAINST BOTH tracking files:**
      ```bash
-     exec printf '%s\n' "slug1" "slug2" "slug3" | grep -vxF -f memory/commented_posts.txt | grep -vxF -f memory/reacted_articles.txt || true
+     printf '%s\n' "slug1" "slug2" "slug3" | grep -vxF -f memory/commented_posts.txt | grep -vxF -f memory/reacted_articles.txt || true
      ```
      🚨 Empty output = ALL already tracked → skip. Lines printed = NEW. NEVER cat/read the tracking file to verify — grep is authoritative.
      Empty output = all already engaged → try different tags (count toward 3-iteration cap).
   6. Navigate ONLY to passing articles, using the full URL from the API
 - 🚨 **MANDATORY: Read article before commenting** (BROWSER-engage.md SS 2b). Your comment MUST directly address the returned `title` and `body`.
-- **After each successful comment:** `exec grep -qxF "{slug}" memory/commented_posts.txt || echo "{slug}" >> memory/commented_posts.txt` (slug only, NO author prefix, dedup-safe)
-- **After each successful reaction:** `exec grep -qxF "{slug}" memory/reacted_articles.txt || echo "{slug}" >> memory/reacted_articles.txt` (slug only, NO author prefix, dedup-safe)
+- **After each successful comment:** `grep -qxF "{slug}" memory/commented_posts.txt || echo "{slug}" >> memory/commented_posts.txt` (slug only, NO author prefix, dedup-safe)
+- **After each successful reaction:** `grep -qxF "{slug}" memory/reacted_articles.txt || echo "{slug}" >> memory/reacted_articles.txt` (slug only, NO author prefix, dedup-safe)
 - 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) before writing comment
 - React before commenting (ALWAYS); self-review per SOUL.md
-- **If browser shows `alreadyCommented: true` but slug was NOT in tracking file:** backfill immediately: `exec grep -qxF "{slug}" memory/commented_posts.txt || echo "{slug}" >> memory/commented_posts.txt`
+- **If browser shows `alreadyCommented: true` but slug was NOT in tracking file:** backfill immediately: `grep -qxF "{slug}" memory/commented_posts.txt || echo "{slug}" >> memory/commented_posts.txt`
 
 **No spacing rule.** Execute tasks back-to-back when due.
 
@@ -190,8 +190,8 @@ articlesToReact = ceil(reactionsToAdd / 2)  // 2 per article (Like+Unicorn)
    a. 🚨 **MANDATORY: Read article content first** (BROWSER-engage.md SS 2b — returns `title` and `body`). Your comment MUST directly address this article's topic.
    b. **SS 3 Step 2 (ONE evaluate):** react + dedup + type — combines Like+Unicorn + dedup check + scroll + type comment. Returns `alreadyCommented`, `reactionsAdded`, `typed`.
    c. If `alreadyCommented` → backfill tracking, skip. If `typed: true` → run SS 3 Step 3 (submit + verify).
-   d. Track reactions: `exec grep -qxF "{slug}" memory/reacted_articles.txt || echo "{slug}" >> memory/reacted_articles.txt`
-   e. Track comment (only after verified): `exec grep -qxF "{slug}" memory/commented_posts.txt || echo "{slug}" >> memory/commented_posts.txt`
+   d. Track reactions: `grep -qxF "{slug}" memory/reacted_articles.txt || echo "{slug}" >> memory/reacted_articles.txt`
+   e. Track comment (only after verified): `grep -qxF "{slug}" memory/commented_posts.txt || echo "{slug}" >> memory/commented_posts.txt`
 2. Pick the best-fit article for commenting (highest relevance to PM/AI angle). React-only articles: navigate, run Step 2 without comment text (just react + dedup check).
 3. 🚨 **MANDATORY: Follow article author from article page** — BROWSER-engage.md SS 5 (no navigation needed). Every comment = follow.
 4. Log Type="Comment"/"Reaction"
@@ -228,7 +228,7 @@ Read PLAYBOOK.md -> "Memory Update"
 
 ## 5. Log & Update Limits
 
-1. Append to `memory/{today}.md` via `exec cat >> file <<'EOF'` (never read/edit).
+1. Append to `memory/{today}.md` via `cat >> file <<'EOF'` (never read/edit).
    Format: `## {date} {time} - {Type}` + Article URL + Tags + Style + text. Types: Heartbeat, Comment, Reply, Reaction, Article Published, Tag Follow, Error.
    🚨 **Comment/Reply entries MUST include:**
    - `Style: {insight|short|personal|disagree}` — which style was used

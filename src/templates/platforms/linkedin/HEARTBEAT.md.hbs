@@ -54,7 +54,7 @@ Read `memory/today_summary.json`. Use tallies to inform comment decisions:
 
 If file doesn't exist or `date != today`, initialize:
 ```bash
-exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
 ```
 
 ## 2. Browser Startup (with retry)
@@ -74,7 +74,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
    - Skip if: our account ({{handle_slug}}), same user in `limits.json` history today
    - 🚨 **MANDATORY: Grep pre-check** — for each notification, build key `{username}|{baseUrl}` (use `baseUrl` without query params, NOT the full `postUrl`):
      ```bash
-     exec grep -qF "{username}|{baseUrl}" memory/replied_notifications_linkedin.txt && echo "SKIP" || echo "OK"
+     grep -qF "{username}|{baseUrl}" memory/replied_notifications_linkedin.txt && echo "SKIP" || echo "OK"
      ```
      If "SKIP" → exclude (already replied, skip navigation entirely)
    - For navigation: use the full `postUrl` (includes `commentUrn`/`dashReplyUrn` params that scroll to the correct comment)
@@ -94,7 +94,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
    - 🚨 **ALWAYS @mention the person** you're replying to at the start of your reply text (e.g. `@Ofir Shentzer good point about...`). LinkedIn threads are flat — @mention makes it clear who you're addressing and triggers a notification to them.
    - Language: ALWAYS English (Ukrainian only if comment is Ukrainian, per SOUL.md)
    - Log: `Type=Reply, User, URL, text (100 chars), Style: {insight|short|personal|disagree}`
-   - **After successful reply:** `exec printf '%s\n' '{username}|{postUrl}' >> memory/replied_notifications_linkedin.txt`
+   - **After successful reply:** `printf '%s\n' '{username}|{postUrl}' >> memory/replied_notifications_linkedin.txt`
    - **Send connection request with note** if ALL pass:
      - `weekly.connection_requests.current < limit`
      - 🚨 `browser.navigate()` to profile URL (do NOT use `browser.open()` — reuse existing tab)
@@ -150,7 +150,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
      return { age: age, tooOld: tooOld, alreadyCommented: alreadyCommented };
    }
    ```
-   If `tooOld` → skip immediately. If `alreadyCommented` → **backfill tracking** (`exec grep -qF "{trackId}" memory/commented_posts.txt || echo "{trackId}" >> memory/commented_posts.txt`), then skip.
+   If `tooOld` → skip immediately. If `alreadyCommented` → **backfill tracking** (`grep -qF "{trackId}" memory/commented_posts.txt || echo "{trackId}" >> memory/commented_posts.txt`), then skip.
    If page shows "Something went wrong" → URL is invalid, skip immediately.
 2. Pick query from `queries.json` — `high_engagement` first, then product-specific
 3. Navigate: `https://www.linkedin.com/search/results/content/?keywords={QUERY}&datePosted=%22past-week%22&sortBy=%22relevance%22`
@@ -158,7 +158,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
 5. Filter: prefer 20+ reactions. If none, highest with >5. Skip authors in today's `limits.json` history
 6. 🚨 **MANDATORY: Grep pre-check against tracking file** — use `trackId` from SS 2 (numeric ID for feed posts, slug for Pulse):
    ```bash
-   exec grep -qF "{trackId}" memory/commented_posts.txt && echo "SKIP" || echo "OK"
+   grep -qF "{trackId}" memory/commented_posts.txt && echo "SKIP" || echo "OK"
    ```
    🚨 Use `-qF` (fixed string, substring match) — NOT `-q "^...$"` (exact line match). The tracking file has mixed formats (URNs, slugs, IDs). Substring match catches all.
    If "SKIP" → exclude (already commented).
@@ -194,7 +194,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
      ```
      🚨 **If `alreadyCommented: true` → MUST backfill tracking file immediately** (previous heartbeat may have commented but got cut off before tracking):
      ```bash
-     exec grep -qF "{trackId}" memory/commented_posts.txt || echo "{trackId}" >> memory/commented_posts.txt
+     grep -qF "{trackId}" memory/commented_posts.txt || echo "{trackId}" >> memory/commented_posts.txt
      ```
      Then skip to next candidate.
      Otherwise use `title` + `content` to write a contextual comment. 🚨 **Pulse uses QUILL editor — MUST use BROWSER-engage.md SS 4b (Quill path). Do NOT use SS 4 (TipTap path) — it silently fails on Pulse.** SS 4b uses `quillInstance.setText()` to properly update Delta state, then verifies by searching for our comment in the rendered list (not by checking editor emptiness).
@@ -211,7 +211,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
 4. **Get post URLs for comment candidates** — for each post with `postUrl: null`, run BROWSER-engage.md SS 3b (overflow menu → "Copy link to post" → clipboard → extract postId). This is 1 evaluate per post instead of 4-6 steps navigating to author profiles.
 5. 🚨 **MANDATORY: Batch grep pre-check** — check ALL postIds at once:
    ```bash
-   exec printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/commented_posts.txt || true
+   printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/commented_posts.txt || true
    ```
    Only navigate to posts NOT in tracking file.
 6. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) before writing comment. 🚨 Use the `content` field from SS 3 extraction to inform your comment — your comment MUST directly address the post's topic.

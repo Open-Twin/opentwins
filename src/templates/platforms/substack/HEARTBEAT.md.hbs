@@ -60,7 +60,7 @@ available = limit - current
 
 Pre-load tracking (single exec):
 ```bash
-exec cat memory/replied_notifications_substack.txt memory/commented_posts.txt 2>/dev/null || echo "(empty)"
+cat memory/replied_notifications_substack.txt memory/commented_posts.txt 2>/dev/null || echo "(empty)"
 ```
 
 ---
@@ -76,7 +76,7 @@ Read `memory/today_summary.json`. Use tallies to inform comment decisions:
 
 If file doesn't exist or `date != today`, initialize:
 ```bash
-exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
 ```
 
 ## SS 2. Browser Startup (with retry)
@@ -95,7 +95,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 3. Filter: process comment replies and mentions only
 4. **MANDATORY batch grep pre-check** — for each notification, grep using `{url}|{first 15 chars of snippet}` (shorter match = tolerant of length variations):
    ```bash
-   exec printf '%s\n' "{url1}|{snippet1_15chars}" "{url2}|{snippet2_15chars}" ... | while read line; do grep -qF "$line" memory/replied_notifications_substack.txt && echo "SKIP: $line" || echo "NEW: $line"; done
+   printf '%s\n' "{url1}|{snippet1_15chars}" "{url2}|{snippet2_15chars}" ... | while read line; do grep -qF "$line" memory/replied_notifications_substack.txt && echo "SKIP: $line" || echo "NEW: $line"; done
    ```
    Only process lines prefixed with "NEW:".
    🚨 **snippet = first 30 chars of reply body** (from extraction). Same URL can have multiple replies — snippet makes each unique. Grep uses first 15 chars for fuzzy tolerance.
@@ -118,7 +118,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
      - URL contains `/note/p-` (post note view): use **SS 3C** (find replier's per-comment Comment button). If SS 3C fails to find the button → fall back to SS 3B.
    - After verified success: append to tracking (include snippet for dedup):
      ```bash
-     exec printf '%s\n' '{type}|{author}|{postUrl}|{snippet}|{ISO_TIMESTAMP}' >> memory/replied_notifications_substack.txt
+     printf '%s\n' '{type}|{author}|{postUrl}|{snippet}|{ISO_TIMESTAMP}' >> memory/replied_notifications_substack.txt
      ```
    - Log: Type=Reply, Author, Post URL, Response (100 chars)
    - Update limits: `comments.current++`
@@ -150,7 +150,7 @@ Before executing any `publish_newsletter` or `publish_note` task:
   2. **Extract posts** — BROWSER-engage.md SS 5. Filter: recent posts (< 14 days), has engagement.
   3. **🚨 MANDATORY batch grep pre-check BEFORE navigating** — check ALL candidate URLs at once:
      ```bash
-     exec printf '%s\n' "slug1" "slug2" "slug3" | while read line; do grep -qF "$line" memory/commented_posts.txt && echo "SKIP: $line" || echo "OK: $line"; done
+     printf '%s\n' "slug1" "slug2" "slug3" | while read line; do grep -qF "$line" memory/commented_posts.txt && echo "SKIP: $line" || echo "OK: $line"; done
      ```
      Only navigate to "OK:" posts.
   4. Per selected post (grep returned "OK"): Navigate to `{post_url}/comments` directly. Then **paywall probe + dedup check (ONE evaluate):**
@@ -184,7 +184,7 @@ Before executing any `publish_newsletter` or `publish_note` task:
   4c. **🚨 Subscribe is tied to commenting.** Every time you comment on a post, subscribe to that author's publication (if not already subscribed and limit not reached). The author sees both notifications — comment + subscribe — which signals genuine engagement.
   5. 🚨 **ONLY append to `commented_posts.txt` AFTER a verified posted comment.**
      ```bash
-     exec printf '%s\n' '{post_url}' >> memory/commented_posts.txt
+     printf '%s\n' '{post_url}' >> memory/commented_posts.txt
      ```
   6. Log: Type=Like, Type=Comment, Type=Subscribe, Type=Restack
   7. Completion: increment `comments_done`, `likes_done`, `restacks_done`. If limits reached -> mark "done". Else "pending".
@@ -260,7 +260,7 @@ Before executing any `publish_newsletter` or `publish_note` task:
 
 Append memory:
 ```bash
-exec cat >> memory/YYYY-MM-DD.md <<'EOF'
+cat >> memory/YYYY-MM-DD.md <<'EOF'
 ## YYYY-MM-DD HH:MM - Comment
 - Post: URL
 - Writer: @name

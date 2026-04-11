@@ -37,7 +37,7 @@ Read `memory/today_summary.json`. Use tallies to inform comment decisions:
 
 If file doesn't exist or `date != today`, initialize:
 ```bash
-exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
 ```
 
 ## 2. Browser Startup (with retry)
@@ -58,7 +58,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 
 For each unreplied post, extract post_id from URL:
 ```bash
-exec printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/replied_posts.txt || true
+printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/replied_posts.txt || true
 ```
 🚨 Empty output = ALL already tracked → skip. Lines printed = NEW. NEVER cat/read the tracking file to verify — grep is authoritative.
 Only IDs NOT in file are new -> store as `allowedIds` array. If empty -> skip to S 4.
@@ -69,7 +69,7 @@ For each unreplied post in `allowedIds`:
 1. Navigate to the post URL (Bluesky requires navigating to post page for replies)
 2. Run BROWSER-engage.md S 4b (click "Compose reply" button)
 3. Run BROWSER-core.md S 5 (Reply/Comment Flow - ONE evaluate: wait + type + submit)
-4. **After successful reply:** `exec printf '%s\n' '{postId}' >> memory/replied_posts.txt` + remove from `allowedIds`
+4. **After successful reply:** `printf '%s\n' '{postId}' >> memory/replied_posts.txt` + remove from `allowedIds`
 5. Navigate back to `https://bsky.app/notifications` for next post
 
 Rules:
@@ -96,7 +96,7 @@ Filter `schedule.json`: `status="pending"` AND `time <= now`
    - 🚨 **Skip `isMemeLikely: true` posts** (image + text < 80 chars). These are memes/screenshots — you can't see the image and will reply with wrong tone.
 3. **MANDATORY: Batch grep pre-check** — check ALL candidate post IDs at once:
    ```bash
-   exec printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/commented_posts.txt || true
+   printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/commented_posts.txt || true
    ```
    🚨 Empty output = ALL already tracked → skip. Lines printed = NEW. NEVER cat/read the tracking file to verify — grep is authoritative.
    Only IDs NOT in file pass. Empty = all commented across ALL queries → skip task, mark done.

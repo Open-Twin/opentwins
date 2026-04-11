@@ -123,12 +123,12 @@ reply|{author}|{url}|{snippet}|{ISO_TIMESTAMP}
 
 **Grep check** — use `{url}|{first 15 chars of snippet}` for matching (shorter = tolerant of length variations):
 ```bash
-exec grep -qF "{url}|{snippet_first_15_chars}" memory/replied_notifications_substack.txt && echo "SKIP" || echo "OK"
+grep -qF "{url}|{snippet_first_15_chars}" memory/replied_notifications_substack.txt && echo "SKIP" || echo "OK"
 ```
 
 **Batch check (preferred):**
 ```bash
-exec printf '%s\n' "{url1}|{snippet1_15chars}" "{url2}|{snippet2_15chars}" ... | while read line; do grep -qF "$line" memory/replied_notifications_substack.txt && echo "SKIP: $line" || echo "NEW: $line"; done
+printf '%s\n' "{url1}|{snippet1_15chars}" "{url2}|{snippet2_15chars}" ... | while read line; do grep -qF "$line" memory/replied_notifications_substack.txt && echo "SKIP: $line" || echo "NEW: $line"; done
 ```
 
 🚨 **Tracking file stores full 30-char snippet.** Grep uses first 15 chars as substring match (`-F` fixed string). This handles minor variations in snippet length between extraction runs.

@@ -62,7 +62,7 @@ Read `memory/today_summary.json`. Use tallies to inform comment decisions:
 
 If file doesn't exist or `date != today`, initialize:
 ```bash
-exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
 ```
 
 ## 2. Browser Startup (with retry)
@@ -78,7 +78,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 2. Batch extract notifications using BROWSER-notifications.md S1 (embed `await new Promise(r => setTimeout(r, 3000));` at start of evaluate — NO separate sleep step)
 3. Filter via tracking file (NEVER `read` tool on tracking file):
    ```bash
-   exec printf '%s\n' "ID1" "ID2" | grep -vxF -f memory/replied_notifications_ph.txt || true
+   printf '%s\n' "ID1" "ID2" | grep -vxF -f memory/replied_notifications_ph.txt || true
    ```
    🚨 Empty output = ALL already tracked → skip. Lines printed = NEW. NEVER cat/read the tracking file to verify — grep is authoritative.
    Empty result -> all tracked, skip to S4
@@ -96,7 +96,7 @@ exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions"
 
 6. After each notification (success OR skip): append to tracking file with dedup guard:
    ```bash
-   exec grep -qxF 'COMMENT_ID' memory/replied_notifications_ph.txt 2>/dev/null || printf '%s\n' 'COMMENT_ID' >> memory/replied_notifications_ph.txt
+   grep -qxF 'COMMENT_ID' memory/replied_notifications_ph.txt 2>/dev/null || printf '%s\n' 'COMMENT_ID' >> memory/replied_notifications_ph.txt
    ```
 
 7. Finish ALL replies before forum check.
@@ -130,7 +130,7 @@ MANDATORY: Execute ALL overdue tasks in sequence.
 3. Apply Post Quality Filter (TOOLS.md)
 4. 🚨 **MANDATORY: Grep pre-check** — extract PH post slug from URL (e.g. `agent-bar` from `/posts/agent-bar`):
    ```bash
-   exec grep -q "^{post_slug}$" memory/commented_posts.txt && echo "SKIP" || echo "OK"
+   grep -q "^{post_slug}$" memory/commented_posts.txt && echo "SKIP" || echo "OK"
    ```
    If "SKIP" → pick next post (already commented)
 5. Upvote launch BEFORE commenting using BROWSER-engage.md S3 (CDP snapshot+click required)
@@ -144,7 +144,7 @@ MANDATORY: Execute ALL overdue tasks in sequence.
    - Extract maker username from S7 Step 3 verify result (`makerUsername` field) — do NOT call S4 separately
    - 🚨 **CHECK `followed_makers.json` FIRST** via grep:
      ```bash
-     exec grep -q '"${makerUsername}"' followed_makers.json && echo "SKIP" || echo "OK"
+     grep -q '"${makerUsername}"' followed_makers.json && echo "SKIP" || echo "OK"
      ```
    - Skip if: "SKIP" (already tracked) or maker not found. No follow limit — every comment = follow.
    - If "OK" + quota available:

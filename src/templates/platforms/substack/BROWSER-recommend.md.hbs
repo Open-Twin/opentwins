@@ -177,12 +177,12 @@ browser.act({
 After each successful recommendation, append to tracking file:
 
 ```bash
-exec printf '%s\n' '{publication_name}|{publication_url}|{reason_snippet_30chars}|{ISO_TIMESTAMP}' >> memory/recommended_publications.txt
+printf '%s\n' '{publication_name}|{publication_url}|{reason_snippet_30chars}|{ISO_TIMESTAMP}' >> memory/recommended_publications.txt
 ```
 
 **Dedup check before recommending:**
 ```bash
-exec grep -qF "{publication_name}" memory/recommended_publications.txt && echo "SKIP" || echo "OK"
+grep -qF "{publication_name}" memory/recommended_publications.txt && echo "SKIP" || echo "OK"
 ```
 
 ---

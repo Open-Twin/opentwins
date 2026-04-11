@@ -72,7 +72,7 @@ Read `memory/today_summary.json`. Use tallies to inform comment decisions:
 
 If file doesn't exist or `date != today`, initialize:
 ```bash
-exec printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
 ```
 
 ## 2. Browser Startup (with retry)
@@ -101,7 +101,7 @@ Before any scheduled tasks. No exceptions.
    - Extract `date` from notification text (e.g. "FEB 19 2026" → `2026-02-19`)
    - ⚠️ Do NOT use the raw URL as tracking key — different replies to the same comment thread produce the same URL, causing new replies to be skipped
    ```bash
-   exec printf '%s\n' "KEY1" "KEY2" "KEY3" | grep -vxF -f memory/replied_notifications.txt || true
+   printf '%s\n' "KEY1" "KEY2" "KEY3" | grep -vxF -f memory/replied_notifications.txt || true
    ```
    🚨 Empty output = ALL already tracked → skip. Lines printed = NEW. NEVER cat/read the tracking file to verify — grep is authoritative.
    Only keys NOT in file are new. If empty → skip to § 4.
@@ -130,7 +130,7 @@ Before any scheduled tasks. No exceptions.
      - `ourRepliesInThread >= 3` → skip reply, append tracking key, log `Type=Reply Skipped, Reason=too_many_replies`
    - If `comment--selected` not found → proceed with reply (do NOT skip — err on the side of replying)
    - Not found: click reply (BROWSER-replies.md S 3), then type+submit (S 4 — includes 1.5s wait via Promise), then verify (3s wait via Promise inside same evaluate)
-   - **After successful reply:** `exec printf '%s\n' '{commentId}_{date}' >> memory/replied_notifications.txt`
+   - **After successful reply:** `printf '%s\n' '{commentId}_{date}' >> memory/replied_notifications.txt`
 6. Language: Cyrillic text = Ukrainian (masculine forms). Latin = English.
 7. Apply SOUL.md anti-AI guidelines
 8. Log: `memory/{today}.md` -> `Type="Reply" | User | URL | text(100 chars)`
@@ -157,7 +157,7 @@ if daily.comments.current >= limit: mark_done("daily limit reached")
 3. 🚨 **MANDATORY: Grep pre-check against tracking file** — for each candidate post, extract its ID:
    - URL has `?post=XXX` → ID = the `XXX` part
    - URL is `/post/slug-hash` → extract BOTH the full `slug-hash` AND just the trailing hash after last `-`
-   Then run: `exec grep -qE "^(full_slug_hash|trailing_hash)$" memory/commented_posts.txt && echo "SKIP" || echo "OK"`
+   Then run: `grep -qE "^(full_slug_hash|trailing_hash)$" memory/commented_posts.txt && echo "SKIP" || echo "OK"`
    ⚠️ Always STORE the full `slug-hash` in tracking file. The dual check handles legacy short-hash entries.
    If "SKIP" → exclude from candidates (already commented, cheaper than browser navigation)
 4. Select 1-2 qualifying posts from remaining candidates
