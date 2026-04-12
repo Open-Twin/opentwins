@@ -161,7 +161,10 @@ Returns: `upvoted: 1` = upvoted, `upvoted: 0` = skipped/already. `composer: 'exp
 
 ## 4. Comment on a Post (Top-Level)
 
-**Step 4: Wait 2s + focus + type** (combined — single async evaluate with embedded wait):
+**Step 4: Expand composer + focus + type** (single async evaluate):
+
+Reddit collapses the comment composer by default. Must click the trigger button first, then use focusin + Selection API to activate Lexical editor. Do NOT use `.focus()` - it doesn't work with Lexical.
+
 ```javascript
 browser.act({
   kind: "evaluate",
@@ -169,17 +172,32 @@ browser.act({
     await new Promise(r => setTimeout(r, 2000));
     if (window.location.href === 'about:blank' || !window.location.href.includes('reddit.com'))
       return { error: 'page_lost', url: window.location.href };
+    // Expand composer if collapsed
+    var composer = document.querySelector('comment-composer-host:not([reply-mode])');
+    if (composer) {
+      var trigger = composer.querySelector('[data-testid="trigger-button"]');
+      if (trigger) { trigger.click(); await new Promise(r => setTimeout(r, 1500)); }
+    }
     var editor = document.querySelector('[data-lexical-editor="true"]');
-    if (!editor) return 'no editor';
-    editor.focus();
-    if (document.activeElement !== editor) return 'not focused';
-    var success = document.execCommand('insertText', false, '${commentText.replace(/'/g, "\\'")}');
-    return success ? 'typed' : 'execCommand failed';
+    if (!editor) return { error: 'no editor' };
+    // Activate Lexical via focusin event + Selection API (NOT .focus())
+    editor.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 300));
+    var sel = window.getSelection();
+    var range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    await new Promise(r => setTimeout(r, 200));
+    document.execCommand('insertText', false, '${commentText.replace(/'/g, "\\'")}');
+    await new Promise(r => setTimeout(r, 500));
+    return { typed: true, text: editor.textContent.trim().slice(0, 80) };
   }`,
   profile: "{{browser_profile}}"
 })
 ```
-If `page_lost` → re-navigate to post URL and retry from § 3 (upvote+expand). Do NOT probe with multiple evaluates.
+If `page_lost` → re-navigate to post URL and retry from § 3 (upvote+expand). If `no editor` → retry once after 2s.
 
 **Step 5: MANDATORY — Verify text (separate evaluate!):**
 Lexical renders async — innerHTML empty in same call. Submit without verify = silent failure.
@@ -198,21 +216,24 @@ browser.act({
 ```
 If `editor empty` -> STOP, retry from step 2.
 
-**Step 6: Submit** — button in regular DOM (NOT shadowRoot). Must use dispatchEvent!
+**Step 6: Submit** — MUST be async. Button is in regular DOM (NOT shadowRoot). Must use dispatchEvent with scrollIntoView + delay.
 - Selector: `comment-composer-host:not([reply-mode])` targets MAIN composer.
 - NEVER use just `comment-composer-host` — could select reply composer!
 ```javascript
 browser.act({
   kind: "evaluate",
-  fn: `() => {
-    const composer = document.querySelector('comment-composer-host:not([reply-mode])');
+  fn: `async () => {
+    var composer = document.querySelector('comment-composer-host:not([reply-mode])');
     if (!composer) return { error: 'no main composer' };
-    const submitBtn = composer.querySelector('button[type="submit"]');
+    var submitBtn = composer.querySelector('button[type="submit"]');
     if (!submitBtn) return { error: 'no submit button' };
     if (!submitBtn.textContent.includes('Comment')) return { error: 'wrong button text' };
+    submitBtn.scrollIntoView({ block: 'center' });
+    await new Promise(r => setTimeout(r, 300));
     submitBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
     submitBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
     submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await new Promise(r => setTimeout(r, 500));
     return { status: 'submitted' };
   }`,
   profile: "{{browser_profile}}"
