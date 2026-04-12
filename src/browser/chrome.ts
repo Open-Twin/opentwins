@@ -2,6 +2,7 @@ import { spawn, execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { homedir, platform } from 'node:os';
+import { fileLog, fileError } from '../util/logger.js';
 
 // ── Chrome executable detection ──────────────────────────────
 
@@ -125,7 +126,10 @@ export async function launchChrome(profileName: string): Promise<ChromeInstance>
     try {
       const lsof = execSync(`lsof -i :${port} -sTCP:LISTEN -t`, { encoding: 'utf-8', timeout: 3000 }).trim();
       const pid = parseInt(lsof.split('\n')[0]);
-      if (pid) return { pid, port, profileName };
+      if (pid) {
+        fileLog('chrome', 'Chrome already running', { profile: profileName, port, pid });
+        return { pid, port, profileName };
+      }
     } catch { /* fall through */ }
   }
 
@@ -151,9 +155,11 @@ export async function launchChrome(profileName: string): Promise<ChromeInstance>
   // Wait for CDP to be ready
   const ready = await waitForCdp(port, 15000);
   if (!ready) {
+    fileError('chrome', 'Chrome failed to start', { profile: profileName, port });
     throw new Error(`Chrome did not start on port ${port} within 15s`);
   }
 
+  fileLog('chrome', 'Chrome launched', { profile: profileName, port, pid: child.pid });
   return { pid: child.pid!, port, profileName };
 }
 
@@ -167,6 +173,7 @@ export function stopChrome(profileName: string): boolean {
         process.kill(pid, 'SIGTERM');
       }
     }
+    fileLog('chrome', 'Chrome stopped', { profile: profileName, port });
     return true;
   } catch {
     return false;

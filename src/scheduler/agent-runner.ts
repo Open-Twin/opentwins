@@ -4,6 +4,7 @@ import { runClaudeAgent } from '../util/claude.js';
 import { getPlatformWorkspaceDir, getLastHeartbeatFile, getLocksDir } from '../util/paths.js';
 import { acquireLock, releaseLock } from './lock.js';
 import { resetLimitsIfNeeded } from './limits-reset.js';
+import { fileLog, fileError } from '../util/logger.js';
 import type { OpenTwinsConfig } from '../config/schema.js';
 
 // Only run worker logic when executed as a Bree worker thread
@@ -63,8 +64,12 @@ export async function runPlatformAgent(
   // Acquire lock
   const locked = acquireLock(platform);
   if (!locked) {
+    fileLog('agent', 'Skipped (locked)', { platform });
     return;
   }
+
+  const startTime = Date.now();
+  fileLog('agent', 'Run started', { platform });
 
   try {
     const workspaceDir = getPlatformWorkspaceDir(platform);
@@ -80,8 +85,12 @@ export async function runPlatformAgent(
     if (result.exitCode !== 0) {
       throw new Error(`Agent exited with code ${result.exitCode}`);
     }
+
+    fileLog('agent', 'Run completed', { platform, durationMs: Date.now() - startTime });
+  } catch (err) {
+    fileError('agent', 'Run failed', { platform, durationMs: Date.now() - startTime, error: err instanceof Error ? err.message : String(err) });
+    throw err;
   } finally {
-    // Record completion time THEN release lock
     writeHeartbeatTime(platform);
     releaseLock(platform);
   }

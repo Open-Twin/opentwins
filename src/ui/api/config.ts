@@ -3,6 +3,7 @@ import { existsSync, rmSync } from 'node:fs';
 import { loadConfig, saveConfig } from '../../config/loader.js';
 import { generateAgentFiles } from '../../config/generator.js';
 import { OpenTwinsConfigSchema } from '../../config/schema.js';
+import { fileLog } from '../../util/logger.js';
 import { getPlatformWorkspaceDir } from '../../util/paths.js';
 import { ZodError } from 'zod';
 
@@ -46,6 +47,7 @@ export async function handleUpdateConfig(req: Request, res: Response): Promise<v
 
     saveConfig(validated);
     const { generated } = await generateAgentFiles(validated);
+    fileLog('config', 'Config saved and files regenerated', { filesGenerated: generated.length });
 
     res.json({ ok: true, regenerated: generated.length });
   } catch (err) {

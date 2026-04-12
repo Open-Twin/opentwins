@@ -7,6 +7,7 @@ import { PLATFORM_TYPES, PLATFORM_API_KEYS } from '../../util/platform-types.js'
 import { loadConfig, configExists } from '../../config/loader.js';
 import { findLatestSessionFile, extractEventsFromSession } from '../../util/session-parser.js';
 import { setupProfile, confirmProfile } from '../../browser/manager.js';
+import { fileLog, fileError } from '../../util/logger.js';
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -236,8 +237,10 @@ export async function handleRunAgent(req: Request, res: Response): Promise<void>
     // Safety timeout
     setTimeout(() => { runningAgents.delete(platform); }, 1800000);
 
+    fileLog('agent', 'Agent spawned via Run Now', { platform, pid: child.pid });
     res.json({ ok: true, message: `${platform} agent started (PID ${child.pid})` });
   } catch (err) {
+    fileError('agent', 'Spawn failed', { platform, error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ error: `Failed to start agent: ${err instanceof Error ? err.message : err}` });
   }
 }
@@ -286,6 +289,7 @@ export async function handleStopAgent(req: Request, res: Response): Promise<void
     stopChrome(`ot-${platform}`);
   } catch { /* best effort */ }
 
+  fileLog('agent', 'Agent stopped', { platform });
   res.json({ ok: true, message: `Stopped ${platform} agent and browser` });
 }
 

@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { getPidFile } from '../util/paths.js';
+import { fileLog, fileError, fileWarn } from '../util/logger.js';
 
 // Wait for the daemon to report a ready PID file, or time out.
 async function waitForPidFile(timeoutMs: number): Promise<number | null> {
@@ -27,6 +28,7 @@ export async function startDaemon(): Promise<number> {
 
   // Remove any stale PID file
   if (existsSync(pidFile)) {
+    fileWarn('daemon', 'Removing stale PID file');
     try { unlinkSync(pidFile); } catch { /* ignore */ }
   }
 
@@ -47,7 +49,9 @@ export async function startDaemon(): Promise<number> {
 
   // Wait briefly for the child to prove it started
   const ready = await waitForPidFile(3000);
-  return ready || child.pid || 0;
+  const pid = ready || child.pid || 0;
+  fileLog('daemon', 'Daemon started', { pid });
+  return pid;
 }
 
 export async function stopDaemon(): Promise<boolean> {
@@ -66,6 +70,7 @@ export async function stopDaemon(): Promise<boolean> {
     try { process.kill(-pid, 'SIGTERM'); } catch { /* fall through */ }
     try { process.kill(pid, 'SIGTERM'); } catch { /* already dead */ }
     try { unlinkSync(pidFile); } catch { /* ignore */ }
+    fileLog('daemon', 'Daemon stopped', { pid });
     return true;
   } catch {
     try { unlinkSync(pidFile); } catch { /* ignore */ }

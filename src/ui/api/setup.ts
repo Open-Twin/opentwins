@@ -8,6 +8,7 @@ import { validateAuth, isClaudeInstalled } from '../../util/claude.js';
 import { isChromeInstalled } from '../../browser/chrome.js';
 import { getOpenTwinsHome } from '../../util/paths.js';
 import { DEFAULT_LIMITS } from '../../config/defaults.js';
+import { fileLog } from '../../util/logger.js';
 import { PLATFORM_URLS } from '../../util/platform-types.js';
 import type { PlatformType } from '../../util/platform-types.js';
 
@@ -146,6 +147,7 @@ export async function handleSetup(req: Request, res: Response): Promise<void> {
     // Save config and generate agent files
     saveConfig(config);
     const { generated } = await generateAgentFiles(config);
+    fileLog('setup', 'Setup completed', { platforms: config.platforms.length, filesGenerated: generated.length });
 
     res.json({ ok: true, regenerated: generated.length });
   } catch (err) {

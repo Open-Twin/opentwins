@@ -15,6 +15,7 @@ import { handleBrowserStart, handleBrowserStop, handleBrowserOpen, handleBrowser
 import { handleUsage } from './api/usage.js';
 import { getSessions } from '../util/session-parser.js';
 import * as log from '../util/logger.js';
+import { fileLog, fileError, readLogs, cleanOldLogs } from '../util/logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -186,6 +187,7 @@ export async function startDashboard(port: number): Promise<void> {
         return;
       }
       const pid = await startDaemon();
+      fileLog('server', 'Scheduler started via API', { pid });
       res.json({ ok: true, message: `Scheduler started (PID ${pid})` });
     } catch (err) {
       res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to start scheduler' });
@@ -195,6 +197,7 @@ export async function startDashboard(port: number): Promise<void> {
   app.post('/api/scheduler/stop', async (_req, res) => {
     try {
       const stopped = await stopDaemon();
+      fileLog('server', 'Scheduler stopped via API', { stopped });
       res.json({ ok: true, stopped });
     } catch (err) {
       res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to stop scheduler' });
@@ -226,6 +229,18 @@ export async function startDashboard(port: number): Promise<void> {
   app.post('/api/browser/:profile/snapshot', (req, res) => { handleBrowserSnapshot(req, res); });
   app.get('/api/browser/:profile/tabs', (req, res) => { handleBrowserTabs(req, res); });
 
+  // Platform logs API
+  app.get('/api/logs', (_req, res) => {
+    const { date, level, mod, limit } = _req.query;
+    const entries = readLogs({
+      date: date as string,
+      level: level as string,
+      mod: mod as string,
+      limit: limit ? parseInt(limit as string) : 200,
+    });
+    res.json(entries);
+  });
+
   // Serve static client files - find client dist by walking up to package root
   let clientDir = '';
   let searchDir = __dirname;
@@ -252,9 +267,14 @@ export async function startDashboard(port: number): Promise<void> {
     });
   }
 
+  // Clean old logs on startup
+  cleanOldLogs(14);
+  fileLog('server', 'Dashboard starting', { port });
+
   await new Promise<void>((resolve, reject) => {
     const server = app.listen(port, () => {
       log.success(`Dashboard running at http://localhost:${port}`);
+      fileLog('server', 'Dashboard started', { port });
       resolve();
     });
     server.on('error', async (err: NodeJS.ErrnoException) => {
