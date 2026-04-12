@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApi, useMutation, today } from '../hooks/useApi.ts';
+import { useApi, today } from '../hooks/useApi.ts';
 import { useAgentsEnabled, HealthBanner } from '../contexts/HealthContext.tsx';
 
 interface StatusData {
@@ -10,7 +10,7 @@ interface StatusData {
   pipelineEnabled: boolean;
   pipelineStartHour: number;
   nextPipelineRun: string | null;
-  platforms: Array<{ platform: string; enabled: boolean; handle: string }>;
+  platforms: Array<{ platform: string; enabled: boolean; auto_run: boolean; handle: string }>;
   platformSchedules: Array<{ platform: string; nextRun: string }>;
   recentRuns: Array<{
     id: string;
@@ -96,9 +96,7 @@ export function Dashboard() {
   const { data: status, loading, refetch } = useApi<StatusData>('/api/status');
   const { data: activityResp, refetch: refetchActivity } = useApi<{ sessions: Array<{ platform: string; toolCount: number; eventCount: number }> }>(`/api/activity?date=${today()}`);
   const { data: agents, refetch: refetchAgents } = useApi<Array<{ platform: string; limits: { daily: Record<string, { limit: number; current: number }>; weekly?: Record<string, { limit: number; current: number }> } | null }>>('/api/agents');
-  const { mutate: startScheduler, loading: startingScheduler } = useMutation('/api/scheduler/start', 'POST');
-  const { mutate: stopScheduler, loading: stoppingScheduler } = useMutation('/api/scheduler/stop', 'POST');
-  const [schedulerFlash, setSchedulerFlash] = useState<string | null>(null);
+  const autoRunCount = status?.platforms.filter((p) => p.auto_run).length || 0;
 
   // Auto-refresh dashboard every 10 seconds
   useEffect(() => {
@@ -135,16 +133,6 @@ export function Dashboard() {
   const runsToday = status?.recentRuns?.length || 0;
   const completedToday = status?.recentRuns?.filter((r) => r.status === 'completed').length || 0;
 
-  const toggleScheduler = async () => {
-    if (status?.daemon) {
-      const r = await stopScheduler({});
-      if (r) { setSchedulerFlash('Agents paused'); refetch(); setTimeout(() => setSchedulerFlash(null), 3000); }
-    } else {
-      const r = await startScheduler({});
-      if (r) { setSchedulerFlash('Agents running'); refetch(); setTimeout(() => setSchedulerFlash(null), 3000); }
-    }
-  };
-
   return (
     <div className="space-y-8">
       {!agentsEnabled && <HealthBanner reason={agentsDisabledReason} />}
@@ -163,51 +151,15 @@ export function Dashboard() {
             <span>active window {status?.activeHours.start}:00–{status?.activeHours.end}:00</span>
           </div>
         </div>
-
-        {/* Primary action: Automation toggle */}
-        <div className="flex items-center gap-3">
-          {schedulerFlash && (
-            <span className="mono text-[13px] px-3 py-1.5 rounded-full animate-fade-up" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)' }}>
-              {schedulerFlash}
-            </span>
-          )}
-          <button
-            onClick={toggleScheduler}
-            disabled={startingScheduler || stoppingScheduler || (!agentsEnabled && !status?.daemon)}
-            className="flex items-center gap-3 px-5 py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
-            style={{
-              background: status?.daemon
-                ? 'linear-gradient(135deg, rgba(52,211,153,0.18) 0%, rgba(52,211,153,0.10) 100%)'
-                : 'linear-gradient(135deg, rgba(45,212,191,0.22) 0%, rgba(45,212,191,0.12) 100%)',
-              border: `1.5px solid ${status?.daemon ? 'rgba(52,211,153,0.5)' : 'rgba(45,212,191,0.6)'}`,
-              color: status?.daemon ? 'var(--c-green)' : 'var(--c-teal)',
-              boxShadow: status?.daemon
-                ? '0 0 32px rgba(52,211,153,0.15), inset 0 1px 0 rgba(255,255,255,0.05)'
-                : '0 0 32px rgba(45,212,191,0.2), inset 0 1px 0 rgba(255,255,255,0.08)',
-            }}
-            title={
-              !agentsEnabled && !status?.daemon ? (agentsDisabledReason || 'Agents unavailable') :
-              status?.daemon ? 'Click to pause scheduled runs (manual runs still work)' :
-              'Click to start scheduled agent runs and daily pipeline'
-            }
-          >
-            <span className="text-lg leading-none">
-              {startingScheduler || stoppingScheduler ? '⏳' : status?.daemon ? '⏸' : '▶'}
-            </span>
-            <span className="text-[15px]">
-              {startingScheduler ? 'Starting agents…' : stoppingScheduler ? 'Pausing agents…' : status?.daemon ? 'Pause Agents' : 'Start Agents'}
-            </span>
-          </button>
-        </div>
       </div>
 
-      {/* ── First-run hint: agents paused and no runs yet ───────── */}
-      {!status?.daemon && runsToday === 0 && (
+      {/* ── First-run hint: no auto-run agents ───────── */}
+      {autoRunCount === 0 && runsToday === 0 && (
         <div className="panel noise animate-fade-up" style={{ background: 'rgba(45,212,191,0.04)', border: '1px solid rgba(45,212,191,0.2)' }}>
           <div className="px-5 py-4 flex items-center gap-4">
             <div className="text-xl shrink-0">💡</div>
             <div className="text-[13px]" style={{ color: 'var(--c-text-dim)' }}>
-              Your agents are paused. Click <strong style={{ color: 'var(--c-teal)' }}>Start Agents</strong> above to run them automatically on schedule. You can also trigger individual runs from the Agents tab.
+              No agents are set to auto-run. Go to the <strong style={{ color: 'var(--c-teal)' }}>Agents</strong> tab and enable auto-run on individual agents to have them run automatically on a schedule.
             </div>
           </div>
         </div>
@@ -233,10 +185,10 @@ export function Dashboard() {
           sub={totalActions > 0 ? 'comments, reactions, posts' : 'no actions yet'}
         />
         <KpiCard
-          label="Schedule"
-          value={status?.daemon ? 'Active' : 'Paused'}
-          sub={status?.daemon ? 'agents auto-run' : 'manual runs only'}
-          accent={status?.daemon ? 'green' : 'amber'}
+          label="Auto-Run"
+          value={`${autoRunCount}/${totalAgents}`}
+          sub={autoRunCount > 0 ? `${autoRunCount} on schedule` : 'none scheduled'}
+          accent={autoRunCount > 0 ? 'green' : undefined}
         />
       </div>
 
@@ -311,10 +263,12 @@ export function Dashboard() {
                         <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--c-blue)' }}></span>
                         running now
                       </span>
-                    ) : status?.daemon && sched ? (
+                    ) : sched ? (
                       <Countdown target={sched.nextRun} />
+                    ) : p.auto_run ? (
+                      <span style={{ color: 'var(--c-green)' }}>auto-run</span>
                     ) : (
-                      <span>paused</span>
+                      <span>manual only</span>
                     )}
                     {run?.duration_ms && (
                       <span>{(run.duration_ms / 1000).toFixed(0)}s</span>

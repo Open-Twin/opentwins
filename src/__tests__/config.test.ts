@@ -88,6 +88,7 @@ describe('Config Schema Validation', () => {
     expect(result.active_hours.end).toBe(23);
     expect(result.pipeline_enabled).toBe(true);
     expect(result.voice.formality).toBe('casual');
+    expect(result.platforms[0].auto_run).toBe(false);
   });
 
   it('rejects invalid platform type', () => {

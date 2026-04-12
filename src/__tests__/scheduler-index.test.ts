@@ -25,7 +25,7 @@ describe('scheduler/index createScheduler', () => {
     BreeCtor.mockReset();
   });
 
-  it('registers one job per enabled platform plus a pipeline job', async () => {
+  it('registers one job per auto_run platform plus a pipeline job', async () => {
     const { createScheduler } = await import('../scheduler/index.js');
     createScheduler(VALID_CONFIG);
 
@@ -34,7 +34,7 @@ describe('scheduler/index createScheduler', () => {
     const names = opts.jobs.map((j) => j.name);
 
     expect(names).toContain('pipeline');
-    for (const p of VALID_CONFIG.platforms.filter((p) => p.enabled)) {
+    for (const p of VALID_CONFIG.platforms.filter((p) => p.enabled && p.auto_run)) {
       expect(names).toContain(p.platform);
     }
   });
@@ -124,5 +124,36 @@ describe('scheduler/index createScheduler', () => {
     const names = opts.jobs.map((j) => j.name);
     expect(names).toContain('linkedin');
     expect(names).not.toContain('twitter');
+  });
+
+  it('skips platforms with auto_run=false', async () => {
+    const { createScheduler } = await import('../scheduler/index.js');
+    const config = {
+      ...VALID_CONFIG,
+      platforms: VALID_CONFIG.platforms.map((p) =>
+        p.platform === 'twitter' ? { ...p, auto_run: false } : p,
+      ),
+    };
+    createScheduler(config);
+
+    const opts = BreeCtor.mock.calls[0][0] as { jobs: Array<Record<string, unknown>> };
+    const names = opts.jobs.map((j) => j.name);
+    expect(names).toContain('linkedin');
+    expect(names).not.toContain('twitter');
+  });
+
+  it('omits pipeline when no agents have auto_run even if pipeline_enabled', async () => {
+    const { createScheduler } = await import('../scheduler/index.js');
+    const config = {
+      ...VALID_CONFIG,
+      pipeline_enabled: true,
+      platforms: VALID_CONFIG.platforms.map((p) => ({ ...p, auto_run: false })),
+    };
+    createScheduler(config);
+
+    const opts = BreeCtor.mock.calls[0][0] as { jobs: Array<Record<string, unknown>> };
+    const names = opts.jobs.map((j) => j.name);
+    expect(names).not.toContain('pipeline');
+    expect(opts.jobs).toHaveLength(0);
   });
 });

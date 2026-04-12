@@ -29,8 +29,9 @@ export function createScheduler(config: OpenTwinsConfig): Bree {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const jobs: any[] = [];
 
-  // Pipeline job (morning sequence)
-  if (config.pipeline_enabled) {
+  // Pipeline job (morning sequence) — only if pipeline enabled AND at least one agent is auto-running
+  const hasAutoRunAgents = config.platforms.some((p) => p.enabled && p.auto_run);
+  if (config.pipeline_enabled && hasAutoRunAgents) {
     const pipelineMinute = 45;
     const pipelineHour = Math.max(0, config.pipeline_start_hour - 2);
 
@@ -51,7 +52,7 @@ export function createScheduler(config: OpenTwinsConfig): Bree {
   // The agent-runner itself decides whether enough time has passed since
   // the last completed run (based on heartbeat_interval_minutes).
   // This decouples the scheduler from the interval logic.
-  const enabledPlatforms = config.platforms.filter((p) => p.enabled);
+  const enabledPlatforms = config.platforms.filter((p) => p.enabled && p.auto_run);
   const { start, end } = config.active_hours;
   enabledPlatforms.forEach((platform, index) => {
     // Stagger checks so agents don't all fire at the same minute

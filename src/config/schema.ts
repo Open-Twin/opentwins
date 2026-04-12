@@ -24,6 +24,7 @@ const PlatformAccountSchema = z.object({
   handle: z.string().min(1),
   profile_url: z.string().url(),
   enabled: z.boolean().default(true),
+  auto_run: z.boolean().default(false),
   premium: z.boolean().optional(),
   account_age: z.string().optional(),
   heartbeat_interval_minutes: z.number().int().min(15).max(480).default(60),

@@ -35,8 +35,8 @@ program
     console.log(chalk.bold('Starting OpenTwins scheduler...'));
     console.log('');
 
-    const enabledPlatforms = config.platforms.filter((p) => p.enabled);
-    log.info(`${enabledPlatforms.length} platform agents enabled`);
+    const autoRunPlatforms = config.platforms.filter((p) => p.enabled && p.auto_run);
+    log.info(`${autoRunPlatforms.length} platform agents set to auto-run`);
     log.info(`Pipeline: ${config.pipeline_enabled ? 'enabled' : 'disabled'}`);
     log.info(`Active hours: ${config.active_hours.start}:00 - ${config.active_hours.end}:00 ${config.timezone}`);
 

@@ -86,6 +86,7 @@ export function handleListAgents(_req: Request, res: Response): void {
         platform: p.platform,
         handle: p.handle,
         enabled: p.enabled,
+        auto_run: p.auto_run,
         browserConfigured: browser,
         hasWorkspace,
         running,
@@ -128,6 +129,7 @@ export function handleGetAgent(req: Request, res: Response): void {
   res.json({
     platform,
     handle: platformConfig?.handle || '',
+    auto_run: platformConfig?.auto_run ?? false,
     heartbeat_interval_minutes: platformConfig?.heartbeat_interval_minutes || 60,
     workspace: dir,
     enabled,
@@ -341,9 +343,9 @@ export async function handleUpdateAgent(req: Request, res: Response): Promise<vo
     return;
   }
 
-  const { limits, queries, behavior, heartbeat_interval_minutes } = req.body;
+  const { limits, queries, behavior, heartbeat_interval_minutes, auto_run } = req.body;
 
-  if (heartbeat_interval_minutes !== undefined) {
+  if (auto_run !== undefined || heartbeat_interval_minutes !== undefined) {
     try {
       const { saveConfig } = await import('../../config/loader.js');
       const config = loadConfig();
@@ -352,12 +354,35 @@ export async function handleUpdateAgent(req: Request, res: Response): Promise<vo
         res.status(404).json({ error: 'Platform not in config' });
         return;
       }
-      const val = Math.max(15, Math.min(480, parseInt(heartbeat_interval_minutes) || 60));
-      config.platforms[platformIndex].heartbeat_interval_minutes = val;
+      if (heartbeat_interval_minutes !== undefined) {
+        const val = Math.max(15, Math.min(480, parseInt(heartbeat_interval_minutes) || 60));
+        config.platforms[platformIndex].heartbeat_interval_minutes = val;
+      }
+      if (auto_run !== undefined) {
+        config.platforms[platformIndex].auto_run = !!auto_run;
+      }
       saveConfig(config);
-      res.json({ ok: true, heartbeat_interval_minutes: val });
+
+      // Restart daemon so it picks up the new config (auto_run or interval changes)
+      const needsRestart = auto_run !== undefined || (heartbeat_interval_minutes !== undefined && config.platforms[platformIndex].auto_run);
+      if (needsRestart) {
+        try {
+          const { stopDaemon, startDaemon } = await import('../../scheduler/daemon.js');
+          await stopDaemon();
+          const hasAutoRun = config.platforms.some((p) => p.enabled && p.auto_run);
+          if (hasAutoRun) {
+            await startDaemon();
+          }
+        } catch { /* best effort */ }
+      }
+
+      res.json({
+        ok: true,
+        auto_run: config.platforms[platformIndex].auto_run,
+        heartbeat_interval_minutes: config.platforms[platformIndex].heartbeat_interval_minutes,
+      });
     } catch (err) {
-      res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to save interval' });
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to save config' });
     }
     return;
   }
@@ -394,7 +419,7 @@ export async function handleUpdateAgent(req: Request, res: Response): Promise<vo
     return;
   }
 
-  res.status(400).json({ error: 'Nothing to update. Send limits, queries, or behavior.' });
+  res.status(400).json({ error: 'Nothing to update. Send auto_run, heartbeat_interval_minutes, limits, queries, or behavior.' });
 }
 
 // ── GET /api/agents/:platform/feed ────────────────────────────

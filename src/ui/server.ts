@@ -96,8 +96,8 @@ export async function startDashboard(port: number): Promise<void> {
 
     // Compute next heartbeat times per platform
     // Next run = last completed + interval (not fixed cron boundaries)
-    const enabledPlatforms = config.platforms.filter((p) => p.enabled);
-    const platformSchedules = enabledPlatforms.map((p) => {
+    const autoRunPlatforms = config.platforms.filter((p) => p.enabled && p.auto_run);
+    const platformSchedules = autoRunPlatforms.map((p) => {
       const intervalMin = p.heartbeat_interval_minutes || 60;
       const intervalMs = intervalMin * 60 * 1000;
       const { start, end } = config.active_hours;
@@ -143,6 +143,7 @@ export async function startDashboard(port: number): Promise<void> {
       platforms: config.platforms.map((p) => ({
         platform: p.platform,
         enabled: p.enabled,
+        auto_run: p.auto_run,
         handle: p.handle,
       })),
       platformSchedules,
@@ -178,31 +179,23 @@ export async function startDashboard(port: number): Promise<void> {
   app.get('/api/quality', (req, res) => getQualityMetrics(req, res));
   app.get('/api/quality/disagreement', (req, res) => getDisagreementRatio(req, res));
 
-  // Scheduler control
-  app.post('/api/scheduler/start', async (_req, res) => {
-    try {
+  // Auto-start daemon if any platform has auto_run enabled
+  if (configExists()) {
+    const initConfig = loadConfig();
+    const hasAutoRun = initConfig.platforms.some((p) => p.enabled && p.auto_run);
+    if (hasAutoRun) {
       const running = await isDaemonRunning();
-      if (running) {
-        res.json({ ok: true, message: 'Scheduler already running' });
-        return;
+      if (!running) {
+        try {
+          const pid = await startDaemon();
+          fileLog('server', 'Daemon auto-started', { pid });
+        } catch (err) {
+          fileError('server', 'Daemon auto-start failed', { error: err instanceof Error ? err.message : String(err) });
+        }
       }
-      const pid = await startDaemon();
-      fileLog('server', 'Scheduler started via API', { pid });
-      res.json({ ok: true, message: `Scheduler started (PID ${pid})` });
-    } catch (err) {
-      res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to start scheduler' });
     }
-  });
+  }
 
-  app.post('/api/scheduler/stop', async (_req, res) => {
-    try {
-      const stopped = await stopDaemon();
-      fileLog('server', 'Scheduler stopped via API', { stopped });
-      res.json({ ok: true, stopped });
-    } catch (err) {
-      res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to stop scheduler' });
-    }
-  });
 
   // Config editing
   app.put('/api/config', (req, res) => { handleUpdateConfig(req, res); });

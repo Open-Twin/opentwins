@@ -23,6 +23,7 @@ interface AgentDetail {
   platform: string;
   handle: string;
   heartbeat_interval_minutes: number;
+  auto_run: boolean;
   enabled: boolean;
   browserConfigured: boolean;
   hasWorkspace: boolean;
@@ -485,8 +486,8 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
               <span>Tasks <strong style={{ color: 'var(--c-text)' }}>{scheduleTasksDone}/{scheduleTasksTotal}</strong></span>
               <span style={{ color: 'var(--c-border)' }}>·</span>
               <span>Last run <strong style={{ color: 'var(--c-text)' }}>{agent.lastRun?.startedAt ? new Date(agent.lastRun.startedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}</strong></span>
-              {statusData?.daemon && (() => {
-                const sched = statusData.platformSchedules?.find((s) => s.platform === platform);
+              {agent.auto_run && (() => {
+                const sched = statusData?.platformSchedules?.find((s) => s.platform === platform);
                 return sched ? (
                   <>
                     <span style={{ color: 'var(--c-border)' }}>·</span>
@@ -495,13 +496,25 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
                 ) : null;
               })()}
             </div>
-            <IntervalPicker
-              value={agent.heartbeat_interval_minutes}
-              onSave={async (minutes) => {
-                const result = await saveAgent({ heartbeat_interval_minutes: minutes });
-                if (result) { setFlash(`Interval: ${intervalLabel(minutes)}`); refetch(); setTimeout(() => setFlash(null), 3000); }
-              }}
-            />
+            <div className="flex items-center gap-3">
+              <AutoRunToggle
+                value={agent.auto_run}
+                disabled={state === 'needs_setup' || state === 'needs_api_keys'}
+                onToggle={async (on) => {
+                  const result = await saveAgent({ auto_run: on });
+                  if (result) { setFlash(on ? 'Auto-run enabled' : 'Auto-run disabled'); refetch(); onRefresh(); setTimeout(() => setFlash(null), 3000); }
+                }}
+              />
+              {agent.auto_run && (
+                <IntervalPicker
+                  value={agent.heartbeat_interval_minutes}
+                  onSave={async (minutes) => {
+                    const result = await saveAgent({ heartbeat_interval_minutes: minutes });
+                    if (result) { setFlash(`Interval: ${intervalLabel(minutes)}`); refetch(); setTimeout(() => setFlash(null), 3000); }
+                  }}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1324,6 +1337,36 @@ function intervalLabel(minutes: number): string {
   if (minutes < 60) return `${minutes}m`;
   const h = minutes / 60;
   return h === Math.floor(h) ? `${h}h` : `${Math.floor(h)}h${minutes % 60}m`;
+}
+
+function AutoRunToggle({ value, disabled, onToggle }: { value: boolean; disabled?: boolean; onToggle: (on: boolean) => void }) {
+  return (
+    <button
+      onClick={() => onToggle(!value)}
+      disabled={disabled}
+      className="flex items-center gap-2 mono text-[12px] px-2.5 py-1.5 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+      style={{
+        background: value ? 'rgba(52,211,153,0.1)' : 'transparent',
+        border: `1px solid ${value ? 'rgba(52,211,153,0.4)' : 'var(--c-border-dim)'}`,
+        color: value ? 'var(--c-green)' : 'var(--c-text-muted)',
+      }}
+      title={disabled ? 'Complete setup first' : value ? 'Click to disable auto-run' : 'Click to enable auto-run'}
+    >
+      <div
+        className="w-7 h-4 rounded-full relative transition-colors"
+        style={{ background: value ? 'rgba(52,211,153,0.3)' : 'rgba(100,116,139,0.2)' }}
+      >
+        <div
+          className="w-3 h-3 rounded-full absolute top-0.5 transition-all"
+          style={{
+            background: value ? 'var(--c-green)' : 'var(--c-text-muted)',
+            left: value ? '14px' : '2px',
+          }}
+        />
+      </div>
+      Auto-run
+    </button>
+  );
 }
 
 function IntervalPicker({ value, onSave }: { value: number; onSave: (minutes: number) => void }) {

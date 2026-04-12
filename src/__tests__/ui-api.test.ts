@@ -38,6 +38,12 @@ vi.mock('../browser/chrome.js', () => ({
   stopChrome: vi.fn(() => true),
 }));
 
+vi.mock('../scheduler/daemon.js', () => ({
+  startDaemon: vi.fn(async () => 99999),
+  stopDaemon: vi.fn(async () => true),
+  isDaemonRunning: vi.fn(async () => false),
+}));
+
 vi.mock('../browser/cdp.js', () => ({
   openTab: vi.fn(async () => JSON.stringify({ ok: true, tabId: 'x' })),
   navigateTo: vi.fn(async () => JSON.stringify({ ok: true })),
@@ -317,9 +323,10 @@ describe('ui/api/agents', () => {
     const { handleListAgents } = await import('../ui/api/agents.js');
     const res = mockRes();
     handleListAgents(mockReq() as any, res as any);
-    const body = res.body as Array<{ platform: string; enabled: boolean }>;
+    const body = res.body as Array<{ platform: string; enabled: boolean; auto_run: boolean }>;
     expect(body).toHaveLength(VALID_CONFIG.platforms.length);
     expect(body.map((a) => a.platform).sort()).toEqual(['linkedin', 'twitter']);
+    expect(body.every((a) => typeof a.auto_run === 'boolean')).toBe(true);
   });
 
   it('handleGetAgent 400s on unknown platform', async () => {
@@ -343,9 +350,10 @@ describe('ui/api/agents', () => {
     const res = mockRes();
     handleGetAgent(mockReq({ params: { platform: 'linkedin' } }) as any, res as any);
 
-    const body = res.body as { platform: string; state: string; enabled: boolean };
+    const body = res.body as { platform: string; state: string; enabled: boolean; auto_run: boolean };
     expect(body.platform).toBe('linkedin');
     expect(body.enabled).toBe(true);
+    expect(body.auto_run).toBe(true);
     // No browser profile set yet → needs_setup
     expect(body.state).toBe('needs_setup');
   });
@@ -396,6 +404,56 @@ describe('ui/api/agents', () => {
     expect(saved.daily.comments.limit).toBe(10);
     // current is preserved, not reset to 0.
     expect(saved.daily.comments.current).toBe(3);
+  });
+
+  it('handleUpdateAgent toggles auto_run and persists to config', async () => {
+    writeFileSync(resolve(tmpDir, 'config.json'), JSON.stringify(VALID_CONFIG), 'utf-8');
+    const workspaceDir = resolve(tmpDir, 'workspaces', 'agent-linkedin');
+    mkdirSync(workspaceDir, { recursive: true });
+
+    const { handleUpdateAgent } = await import('../ui/api/agents.js');
+    const res = mockRes();
+    await handleUpdateAgent(
+      mockReq({ params: { platform: 'linkedin' }, body: { auto_run: false } }) as any,
+      res as any,
+    );
+    expect((res.body as { ok: boolean; auto_run: boolean }).ok).toBe(true);
+    expect((res.body as { auto_run: boolean }).auto_run).toBe(false);
+
+    const saved = JSON.parse(readFileSync(resolve(tmpDir, 'config.json'), 'utf-8'));
+    expect(saved.platforms[0].auto_run).toBe(false);
+  });
+
+  it('handleUpdateAgent updates heartbeat_interval_minutes', async () => {
+    writeFileSync(resolve(tmpDir, 'config.json'), JSON.stringify(VALID_CONFIG), 'utf-8');
+    const workspaceDir = resolve(tmpDir, 'workspaces', 'agent-linkedin');
+    mkdirSync(workspaceDir, { recursive: true });
+
+    const { handleUpdateAgent } = await import('../ui/api/agents.js');
+    const res = mockRes();
+    await handleUpdateAgent(
+      mockReq({ params: { platform: 'linkedin' }, body: { heartbeat_interval_minutes: 30 } }) as any,
+      res as any,
+    );
+    expect((res.body as { ok: boolean }).ok).toBe(true);
+    expect((res.body as { heartbeat_interval_minutes: number }).heartbeat_interval_minutes).toBe(30);
+
+    const saved = JSON.parse(readFileSync(resolve(tmpDir, 'config.json'), 'utf-8'));
+    expect(saved.platforms[0].heartbeat_interval_minutes).toBe(30);
+  });
+
+  it('handleUpdateAgent clamps heartbeat_interval_minutes to valid range', async () => {
+    writeFileSync(resolve(tmpDir, 'config.json'), JSON.stringify(VALID_CONFIG), 'utf-8');
+    const workspaceDir = resolve(tmpDir, 'workspaces', 'agent-linkedin');
+    mkdirSync(workspaceDir, { recursive: true });
+
+    const { handleUpdateAgent } = await import('../ui/api/agents.js');
+    const res = mockRes();
+    await handleUpdateAgent(
+      mockReq({ params: { platform: 'linkedin' }, body: { heartbeat_interval_minutes: 5 } }) as any,
+      res as any,
+    );
+    expect((res.body as { heartbeat_interval_minutes: number }).heartbeat_interval_minutes).toBe(15);
   });
 
   it('handleGetAgentFeed 400s on unknown platform', async () => {

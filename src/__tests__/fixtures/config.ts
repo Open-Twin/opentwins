@@ -45,6 +45,7 @@ export const VALID_CONFIG: OpenTwinsConfig = {
       handle: 'alexjohnson-fitness',
       profile_url: 'https://www.linkedin.com/in/alexjohnson-fitness',
       enabled: true,
+      auto_run: true,
       heartbeat_interval_minutes: 60,
       limits: {
         daily: {
@@ -68,6 +69,7 @@ export const VALID_CONFIG: OpenTwinsConfig = {
       handle: 'alexfitcoach',
       profile_url: 'https://x.com/alexfitcoach',
       enabled: true,
+      auto_run: true,
       heartbeat_interval_minutes: 30,
       limits: {
         daily: {
@@ -97,16 +99,16 @@ export const VALID_CONFIG: OpenTwinsConfig = {
 export const FULL_CONFIG: OpenTwinsConfig = {
   ...VALID_CONFIG,
   platforms: [
-    { platform: 'linkedin', handle: 'alexfitness', profile_url: 'https://www.linkedin.com/in/alexfitness', enabled: true, heartbeat_interval_minutes: 60, limits: { daily: { comments: { limit: 4 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
-    { platform: 'twitter', handle: 'alexfitcoach', profile_url: 'https://x.com/alexfitcoach', enabled: true, heartbeat_interval_minutes: 30, limits: { daily: { comments: { limit: 5 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
-    { platform: 'reddit', handle: 'alexfitcoach', profile_url: 'https://reddit.com/user/alexfitcoach', enabled: true, heartbeat_interval_minutes: 40, limits: { daily: { comments: { limit: 10 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
-    { platform: 'bluesky', handle: 'alexfit.bsky.social', profile_url: 'https://bsky.app/profile/alexfit.bsky.social', enabled: true, heartbeat_interval_minutes: 60, limits: { daily: { comments: { limit: 10 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
-    { platform: 'threads', handle: 'alexfitcoach', profile_url: 'https://www.threads.net/@alexfitcoach', enabled: true, heartbeat_interval_minutes: 40, limits: { daily: { comments: { limit: 10 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
-    { platform: 'medium', handle: 'alexfitcoach', profile_url: 'https://medium.com/@alexfitcoach', enabled: true, heartbeat_interval_minutes: 90, limits: { daily: { responses: { limit: 5 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
-    { platform: 'substack', handle: 'alexfitcoach', profile_url: 'https://alexfitcoach.substack.com', enabled: true, heartbeat_interval_minutes: 90, limits: { daily: { comments: { limit: 4 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
-    { platform: 'devto', handle: 'alexfitcoach', profile_url: 'https://dev.to/alexfitcoach', enabled: true, heartbeat_interval_minutes: 90, limits: { daily: { comments: { limit: 6 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
-    { platform: 'ph', handle: 'alexfitcoach', profile_url: 'https://www.producthunt.com/@alexfitcoach', enabled: true, heartbeat_interval_minutes: 90, limits: { daily: { comments: { limit: 8 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
-    { platform: 'ih', handle: 'alexfitcoach', profile_url: 'https://www.indiehackers.com/alexfitcoach', enabled: true, heartbeat_interval_minutes: 150, limits: { daily: { comments: { limit: 4 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
+    { platform: 'linkedin', handle: 'alexfitness', profile_url: 'https://www.linkedin.com/in/alexfitness', enabled: true, auto_run: true, heartbeat_interval_minutes: 60, limits: { daily: { comments: { limit: 4 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
+    { platform: 'twitter', handle: 'alexfitcoach', profile_url: 'https://x.com/alexfitcoach', enabled: true, auto_run: true, heartbeat_interval_minutes: 30, limits: { daily: { comments: { limit: 5 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
+    { platform: 'reddit', handle: 'alexfitcoach', profile_url: 'https://reddit.com/user/alexfitcoach', enabled: true, auto_run: true, heartbeat_interval_minutes: 40, limits: { daily: { comments: { limit: 10 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
+    { platform: 'bluesky', handle: 'alexfit.bsky.social', profile_url: 'https://bsky.app/profile/alexfit.bsky.social', enabled: true, auto_run: true, heartbeat_interval_minutes: 60, limits: { daily: { comments: { limit: 10 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
+    { platform: 'threads', handle: 'alexfitcoach', profile_url: 'https://www.threads.net/@alexfitcoach', enabled: true, auto_run: true, heartbeat_interval_minutes: 40, limits: { daily: { comments: { limit: 10 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
+    { platform: 'medium', handle: 'alexfitcoach', profile_url: 'https://medium.com/@alexfitcoach', enabled: true, auto_run: true, heartbeat_interval_minutes: 90, limits: { daily: { responses: { limit: 5 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
+    { platform: 'substack', handle: 'alexfitcoach', profile_url: 'https://alexfitcoach.substack.com', enabled: true, auto_run: true, heartbeat_interval_minutes: 90, limits: { daily: { comments: { limit: 4 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
+    { platform: 'devto', handle: 'alexfitcoach', profile_url: 'https://dev.to/alexfitcoach', enabled: true, auto_run: true, heartbeat_interval_minutes: 90, limits: { daily: { comments: { limit: 6 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
+    { platform: 'ph', handle: 'alexfitcoach', profile_url: 'https://www.producthunt.com/@alexfitcoach', enabled: true, auto_run: true, heartbeat_interval_minutes: 90, limits: { daily: { comments: { limit: 8 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
+    { platform: 'ih', handle: 'alexfitcoach', profile_url: 'https://www.indiehackers.com/alexfitcoach', enabled: true, auto_run: true, heartbeat_interval_minutes: 150, limits: { daily: { comments: { limit: 4 } } }, behavior: { style_ratios: { questions: 30, statements: 30, reactions: 20, trailing: 20 }, disagree_target_pct: 25, brand_mention_every_n: 5, max_word_count: 80 } },
   ],
 };
 
