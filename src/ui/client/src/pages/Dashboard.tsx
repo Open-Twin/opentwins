@@ -311,7 +311,7 @@ export function Dashboard() {
                     ) : status?.daemon && sched ? (
                       <Countdown target={sched.nextRun} />
                     ) : (
-                      <span>scheduler off</span>
+                      <span>paused</span>
                     )}
                     {run?.duration_ms && (
                       <span>{(run.duration_ms / 1000).toFixed(0)}s</span>
@@ -503,7 +503,7 @@ function Countdown({ target }: { target: string }) {
   const s = totalSec % 60;
 
   if (diff <= 0) {
-    return <span style={{ color: 'var(--c-teal)' }}>running soon...</span>;
+    return <span style={{ color: 'var(--c-teal)' }}>due now — waiting for check</span>;
   }
 
   const parts: string[] = [];
