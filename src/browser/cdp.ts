@@ -110,9 +110,10 @@ export async function evaluate(profileName: string, fn: string): Promise<string>
   const tab = await getActivePage(port);
   if (!tab.webSocketDebuggerUrl) throw new Error('No WebSocket URL for active tab');
 
-  // Wrap in IIFE if it looks like a function declaration
+  // Wrap in IIFE if it looks like a function (including arrow functions)
   let expression = fn;
-  if (fn.trim().startsWith('function') || fn.trim().startsWith('async')) {
+  const trimmed = fn.trim();
+  if (trimmed.startsWith('function') || trimmed.startsWith('async') || trimmed.startsWith('(') || trimmed.startsWith('()')) {
     expression = `(${fn})()`;
   }
 

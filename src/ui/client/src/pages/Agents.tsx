@@ -219,7 +219,7 @@ export function Agents() {
                 <span className="mono text-[14px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Default limits</span>
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   {Object.entries(DEFAULT_LIMITS[newPlatform].daily).map(([k, v]) => (<span key={k} className="mono text-[13px] px-2 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--c-text-muted)', border: '1px solid var(--c-border-dim)' }}>{k}: {v.limit}/d</span>))}
-                  {DEFAULT_LIMITS[newPlatform].weekly && Object.entries(DEFAULT_LIMITS[newPlatform].weekly!).map(([k, v]) => (<span key={k} className="mono text-[13px] px-2 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.02)', color: 'var(--c-border)', border: '1px solid var(--c-border-dim)' }}>{k}: {v.limit}/w</span>))}
+                  {DEFAULT_LIMITS[newPlatform].weekly && Object.entries(DEFAULT_LIMITS[newPlatform].weekly!).map(([k, v]) => (<span key={k} className="mono text-[13px] px-2 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--c-text-muted)', border: '1px solid var(--c-border-dim)' }}>{k}: {v.limit}/w</span>))}
                 </div>
               </div>
             )}
@@ -1083,8 +1083,8 @@ function LimitRow({ label, current, limit, color, period, editing, onChange }: {
       </div>
       <span className="mono text-[13px] tabular-nums w-16 text-right" style={{ color: pct >= 90 ? 'var(--c-amber)' : 'var(--c-text-dim)' }}>
         {editing !== undefined ? (
-          <input type="number" value={editing} onChange={(e) => onChange(Math.max(0, parseInt(e.target.value) || 0))}
-            className="w-12 bg-transparent text-right outline-none rounded px-1" style={{ color: 'var(--c-teal)', borderBottom: '1px solid var(--c-teal-dim)' }} min={0} />
+          <input type="text" inputMode="numeric" pattern="[0-9]*" value={String(editing)} onChange={(e) => { const v = e.target.value.replace(/\D/g, ''); onChange(Math.max(0, parseInt(v) || 0)); }}
+            className="w-12 bg-transparent text-right outline-none rounded px-1" style={{ color: 'var(--c-teal)', borderBottom: '1px solid var(--c-teal-dim)' }} />
         ) : (
           <>{current}<span style={{ color: 'var(--c-text-muted)' }}>/{limit}</span></>
         )}
