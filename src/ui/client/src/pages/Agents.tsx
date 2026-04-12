@@ -277,6 +277,7 @@ export function Agents() {
 function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { platform: string; summary: AgentSummary; onRefresh: () => void; onRemove: (p: string) => void; agentCount: number }) {
   const { enabled: agentsEnabled, reason: agentsDisabledReason } = useAgentsEnabled();
   const { data: agent, loading, refetch } = useApi<AgentDetail>(`/api/agents/${platform}`, [platform]);
+  const { data: statusData } = useApi<{ daemon: boolean; platformSchedules: Array<{ platform: string; nextRun: string; intervalMin: number }> }>('/api/status');
   const { mutate: runAgent, loading: starting } = useMutation(`/api/agents/${platform}/run`, 'POST');
   const { mutate: stopAgent, loading: stopping } = useMutation(`/api/agents/${platform}/stop`, 'POST');
   const { mutate: saveLimits, loading: savingLimits } = useMutation(`/api/agents/${platform}/limits`);
@@ -289,6 +290,8 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
   const [flash, setFlash] = useState<string | null>(null);
   const [browserSetupOpen, setBrowserSetupOpen] = useState(false);
   const [browserSetupError, setBrowserSetupError] = useState<string | null>(null);
+  const [showInsightsModal, setShowInsightsModal] = useState(false);
+  const [showFeed, setShowFeed] = useState(true);
 
   const state = summary.state;
 
@@ -444,123 +447,59 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
 
   return (
     <div className="space-y-4 animate-fade-up">
-      {/* Agent hero panel */}
-      <div className="panel noise" style={{
-        background: `linear-gradient(135deg, var(--c-panel) 0%, var(--c-panel) 70%, ${color}08 100%)`,
-      }}>
-        <div className="p-5">
-          <div className="flex items-start justify-between gap-6 flex-wrap">
-            {/* Identity */}
-            <div className="flex items-start gap-4 min-w-0 flex-1">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                style={{
-                  background: `${color}15`,
-                  border: `1px solid ${color}30`,
-                  boxShadow: state === 'running' ? `0 0 24px ${color}40` : undefined,
-                }}
-              >
-                <div className="w-3 h-3 rounded-full" style={{ background: color, boxShadow: `0 0 12px ${color}80` }} />
+      {/* Agent header - compact single row */}
+      <div className="panel noise" style={{ background: `linear-gradient(135deg, var(--c-panel) 0%, var(--c-panel) 85%, ${color}08 100%)` }}>
+        <div className="px-5 py-4">
+          {/* Row 1: Identity + Actions */}
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${color}15`, border: `1px solid ${color}30` }}>
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: color, boxShadow: state === 'running' ? `0 0 12px ${color}80` : `0 0 6px ${color}40` }} />
               </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-2xl font-bold capitalize leading-tight" style={{ color: 'var(--c-text)' }}>
-                    {PLATFORM_LABELS[platform] || platform}
-                  </h2>
-                  <StateBadge state={state} />
-                </div>
-                <a
-                  href={fullProfileUrl}
-                  target="_blank"
-                  rel="noopener"
-                  className="mono text-sm mt-1 inline-flex items-center gap-1.5 transition-colors hover:underline"
-                  style={{ color: 'var(--c-text-muted)' }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {cleanHandle(agent.handle)}
-                  <span style={{ fontSize: 10 }}>↗</span>
-                </a>
-              </div>
+              <h2 className="text-xl font-bold capitalize" style={{ color: 'var(--c-text)' }}>{PLATFORM_LABELS[platform] || platform}</h2>
+              <StateBadge state={state} />
+              <a href={fullProfileUrl} target="_blank" rel="noopener" className="mono text-[13px] transition-colors hover:underline hidden sm:inline" style={{ color: 'var(--c-text-muted)' }}>
+                {cleanHandle(agent.handle)} ↗
+              </a>
             </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-3">
-              {flash && (
-                <span className="mono text-[13px] px-3 py-1.5 rounded-full animate-fade-up" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)' }}>
-                  {flash}
-                </span>
-              )}
-
+            <div className="flex items-center gap-2">
+              {flash && <span className="mono text-[12px] px-2.5 py-1 rounded-full animate-fade-up" style={{ color: 'var(--c-teal)', background: 'var(--c-teal-glow)' }}>{flash}</span>}
               {state === 'needs_setup' && (
-                <button
-                  onClick={handleBrowserSetup}
-                  disabled={settingUpBrowser || !agentsEnabled}
-                  title={!agentsEnabled ? (agentsDisabledReason || 'Agents unavailable') : 'Launch Chrome to log in'}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    color: 'var(--c-amber)',
-                    background: 'rgba(251,191,36,0.08)',
-                    border: '1px solid rgba(251,191,36,0.3)',
-                  }}
-                >
-                  {settingUpBrowser ? 'Launching Chrome…' : '🌐 Set up browser'}
-                </button>
+                <ActionBtn onClick={handleBrowserSetup} loading={settingUpBrowser} disabled={!agentsEnabled}>🌐 Set up browser</ActionBtn>
               )}
-
-              {state === 'running' && (
-                <ActionBtn onClick={handleStop} loading={stopping} danger>Stop Agent</ActionBtn>
-              )}
-
+              {state === 'running' && <ActionBtn onClick={handleStop} loading={stopping} danger>Stop</ActionBtn>}
               {(state === 'ready' || state === 'completed' || state === 'failed') && (
-                <ActionBtn
-                  onClick={handleRun}
-                  loading={starting}
-                  accent
-                  disabled={!agentsEnabled}
-                  title={!agentsEnabled ? (agentsDisabledReason || 'Agents unavailable') : undefined}
-                >
-                  ▶ Run Now
-                </ActionBtn>
+                <ActionBtn onClick={handleRun} loading={starting} accent disabled={!agentsEnabled}>▶ Run Now</ActionBtn>
               )}
-
-              <button
-                onClick={() => { if (confirm(`Remove ${platform} agent? This won't delete browser profiles or activity history.`)) onRemove(platform); }}
-                disabled={agentCount <= 1}
-                className="mono text-[13px] px-3 py-1.5 rounded-md transition-all opacity-50 hover:opacity-100 disabled:opacity-20 disabled:cursor-not-allowed"
-                style={{ color: 'var(--c-red)', border: '1px solid rgba(248,113,113,0.2)' }}
-                title={agentCount <= 1 ? 'At least one platform is required' : 'Remove agent'}
-              >
-                Remove
-              </button>
+              <button onClick={() => { if (confirm(`Remove ${platform}?`)) onRemove(platform); }} disabled={agentCount <= 1}
+                className="mono text-[12px] px-2 py-1 rounded opacity-40 hover:opacity-100 disabled:opacity-15 disabled:cursor-not-allowed transition-all"
+                style={{ color: 'var(--c-red)' }}>✕</button>
             </div>
           </div>
 
-          {/* Quick stats row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4" style={{ borderTop: '1px solid var(--c-border-dim)' }}>
-            <HeroStat
-              label="Today's actions"
-              value={dailyLimitsTotal}
-              sub={dailyLimitsMax > 0 ? `of ${dailyLimitsMax} cap` : 'no caps set'}
-            />
-            <HeroStat
-              label="Tasks today"
-              value={scheduleTasksTotal > 0 ? `${scheduleTasksDone}/${scheduleTasksTotal}` : '—'}
-              sub={scheduleTasksTotal > 0 ? 'scheduled' : 'no schedule'}
-            />
-            <HeroStat
-              label="Last run"
-              value={agent.lastRun?.startedAt ? new Date(agent.lastRun.startedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
-              sub={agent.lastRun?.exitCode !== undefined ? `exit ${agent.lastRun.exitCode}` : 'no runs yet'}
-            />
+          {/* Row 2: Inline stats chips */}
+          <div className="flex items-center justify-between mt-3 pt-3 flex-wrap gap-2 mono text-[13px]" style={{ borderTop: '1px solid var(--c-border-dim)', color: 'var(--c-text-dim)' }}>
+            <div className="flex items-center gap-4 flex-wrap">
+              <span>Actions <strong style={{ color: dailyLimitsTotal > 0 ? 'var(--c-text)' : 'var(--c-text-muted)' }}>{dailyLimitsTotal}</strong><span style={{ color: 'var(--c-text-muted)' }}>/{dailyLimitsMax}</span></span>
+              <span style={{ color: 'var(--c-border)' }}>·</span>
+              <span>Tasks <strong style={{ color: 'var(--c-text)' }}>{scheduleTasksDone}/{scheduleTasksTotal}</strong></span>
+              <span style={{ color: 'var(--c-border)' }}>·</span>
+              <span>Last run <strong style={{ color: 'var(--c-text)' }}>{agent.lastRun?.startedAt ? new Date(agent.lastRun.startedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}</strong></span>
+              {statusData?.daemon && (() => {
+                const sched = statusData.platformSchedules?.find((s) => s.platform === platform);
+                return sched ? (
+                  <>
+                    <span style={{ color: 'var(--c-border)' }}>·</span>
+                    <span>Next <InlineCountdown target={sched.nextRun} /></span>
+                  </>
+                ) : null;
+              })()}
+            </div>
             <IntervalPicker
               value={agent.heartbeat_interval_minutes}
               onSave={async (minutes) => {
                 const result = await saveAgent({ heartbeat_interval_minutes: minutes });
-                if (result) {
-                  setFlash(`Interval set to ${intervalLabel(minutes)} - restart scheduler to apply`);
-                  refetch();
-                  setTimeout(() => setFlash(null), 4000);
-                }
+                if (result) { setFlash(`Interval: ${intervalLabel(minutes)}`); refetch(); setTimeout(() => setFlash(null), 3000); }
               }}
             />
           </div>
@@ -640,73 +579,50 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
         </div>
       )}
 
-      {/* Limits */}
-      {agent.limits && (
+      {/* Limits + Behavior - merged side by side */}
+      {(agent.limits || agent.behavior) && (
         <div className="panel noise">
           <div className="panel-header flex items-center justify-between">
-            <span>// Limits</span>
+            <span>// Limits & Behavior</span>
             <div className="flex items-center gap-2">
-              {editLimits !== null ? (
+              {(editLimits !== null || editBehavior) ? (
                 <>
-                  <MiniBtn onClick={() => setEditLimits(null)} dim>Cancel</MiniBtn>
-                  <MiniBtn onClick={handleSaveLimits} accent loading={savingLimits}>Save</MiniBtn>
-                </>
-              ) : (
-                <MiniBtn onClick={startEditLimits}>Edit</MiniBtn>
-              )}
-            </div>
-          </div>
-          <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <LimitGroup
-              title="Daily"
-              limits={agent.limits.daily}
-              editing={editLimits?.daily || null}
-              color={color}
-              onChange={(key, val) => editLimits && setEditLimits({ ...editLimits, daily: { ...editLimits.daily, [key]: val } })}
-            />
-            {agent.limits.weekly && Object.keys(agent.limits.weekly).length > 0 && (
-              <LimitGroup
-                title="Weekly"
-                limits={agent.limits.weekly}
-                editing={editLimits?.weekly || null}
-                color={color}
-                onChange={(key, val) => editLimits && setEditLimits({ ...editLimits, weekly: { ...(editLimits.weekly || {}), [key]: val } })}
-              />
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Behavior */}
-      {agent.behavior && (
-        <div className="panel noise">
-          <div className="panel-header flex items-center justify-between">
-            <span>// Behavior</span>
-            <div className="flex items-center gap-2">
-              {editBehavior ? (
-                <>
-                  <MiniBtn onClick={() => setEditBehavior(null)} dim>Cancel</MiniBtn>
+                  <MiniBtn onClick={() => { setEditLimits(null); setEditBehavior(null); }} dim>Cancel</MiniBtn>
                   <MiniBtn onClick={async () => {
-                    const result = await saveAgent({ behavior: editBehavior });
-                    if (result) {
-                      setEditBehavior(null);
-                      setFlash('Behavior saved & templates regenerated');
-                      refetch();
-                      setTimeout(() => setFlash(null), 3000);
+                    if (editLimits) await handleSaveLimits();
+                    if (editBehavior) {
+                      const result = await saveAgent({ behavior: editBehavior });
+                      if (result) { setEditBehavior(null); refetch(); }
                     }
-                  }} accent>Save</MiniBtn>
+                    setFlash('Saved'); setTimeout(() => setFlash(null), 3000);
+                  }} accent loading={savingLimits}>Save</MiniBtn>
                 </>
               ) : (
-                <MiniBtn onClick={() => setEditBehavior(JSON.parse(JSON.stringify(agent.behavior)))}>Edit</MiniBtn>
+                <MiniBtn onClick={() => { startEditLimits(); setEditBehavior(JSON.parse(JSON.stringify(agent.behavior))); }}>Edit</MiniBtn>
               )}
             </div>
           </div>
-          <div className="p-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Style Ratios */}
-              <div>
-                <div className="mono text-[14px] uppercase tracking-wider mb-2" style={{ color: 'var(--c-text-muted)' }}>Reply Style Mix</div>
-                <div className="space-y-3">
+          <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left column: Limits */}
+            <div>
+              {agent.limits && (
+                <div className="space-y-1">
+                  {Object.entries(agent.limits.daily).map(([key, val]) => (
+                    <LimitRow key={`d-${key}`} label={key} current={val.current} limit={val.limit} color={color} period="daily"
+                      editing={editLimits?.daily?.[key]} onChange={(v) => editLimits && setEditLimits({ ...editLimits, daily: { ...editLimits.daily, [key]: v } })} />
+                  ))}
+                  {agent.limits.weekly && Object.entries(agent.limits.weekly).map(([key, val]) => (
+                    <LimitRow key={`w-${key}`} label={key} current={val.current} limit={val.limit} color={color} period="weekly"
+                      editing={editLimits?.weekly?.[key]} onChange={(v) => editLimits && setEditLimits({ ...editLimits, weekly: { ...(editLimits.weekly || {}), [key]: v } })} />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Right column: Behavior */}
+            <div>
+              <div className="mono text-[12px] uppercase tracking-wider mb-2" style={{ color: 'var(--c-text-muted)' }}>Reply Style</div>
+              <div className="space-y-2">
                   {(['questions', 'statements', 'reactions', 'trailing'] as const).map((key) => {
                     const labels: Record<string, string> = { questions: 'Questions', statements: 'Statements', reactions: 'Short reactions', trailing: 'Trailing thoughts' };
                     const val = editBehavior ? editBehavior.style_ratios[key] : agent.behavior.style_ratios[key];
@@ -753,11 +669,10 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
                     );
                   })()}
                 </div>
-              </div>
 
               {/* Other behavior params */}
-              <div>
-                <div className="mono text-[14px] uppercase tracking-wider mb-2" style={{ color: 'var(--c-text-muted)' }}>Parameters</div>
+              <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--c-border-dim)' }}>
+                <div className="mono text-[12px] uppercase tracking-wider mb-2" style={{ color: 'var(--c-text-muted)' }}>Parameters</div>
                 <div className="space-y-3">
                   <BehaviorField
                     label="Disagree target"
@@ -785,50 +700,31 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
                   />
                 </div>
               </div>
-            </div>
 
-            {/* Platform-specific lists */}
-            {(agent.behavior.subreddits !== undefined || agent.behavior.target_accounts !== undefined || agent.behavior.target_companies !== undefined || agent.behavior.hashtags !== undefined) && (
-              <div className="pt-4 mt-4" style={{ borderTop: '1px solid var(--c-border-dim)' }}>
-                <div className="mono text-[14px] uppercase tracking-wider mb-2" style={{ color: 'var(--c-text-muted)' }}>Platform Content</div>
-                <div className="space-y-3">
-                  {agent.behavior.subreddits !== undefined && (
-                    <ListField
-                      label="Subreddits"
-                      values={editBehavior?.subreddits ?? agent.behavior.subreddits ?? []}
-                      editing={!!editBehavior}
-                      placeholder="e.g. programming, webdev, startups"
-                      onChange={(v) => editBehavior && setEditBehavior({ ...editBehavior, subreddits: v })}
-                    />
-                  )}
-                  {agent.behavior.target_accounts !== undefined && (
-                    <ListField
-                      label="Target accounts"
-                      values={editBehavior?.target_accounts ?? agent.behavior.target_accounts ?? []}
-                      editing={!!editBehavior}
-                      placeholder="e.g. levelsio, swyx, GergelyOrosz"
-                      onChange={(v) => editBehavior && setEditBehavior({ ...editBehavior, target_accounts: v })}
-                    />
-                  )}
-                  {agent.behavior.target_companies !== undefined && (
-                    <ListField
-                      label="Target companies"
-                      values={editBehavior?.target_companies ?? agent.behavior.target_companies ?? []}
-                      editing={!!editBehavior}
-                      placeholder="e.g. Google, Stripe, Anthropic"
-                      onChange={(v) => editBehavior && setEditBehavior({ ...editBehavior, target_companies: v })}
-                    />
-                  )}
+              {/* Platform-specific lists */}
+              {(agent.behavior.subreddits !== undefined || agent.behavior.target_accounts !== undefined || agent.behavior.target_companies !== undefined) && (
+                <div className="pt-3 mt-3" style={{ borderTop: '1px solid var(--c-border-dim)' }}>
+                  <div className="space-y-2">
+                    {agent.behavior.subreddits !== undefined && (
+                      <ListField label="Subreddits" values={editBehavior?.subreddits ?? agent.behavior.subreddits ?? []} editing={!!editBehavior} placeholder="e.g. programming, webdev" onChange={(v) => editBehavior && setEditBehavior({ ...editBehavior, subreddits: v })} />
+                    )}
+                    {agent.behavior.target_accounts !== undefined && (
+                      <ListField label="Target accounts" values={editBehavior?.target_accounts ?? agent.behavior.target_accounts ?? []} editing={!!editBehavior} placeholder="e.g. levelsio, swyx" onChange={(v) => editBehavior && setEditBehavior({ ...editBehavior, target_accounts: v })} />
+                    )}
+                    {agent.behavior.target_companies !== undefined && (
+                      <ListField label="Target companies" values={editBehavior?.target_companies ?? agent.behavior.target_companies ?? []} editing={!!editBehavior} placeholder="e.g. Google, Stripe" onChange={(v) => editBehavior && setEditBehavior({ ...editBehavior, target_companies: v })} />
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {/* Schedule + Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
-        {/* Schedule — takes 3 columns */}
+        {/* Schedule */}
         <div className="panel noise lg:col-span-3">
           <div className="panel-header flex items-center justify-between">
             <span>// Today's Schedule</span>
@@ -864,14 +760,29 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
           </div>
         </div>
 
-        {/* Insights — takes 2 columns */}
-        <div className="panel noise lg:col-span-2">
-          <div className="panel-header">// Insights</div>
-          <div className="p-3">
+        {/* Insights — fixed height preview, click to expand */}
+        <div
+          className="panel noise lg:col-span-2 cursor-pointer hover:brightness-110 transition-all"
+          onClick={() => agent.insights && setShowInsightsModal(true)}
+          title={agent.insights ? 'Click to view full insights' : ''}
+        >
+          <div className="panel-header flex items-center justify-between">
+            <span>// Insights</span>
+            {agent.insights && <span className="mono text-[12px] normal-case" style={{ color: 'var(--c-text-muted)' }}>click to expand</span>}
+          </div>
+          <div className="p-3 overflow-hidden" style={{ maxHeight: '200px', maskImage: agent.insights ? 'linear-gradient(to bottom, black 60%, transparent 100%)' : undefined }}>
             {agent.insights ? (
-              <pre className="mono text-[13px] leading-snug whitespace-pre-wrap" style={{ color: 'var(--c-text-dim)' }}>
-                {agent.insights}
-              </pre>
+              <div className="mono text-[12px] leading-snug" style={{ color: 'var(--c-text-dim)' }}
+                dangerouslySetInnerHTML={{ __html: agent.insights
+                  .replace(/^### (.+)$/gm, '<div style="color:var(--c-text);font-size:12px;font-weight:600;margin:8px 0 3px">$1</div>')
+                  .replace(/^## (.+)$/gm, '<div style="color:var(--c-teal);font-size:13px;font-weight:600;margin:10px 0 3px">$1</div>')
+                  .replace(/^# (.+)$/gm, '<div style="color:var(--c-text);font-size:14px;font-weight:700;margin:0 0 4px">$1</div>')
+                  .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--c-text)">$1</strong>')
+                  .replace(/^- (.+)$/gm, '<div style="padding-left:8px;margin:1px 0">• $1</div>')
+                  .replace(/\n\n/g, '<br/>')
+                  .replace(/\n/g, ' ')
+                }}
+              />
             ) : (
               <Empty text="No insights yet" hint="Updated after first memory cycle" />
             )}
@@ -881,6 +792,39 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
 
       {/* Live Activity Feed */}
       <AgentFeed platform={platform} running={state === 'running'} />
+
+      {/* Insights modal */}
+      {showInsightsModal && agent.insights && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          style={{ background: 'rgba(6,8,13,0.85)', backdropFilter: 'blur(8px)' }}
+          onClick={() => setShowInsightsModal(false)}
+        >
+          <div
+            className="panel noise max-w-3xl w-full max-h-[80vh] flex flex-col animate-fade-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="panel-header flex items-center justify-between shrink-0">
+              <span>// Insights - {PLATFORM_LABELS[platform] || platform}</span>
+              <button onClick={() => setShowInsightsModal(false)} className="mono text-[13px] opacity-50 hover:opacity-100 transition-all" style={{ color: 'var(--c-text-muted)' }}>✕ close</button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1">
+              <div className="mono text-[13px] leading-snug" style={{ color: 'var(--c-text-dim)' }}
+                dangerouslySetInnerHTML={{ __html: agent.insights
+                  .replace(/^### (.+)$/gm, '<div style="color:var(--c-text);font-size:13px;font-weight:600;margin:12px 0 4px">$1</div>')
+                  .replace(/^## (.+)$/gm, '<div style="color:var(--c-teal);font-size:14px;font-weight:600;margin:14px 0 4px">$1</div>')
+                  .replace(/^# (.+)$/gm, '<div style="color:var(--c-text);font-size:15px;font-weight:700;margin:0 0 6px">$1</div>')
+                  .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--c-text)">$1</strong>')
+                  .replace(/^- (.+)$/gm, '<div style="padding-left:10px;margin:2px 0">• $1</div>')
+                  .replace(/\n\n/g, '<br/>')
+                  .replace(/\n/g, ' ')
+                }}
+              />
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Browser setup modal — rendered via portal to avoid stacking context issues */}
       {browserSetupOpen && createPortal(
@@ -1121,6 +1065,32 @@ function StateBadge({ state }: { state: AgentState }) {
       {(state === 'needs_setup' || state === 'needs_api_keys') && <span style={{ fontSize: 8 }}>!</span>}
       {c.label}
     </span>
+  );
+}
+
+function LimitRow({ label, current, limit, color, period, editing, onChange }: {
+  label: string; current: number; limit: number; color: string; period: string;
+  editing?: number; onChange: (val: number) => void;
+}) {
+  const pct = limit > 0 ? Math.min((current / limit) * 100, 100) : 0;
+  return (
+    <div className="flex items-center gap-3 py-1">
+      <span className="text-[13px] capitalize min-w-[120px]" style={{ color: 'var(--c-text-dim)' }}>
+        {label.replace(/_/g, ' ')}
+      </span>
+      <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'var(--c-border-dim)' }}>
+        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: pct >= 90 ? 'var(--c-amber)' : color, opacity: 0.7 }} />
+      </div>
+      <span className="mono text-[13px] tabular-nums w-16 text-right" style={{ color: pct >= 90 ? 'var(--c-amber)' : 'var(--c-text-dim)' }}>
+        {editing !== undefined ? (
+          <input type="number" value={editing} onChange={(e) => onChange(Math.max(0, parseInt(e.target.value) || 0))}
+            className="w-12 bg-transparent text-right outline-none rounded px-1" style={{ color: 'var(--c-teal)', borderBottom: '1px solid var(--c-teal-dim)' }} min={0} />
+        ) : (
+          <>{current}<span style={{ color: 'var(--c-text-muted)' }}>/{limit}</span></>
+        )}
+      </span>
+      <span className="mono text-[10px] uppercase w-4" style={{ color: 'var(--c-text-muted)' }}>{period === 'daily' ? '/d' : '/w'}</span>
+    </div>
   );
 }
 
@@ -1380,20 +1350,17 @@ function IntervalPicker({ value, onSave }: { value: number; onSave: (minutes: nu
   }, [open]);
 
   return (
-    <div>
-      <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-1.5" style={{ color: 'var(--c-text-muted)' }}>Run every</div>
+    <span className="inline-flex items-center gap-1">
+      <span>Every</span>
       <button
         ref={btnRef}
         onClick={() => setOpen(!open)}
-        className="text-xl font-semibold tabular-nums leading-none flex items-center gap-1.5 transition-colors hover:text-teal"
-        style={{ color: 'var(--c-text)' }}
+        className="font-semibold tabular-nums inline-flex items-center gap-1 transition-colors hover:brightness-125 px-1 rounded"
+        style={{ color: 'var(--c-teal)' }}
       >
         {intervalLabel(value)}
-        <span className="text-[10px]" style={{ color: 'var(--c-text-muted)' }}>▼</span>
+        <span className="text-[10px]" style={{ color: 'var(--c-text-muted)' }}>▾</span>
       </button>
-      <div className="mono text-[12px] mt-1.5" style={{ color: 'var(--c-text-muted)' }}>
-        during active hours
-      </div>
       {open && createPortal(
         <div
           ref={dropRef}
@@ -1417,8 +1384,23 @@ function IntervalPicker({ value, onSave }: { value: number; onSave: (minutes: nu
         </div>,
         document.body
       )}
-    </div>
+    </span>
   );
+}
+
+function InlineCountdown({ target }: { target: string }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const diff = Math.max(0, new Date(target).getTime() - now);
+  if (diff <= 0) return <strong style={{ color: 'var(--c-teal)' }}>due now</strong>;
+  const m = Math.floor(diff / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  const h = Math.floor(m / 60);
+  const parts = h > 0 ? `${h}h ${m % 60}m` : `${m}m ${String(s).padStart(2, '0')}s`;
+  return <strong className="tabular-nums" style={{ color: 'var(--c-teal)' }}>{parts}</strong>;
 }
 
 function HeroStat({ label, value, sub, warn }: { label: string; value: string | number; sub?: string; warn?: boolean }) {
