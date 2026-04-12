@@ -272,14 +272,20 @@ export async function handleStopAgent(req: Request, res: Response): Promise<void
         res.json({ ok: true, message: 'Cleared stale lock (was server PID)' });
         return;
       }
-      // Check if alive before killing
+      // Kill process and its children
       try {
         process.kill(pid, 0); // test if alive
+        // Try killing process group first, then individual process
+        try { process.kill(-pid, 'SIGTERM'); } catch { /* not a group leader */ }
         process.kill(pid, 'SIGTERM');
+        // Force kill after 2s if still alive
+        setTimeout(() => {
+          try { process.kill(pid, 'SIGKILL'); } catch { /* already dead */ }
+        }, 2000);
       } catch {
         // Process already dead, clean up lock
-        unlinkSync(lockFile);
       }
+      try { unlinkSync(lockFile); } catch { /* ignore */ }
     } catch {
       try { unlinkSync(lockFile); } catch {}
     }

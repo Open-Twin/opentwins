@@ -114,8 +114,8 @@ export async function startDashboard(port: number): Promise<void> {
         // Next run = last completed + interval
         nextRun = new Date(lastCompleted + intervalMs);
       } else {
-        // Never run before — next run is now (or start of active hours)
-        nextRun = new Date(now);
+        // Never run before — first run after the configured interval
+        nextRun = new Date(now.getTime() + intervalMs);
       }
 
       // Ensure within active hours
@@ -125,9 +125,9 @@ export async function startDashboard(port: number): Promise<void> {
         nextRun.setHours(start, 0, 0, 0);
       }
 
-      // If nextRun is in the past, it means the agent is due now
+      // If nextRun is in the past, agent is due — next run after one interval from now
       if (nextRun.getTime() < now.getTime()) {
-        nextRun = new Date(now);
+        nextRun = new Date(now.getTime() + intervalMs);
       }
 
       return { platform: p.platform, nextRun: nextRun.toISOString(), intervalMin };

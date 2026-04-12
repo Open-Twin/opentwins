@@ -433,7 +433,7 @@ function Countdown({ target }: { target: string }) {
   const s = totalSec % 60;
 
   if (diff <= 0) {
-    return <span style={{ color: 'var(--c-teal)' }}>due now — waiting for check</span>;
+    return <span style={{ color: 'var(--c-teal)' }}>starting soon</span>;
   }
 
   const parts: string[] = [];

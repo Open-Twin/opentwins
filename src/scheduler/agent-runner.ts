@@ -1,7 +1,7 @@
 import { workerData, parentPort, isMainThread } from 'node:worker_threads';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { runClaudeAgent } from '../util/claude.js';
-import { getPlatformWorkspaceDir, getLastHeartbeatFile, getLocksDir } from '../util/paths.js';
+import { getPlatformWorkspaceDir, getLastHeartbeatFile, getLocksDir, getLockFile } from '../util/paths.js';
 import { acquireLock, releaseLock } from './lock.js';
 import { resetLimitsIfNeeded } from './limits-reset.js';
 import { fileLog, fileError } from '../util/logger.js';
@@ -80,6 +80,9 @@ export async function runPlatformAgent(
       prompt: 'Execute your heartbeat. Follow HEARTBEAT.md step by step.',
       timeoutMs: 1800000,
       auth: config.auth,
+      onSpawn: (pid) => {
+        try { writeFileSync(getLockFile(platform), String(pid), 'utf-8'); } catch { /* best effort */ }
+      },
     });
 
     if (result.exitCode !== 0) {

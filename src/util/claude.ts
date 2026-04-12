@@ -9,6 +9,7 @@ export interface ClaudeRunOptions {
   prompt: string;
   timeoutMs: number;
   auth: AuthConfig;
+  onSpawn?: (pid: number) => void;
 }
 
 export interface ClaudeRunResult {
@@ -44,7 +45,7 @@ export async function runClaudeAgent(opts: ClaudeRunOptions): Promise<ClaudeRunR
   args.push(opts.prompt);
 
   try {
-    const result = await execa('claude', args, {
+    const child = execa('claude', args, {
       cwd: resolve(opts.workingDir),
       timeout: opts.timeoutMs,
       env: {
@@ -53,6 +54,12 @@ export async function runClaudeAgent(opts: ClaudeRunOptions): Promise<ClaudeRunR
       },
       reject: false,
     });
+
+    if (opts.onSpawn && child.pid) {
+      opts.onSpawn(child.pid);
+    }
+
+    const result = await child;
 
     return {
       output: result.stdout + (result.stderr ? '\n' + result.stderr : ''),

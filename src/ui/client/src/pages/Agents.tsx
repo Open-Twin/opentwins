@@ -9,6 +9,7 @@ interface AgentSummary {
   platform: string;
   handle: string;
   enabled: boolean;
+  auto_run: boolean;
   browserConfigured: boolean;
   hasWorkspace: boolean;
   running: boolean;
@@ -261,6 +262,9 @@ export function Agents() {
                 {a.state === 'running' && (
                   <span className="mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--c-blue)' }}>● live</span>
                 )}
+                {a.state !== 'running' && a.auto_run && (
+                  <span className="mono text-[11px]" style={{ color: 'var(--c-green)' }} title="Auto-run enabled">↻</span>
+                )}
               </button>
             );
           })}
@@ -278,7 +282,7 @@ export function Agents() {
 function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { platform: string; summary: AgentSummary; onRefresh: () => void; onRemove: (p: string) => void; agentCount: number }) {
   const { enabled: agentsEnabled, reason: agentsDisabledReason } = useAgentsEnabled();
   const { data: agent, loading, refetch } = useApi<AgentDetail>(`/api/agents/${platform}`, [platform]);
-  const { data: statusData } = useApi<{ daemon: boolean; platformSchedules: Array<{ platform: string; nextRun: string; intervalMin: number }> }>('/api/status');
+  const { data: statusData, refetch: refetchStatus } = useApi<{ daemon: boolean; platformSchedules: Array<{ platform: string; nextRun: string; intervalMin: number }> }>('/api/status');
   const { mutate: runAgent, loading: starting } = useMutation(`/api/agents/${platform}/run`, 'POST');
   const { mutate: stopAgent, loading: stopping } = useMutation(`/api/agents/${platform}/stop`, 'POST');
   const { mutate: saveLimits, loading: savingLimits } = useMutation(`/api/agents/${platform}/limits`);
@@ -502,7 +506,11 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
                 disabled={state === 'needs_setup' || state === 'needs_api_keys'}
                 onToggle={async (on) => {
                   const result = await saveAgent({ auto_run: on });
-                  if (result) { setFlash(on ? 'Auto-run enabled' : 'Auto-run disabled'); refetch(); onRefresh(); setTimeout(() => setFlash(null), 3000); }
+                  if (result) {
+                    setFlash(on ? 'Auto-run enabled' : 'Auto-run disabled');
+                    refetch(); onRefresh(); refetchStatus();
+                    setTimeout(() => setFlash(null), 3000);
+                  }
                 }}
               />
               {agent.auto_run && (
@@ -510,7 +518,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
                   value={agent.heartbeat_interval_minutes}
                   onSave={async (minutes) => {
                     const result = await saveAgent({ heartbeat_interval_minutes: minutes });
-                    if (result) { setFlash(`Interval: ${intervalLabel(minutes)}`); refetch(); setTimeout(() => setFlash(null), 3000); }
+                    if (result) { setFlash(`Interval: ${intervalLabel(minutes)}`); refetch(); onRefresh(); setTimeout(refetchStatus, 500); setTimeout(() => setFlash(null), 3000); }
                   }}
                 />
               )}
@@ -1438,7 +1446,7 @@ function InlineCountdown({ target }: { target: string }) {
     return () => clearInterval(id);
   }, []);
   const diff = Math.max(0, new Date(target).getTime() - now);
-  if (diff <= 0) return <strong style={{ color: 'var(--c-teal)' }}>due now</strong>;
+  if (diff <= 0) return <strong style={{ color: 'var(--c-teal)' }}>starting soon</strong>;
   const m = Math.floor(diff / 60000);
   const s = Math.floor((diff % 60000) / 1000);
   const h = Math.floor(m / 60);
