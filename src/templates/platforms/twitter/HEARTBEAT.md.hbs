@@ -13,6 +13,7 @@
 - NEVER use execCommand/textContent/innerHTML for typing — React won't register it
 - See BROWSER-core.md § 1 for correct CDP typing pattern
 🚨 **NEVER write your own browser JavaScript.** The BROWSER-*.md files contain exact, tested evaluate functions for every action (extract, click, type, navigate, like). Copy-paste them verbatim. Do NOT improvise selectors, write custom querySelectorAll, or modify the provided JS. If a function does not exist for what you need, skip the action.
+🚨 **APOSTROPHE SAFETY:** Comment text with apostrophes (it's, don't) breaks single-quoted curl `-d '...'` bodies. Use double-quoted `-d "..."` with `\"` for inner quotes, or heredoc `-d @- <<'ENDJSON'`.
 
 NEVER `exec sleep` — embed waits in evaluate: `new Promise(r => setTimeout(() => { r(result); }, 2000))`
 

@@ -375,6 +375,8 @@ If `verified: false`: retry ONCE. Still fails → do NOT log, do NOT increment c
 
 🚨 **Pulse articles use QUILL editor, NOT TipTap.** `execCommand('insertText')` inserts text in the DOM but leaves Quill's internal Delta state EMPTY → submit is silently rejected. Must use Quill's API directly.
 
+🚨 **APOSTROPHE SAFETY:** Comment text with apostrophes (`it's`, `don't`, `I've`) WILL break single-quoted `-d '...'` curl bodies. ALWAYS use double-quoted `-d "..."` with inner quotes escaped as `\"`, OR use heredoc: `-d @- <<'ENDJSON'`. NEVER put apostrophes inside single-quoted JSON.
+
 **Prerequisite:** Agent has already navigated to the Pulse article URL and confirmed the article loads (dedup/content-read step in HEARTBEAT.md).
 
 ### Step 1: Scroll to comments + open composer + insert via Quill API (ONE async evaluate)
