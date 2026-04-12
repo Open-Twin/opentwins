@@ -9,7 +9,7 @@ Daily tasks with jitter timing. Read every heartbeat. Last task generates tomorr
 **Source of truth for counts & timing.** Read every heartbeat.
 - Structure: `daily.comments`, `daily.upvotes`, `weekly.posts`
 - Resets: daily at midnight, weekly after 7 days
-- Increment `current` on each action. Comment/Upvote = limited daily. Reply = unlimited. Post = limited weekly (2).
+- Increment `current` on each action. Comment/Upvote = limited daily. Reply = unlimited. Post = limited weekly (per `weekly.posts.limit`).
 - Do NOT re-count from memory files.
 
 ### queries.json

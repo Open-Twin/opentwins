@@ -23,30 +23,30 @@
 
 3. **Load base template** for today's day of week:
    - **Weekdays (Mon-Fri)**: 5 sessions (brand-heavy, karma supplemental)
-     - Morning (09:00): karma_building, max_comments: 2, target: r/AskReddit /new (safe karma, no factual risk)
-     - Late morning (11:00): browse_and_engage, max_comments: 2, target: r/projectmanagement + r/artificial
-     - Afternoon (14:00): browse_and_engage, max_comments: 2, target: r/ExperiencedDevs + r/agile
-     - Evening (17:00): browse_and_engage, max_comments: 2, target: r/ProductManagement + r/MachineLearning
-     - Night (20:00): karma_building, max_comments: 2, target: r/AskReddit + r/mildlyinteresting
+     - Morning (09:00): karma_building, target: r/AskReddit /new (safe karma, no factual risk)
+     - Late morning (11:00): browse_and_engage, target: r/projectmanagement + r/artificial
+     - Afternoon (14:00): browse_and_engage, target: r/ExperiencedDevs + r/agile
+     - Evening (17:00): browse_and_engage, target: r/ProductManagement + r/MachineLearning
+     - Night (20:00): karma_building, target: r/AskReddit + r/mildlyinteresting
      - 🚨 **Wednesday**: add post_original_content at 10:00 (before late morning engage)
-     - **Total: 10 comments** (4 karma + 6 brand). Update daily.comments.limit to 10.
+     - **Total:** `daily.comments.limit` from limits.json. Distribute max_comments across sessions proportionally (~40% karma, ~60% brand). Do NOT change daily.comments.limit — respect the user's configured value.
    - **Saturday**: Post original content + brand-heavy (high weekend traffic)
      - Morning (10:00): 🚨 post_original_content (MANDATORY)
-     - Midday (12:00): browse_and_engage, max_comments: 2, target: r/projectmanagement + r/artificial
-     - Afternoon (15:00): browse_and_engage, max_comments: 2, target: r/ExperiencedDevs + r/productivity
-     - Evening (18:00): karma_building, max_comments: 2, target: r/AskReddit + r/mildlyinteresting
-     - Night (20:00): browse_and_engage, max_comments: 2, target: r/agile + r/MachineLearning
-     - Late (21:30): karma_building, max_comments: 2, target: r/AskReddit + r/technology
-     - **Total: 10 comments** (4 karma + 6 brand)
+     - Midday (12:00): browse_and_engage, target: r/projectmanagement + r/artificial
+     - Afternoon (15:00): browse_and_engage, target: r/ExperiencedDevs + r/productivity
+     - Evening (18:00): karma_building, target: r/AskReddit + r/mildlyinteresting
+     - Night (20:00): browse_and_engage, target: r/agile + r/MachineLearning
+     - Late (21:30): karma_building, target: r/AskReddit + r/technology
+     - **Total:** `daily.comments.limit` from limits.json. Distribute across sessions proportionally.
    - **Sunday**: Brand-heavy (highest traffic day)
-     - Morning (11:00): karma_building, max_comments: 2, target: r/AskReddit + r/mildlyinteresting
-     - Afternoon (14:00): browse_and_engage, max_comments: 2, target: r/artificial + r/productivity
-     - Evening (17:00): browse_and_engage, max_comments: 2, target: r/projectmanagement + r/ExperiencedDevs
-     - Night (20:00): browse_and_engage, max_comments: 2, target: r/agile + r/MachineLearning
-     - Late (21:30): karma_building, max_comments: 2, target: r/AskReddit + r/technology
-     - **Total: 10 comments** (4 karma + 6 brand)
+     - Morning (11:00): karma_building, target: r/AskReddit + r/mildlyinteresting
+     - Afternoon (14:00): browse_and_engage, target: r/artificial + r/productivity
+     - Evening (17:00): browse_and_engage, target: r/projectmanagement + r/ExperiencedDevs
+     - Night (20:00): browse_and_engage, target: r/agile + r/MachineLearning
+     - Late (21:30): karma_building, target: r/AskReddit + r/technology
+     - **Total:** `daily.comments.limit` from limits.json. Distribute across sessions proportionally.
 
-   🚨 **Original posts: MANDATORY 2/week.** Wednesday + Saturday. Always include in schedule — do NOT skip. If `weekly.posts.current >= limit` → skip the task but keep other tasks.
+   🚨 **Original posts: MANDATORY per `weekly.posts.limit` from limits.json.** Wednesday + Saturday. Always include in schedule — do NOT skip. If `weekly.posts.current >= weekly.posts.limit` → skip the task but keep other tasks.
    - 🚨 MUST include `content_source` in `post_original_content` config:
      ```json
      "config": {
@@ -63,8 +63,8 @@
    - Avoid subs where comments were removed
    - Spread tasks more evenly if hit limits early
 
-   **Capacity matching (MANDATORY):** The sum of `max_comments` across ALL engagement/karma tasks MUST equal `daily.comments.limit` from limits.json (10).
-   **Weekly posts MUST NOT exceed `weekly.posts.limit` (2).**
+   **Capacity matching (MANDATORY):** Read `daily.comments.limit` from limits.json and distribute `max_comments` across ALL engagement/karma tasks so their sum equals that limit. Do NOT modify the limit value — it is user-configured.
+   **Weekly posts MUST NOT exceed `weekly.posts.limit` from limits.json.**
 
    **Quality over volume:** Prioritize being early on rising posts over hitting max daily limit. Better to post 8 high-quality, well-positioned comments than 12 mediocre ones.
 

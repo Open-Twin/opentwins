@@ -75,7 +75,7 @@ Keep INSIGHTS.md under 100 lines. Replace outdated entries vs appending.
    - Σ(max_responses across all tasks) MUST = `daily.responses.limit` from limits.json
    - Σ(max_claps across all tasks) MUST = `daily.clap_sessions.limit` from limits.json
    - If mismatch → adjust task configs until they match exactly. Do NOT skip.
-5. 🚨 **Articles: MANDATORY 2/week.** Wednesday + Saturday. Always include `publish_article` task at 10:00 on those days — do NOT skip. Article must be written and published via `/new-story` URL. 800-1500 words, personal experience, story-driven. Tags: max 5, prefer #ai, #project-management, #software-development. If no article in 14+ days → ALERT in Slack report.
+5. 🚨 **Articles: MANDATORY per `weekly.articles.limit` from limits.json (if configured).** Wednesday + Saturday. Always include `publish_article` task at 10:00 on those days — do NOT skip. Article must be written and published via `/new-story` URL. 800-1500 words, personal experience, story-driven. Tags: max 5, prefer #ai, #project-management, #software-development. If no article in 14+ days → ALERT in Slack report.
    - 🚨 MUST include `content_source` in `publish_article` config:
      ```json
      "config": {

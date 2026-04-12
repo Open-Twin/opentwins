@@ -49,14 +49,14 @@
    - 20:00 Search & comment - trending (max_comments: 2)
    - 🚨 **22:00 update_memory** (PLAYBOOK.md § Memory Update)
 
-   **Original posts:** 🚨 **MANDATORY 3/week.** Monday + Wednesday + Friday. Always include in schedule — do NOT skip.
+   **Original posts:** 🚨 **MANDATORY per `weekly.posts.limit` from limits.json.** Monday + Wednesday + Friday. Always include in schedule — do NOT skip.
 
    **Capacity check (mandatory):** After building the schedule, validate before writing:
-   - Σ(max_comments across all tasks) MUST = `daily.comments.limit` from limits.json (10)
-   - Weekly quotes MUST NOT exceed `weekly.quotes.limit` (6)
-   - Weekly posts MUST NOT exceed `weekly.posts.limit` (3)
+   - Σ(max_comments across all tasks) MUST = `daily.comments.limit` from limits.json. Do NOT modify the limit value — it is user-configured.
+   - Weekly quotes MUST NOT exceed `weekly.quotes.limit` from limits.json.
+   - Weekly posts MUST NOT exceed `weekly.posts.limit` from limits.json.
    - If mismatch → adjust task count or max_comments values until they match exactly
-   - Example: limit=10 → 2+2+2+2+2=10 ✅ | 2+2+2+2+3=11 ❌
+   - Example: if limit=5 → 1+1+1+1+1=5 ✅ | 2+2+2+2+2=10 ❌
 
    **Assign queries:** for each search_and_comment and quote_post task, pick 2-3 queries from `queries.json` matching its category. Write them into the task's `config.search_queries`. All queries are fresh (generated daily by content planner) — no rotation needed.
    🚨 **Validate queries before assigning:** Threads search is simple keyword match on a small user base. If a query has 4+ words, specific names, or jargon — simplify it to 2-3 common words. Example: "Andreessen overstaffing AI excuse" → "AI overstaffing" or "tech layoffs AI".

@@ -135,7 +135,7 @@ Promo pre-check: `current >= limit` → mark done.
 13. Task: `replies_done++`, if `>= max_replies` → done, else pending
 
 ### non_promo_engagement
-1. Check `non_promo_engagement.current < limit` (20). If at cap → mark `"skipped"` with note "non_promo cap {current}/{limit}". Do NOT use `"failed"` — that implies an error.
+1. Check `non_promo_engagement.current < non_promo_engagement.limit`. If at cap → mark `"skipped"` with note "non_promo cap {current}/{limit}". Do NOT use `"failed"` — that implies an error.
 2. Browse feed (/home) or search growth_queries
 3. Like tweets → `current += 1`, track `likes_done`
 4. Reply (1-2 per task): Navigate to tweet page first, then inline reply (BROWSER-core.md § 1)
@@ -144,7 +144,7 @@ Promo pre-check: `current >= limit` → mark done.
 6. Done when: `likes_done >= config.likes` AND `replies_done >= config.replies`
 
 ### strategic_reply
-1. Check `strategic_replies.current < limit` (5)
+1. Check `strategic_replies.current < strategic_replies.limit`
 2. Pick target niche from task config
 3. 🚨 ONE advanced search — NEVER profile-hop:
    `from:X OR from:Y OR from:Z min_faves:100 since:{2_days_ago}` → search URL → extract (BROWSER-engage.md § 4)
@@ -182,14 +182,14 @@ Before executing any `original_tweet` or `article` task:
 6. Log: `Type: "Original Tweet", Hashtags: [list]`. Done.
 
 ### quote_tweet
-1. Check `weekly.quote_tweets.current < limit` (5)
+1. Check `weekly.quote_tweets.current < weekly.quote_tweets.limit`
 2. Find quotable content: trending (500+ likes in our niches) or target accounts
 3. Use BROWSER-engage.md § 8 for quote tweet flow, type via BROWSER-core.md § 1
 4. Update: `weekly.quote_tweets.current += 1`
 5. Log: `Type: "Quote Tweet", Quoted: @handle, Likes: N`. Done.
 
 ### thread
-1. Check `weekly.original_tweets.current < limit` (7)
+1. Check `weekly.original_tweets.current < weekly.original_tweets.limit`
 2. Plan thread: hook tweet (curiosity + numbers + promise value) + 3 body tweets + CTA tweet. Max 280 chars each.
 3. Add 2-3 hashtags to hook tweet ONLY (read from `queries.json → hashtags` array)
 4. 🚨 **Use BROWSER-engage.md § 10 (hook-then-reply pattern).** NEVER use the multi-textarea thread composer — it is broken (snapshot de-dupes same aria-label, second textarea unreachable).
@@ -198,7 +198,7 @@ Before executing any `original_tweet` or `article` task:
 7. Log: `Type: "Thread", Hook: status/ID, Tweets: N`. Done.
 
 ### article
-1. Check `weekly.articles.current < limit` (1)
+1. Check `weekly.articles.current < weekly.articles.limit`
 2. Read INSIGHTS.md + content brief (`{{pipeline_workspace}}/content-briefs/{today}.md`) for topic
 3. Write article: 500-800 words, opinionated, story-driven, personal experience. Use SOUL.md voice (peak focus tone). Structure: hook intro, 3-4 sections with subheadings, practical takeaway, CTA ending.
 4. **Build rich HTML** — use `<h2>` for section headings, `<p>` for paragraphs, `<strong>` for bold key terms, `<em>` for italic, `<ul><li>` for lists, `<blockquote>` for quotes. See BROWSER-engage.md § 11 for supported tags.

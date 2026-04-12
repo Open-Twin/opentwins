@@ -7,7 +7,7 @@
 **limits.json** — Source of truth for action counts and timing. Never hardcode limit values.
 - Structure: `daily.comments`, `daily.upvotes`, `daily.follows`, `daily.bookmarks` (each has: limit, current, last_reset)
 - Resets: daily at midnight
-- Comment = limited daily (8). Reply = unlimited. Upvote = limited daily (12). Follow = auto (every comment). Bookmark = limited daily (50).
+- Comment = limited daily (per `daily.comments.limit`). Reply = unlimited. Upvote = limited daily (per `daily.upvotes.limit`). Follow = auto (every comment). Bookmark = limited daily (per `daily.bookmarks.limit`).
 - Increment `current` directly on each action — do NOT re-count from memory files
 
 **queries.json** — Topics and products for browsing. Pick 2-3 topics per session. Generated daily by content planner.

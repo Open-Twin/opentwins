@@ -54,7 +54,7 @@ All steps MANDATORY. Execute in order. SS 0 runs first every time.
       - Read PLAYBOOK.md SS Generate Schedule
       - Set `for_date = TODAY`
       - `day_of_week`: use `date +%A | tr '[:upper:]' '[:lower:]'` (NEVER guess)
-      - CAPACITY MATCHING: sum `max_comments` = `limits.daily.comments.limit` (6); sum `max_reactions` = `limits.daily.reactions.limit` (15)
+      - CAPACITY MATCHING: sum `max_comments` = `limits.daily.comments.limit`; sum `max_reactions` = `limits.daily.reactions.limit` (read from limits.json, do NOT hardcode)
       - WRITE schedule.json (not optional)
    d. Verify: `cat schedule.json | jq -r '.metadata.for_date'` must return today
       - Fail -> log ERROR + Slack alert + HEARTBEAT_OK
@@ -213,7 +213,7 @@ Before executing any `publish_article` task:
 3. After publish → mark task done
 
 ### Publish article
-🚨 **MANDATORY 2/week (Wednesday + Sunday).** If `weekly.articles.current >= limit` → skip.
+🚨 **MANDATORY per `weekly.articles.limit` from limits.json (Wednesday + Sunday).** If `weekly.articles.current >= weekly.articles.limit` → skip.
 1. Pick topic from queries.json + check INSIGHTS.md for what resonates
 2. Write article: 800-1500 words, conversational, story-driven, personal experience. Match SOUL.md voice.
 3. Use markdown formatting: `##` headers for sections, `**bold**` for key phrases, short paragraphs, `---` separator before CTA

@@ -36,13 +36,13 @@ Read only when: (1) schedule generation task, (2) updating INSIGHTS.md, (3) debu
    - Spread tasks if hitting limits early
 
 6. **🚨 MANDATORY capacity check (DO NOT SKIP):**
-   - Sum of ALL tasks' `max_comments` MUST = `daily.comments.limit` (currently 6)
-   - Sum of ALL tasks' `max_reactions` MUST = `daily.reactions.limit` (currently 15)
+   - Sum of ALL tasks' `max_comments` MUST = `daily.comments.limit` from limits.json. Do NOT modify the limit value — it is user-configured.
+   - Sum of ALL tasks' `max_reactions` MUST = `daily.reactions.limit` from limits.json. Do NOT modify the limit value — it is user-configured.
    - If sums don't match → adjust task configs until they do
-   - **Example:** 3 tasks → task1: max_comments=2, max_reactions=5; task2: max_comments=2, max_reactions=5; task3: max_comments=2, max_reactions=5 → total: 6 comments, 15 reactions ✅
-   - **WRONG:** 1 task with max_comments=1, max_reactions=5 → total: 1/6 comments, 5/15 reactions ❌
+   - **Example:** if limit=6: 3 tasks → task1: max_comments=2, max_reactions=5; task2: max_comments=2, max_reactions=5; task3: max_comments=2, max_reactions=5 → total: 6 ✅
+   - **WRONG:** 1 task with max_comments=1 → total doesn't match limit ❌
 
-7. 🚨 **Articles: MANDATORY 2/week.** Wednesday + Sunday. Always include `publish_article` task in schedule on those days — do NOT skip.
+7. 🚨 **Articles: MANDATORY per `weekly.articles.limit` from limits.json.** Wednesday + Sunday. Always include `publish_article` task in schedule on those days — do NOT skip.
    - Wednesday at 10:00, Sunday at 10:00
    - If `weekly.articles.current >= limit` → skip the task but keep other tasks
    - Series selection from trending category (step 2 tag performance):
@@ -90,7 +90,7 @@ If API fails → log "Dev.to API unavailable" and **continue to step 2**.
 
 ### Step 2: Follow/unfollow tags (browser — best effort)
 
-Weekly limit = 2. Only run if tag analysis from step 1 identified actionable changes.
+Weekly limit from `weekly.tag_follows.limit` in limits.json. Only run if tag analysis from step 1 identified actionable changes.
 
 - Hot tag NOT in `followed_tags[]` + `current < limit`:
   - Navigate: `https://dev.to/t/{tag}`

@@ -45,7 +45,7 @@ Read these two sources:
 | Sun | 14:00 only |
 | 🚨 **Every day** | **22:00 update_memory** |
 
-🚨 **Posts: MANDATORY 2/week.** Wednesday + Saturday. Always include `publish_post` task — do NOT skip. If `weekly.posts.current >= limit` → skip the task but keep other tasks.
+🚨 **Posts: MANDATORY per `weekly.posts.limit` from limits.json.** Wednesday + Saturday. Always include `publish_post` task — do NOT skip. If `weekly.posts.current >= weekly.posts.limit` → skip the task but keep other tasks.
    - 🚨 MUST include `content_source` in `publish_post` config:
      ```json
      "config": {

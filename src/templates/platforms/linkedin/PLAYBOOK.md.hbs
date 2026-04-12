@@ -35,7 +35,7 @@ End-of-day and on-demand tasks. **Do NOT load on routine heartbeats.** Only read
    - Distribute comments to peak windows (15:00 and 10:00 first)
    - Midday window can be likes-only when comment budget is tight
    Adjust to match exactly.
-5. 🚨 **Articles: MANDATORY 2/week.** Tuesday + Friday. Always include `publish_article` task at 10:00 on those days — do NOT skip. If `weekly.articles.current >= limit` → skip the task but keep other tasks.
+5. 🚨 **Articles: MANDATORY per `weekly.articles.limit` from limits.json.** Tuesday + Friday. Always include `publish_article` task at 10:00 on those days — do NOT skip. If `weekly.articles.current >= weekly.articles.limit` → skip the task but keep other tasks.
    - 🚨 MUST include `content_source` in `publish_post` config:
      ```json
      "config": {

@@ -61,9 +61,9 @@ End-of-day / on-demand. DO NOT load on routine heartbeats. Read sections as need
 - Daily: 5 promo (max_replies: 1 each) + 3-4 strategic + 3 non-promo
 
 4. **MANDATORY capacity match:**
-   - Sum promo `max_replies` = `daily.promo_replies.limit` (5). No spacing rule — execute back-to-back when due.
-   - Sum non-promo `likes + replies` across scheduled tasks ≤ `daily.non_promo_engagement.limit` (20). **Distribute: ~4 morning + ~5 afternoon + ~6 evening = 15 scheduled** (remaining 5 reserved for mention replies which also count toward this limit per § 3e).
-   - Sum strategic reply tasks × 1 reply each = `daily.strategic_replies.limit` (5). E.g. 4-5 tasks
+   - Sum promo `max_replies` = `daily.promo_replies.limit` from limits.json. No spacing rule — execute back-to-back when due.
+   - Sum non-promo `likes + replies` across scheduled tasks ≤ `daily.non_promo_engagement.limit` from limits.json. **Distribute across morning/afternoon/evening windows, reserving ~25% for mention replies which also count toward this limit per § 3e.**
+   - Sum strategic reply tasks × 1 reply each = `daily.strategic_replies.limit` from limits.json.
    - Adjust to match exactly.
 
 5. **Adjustments** (2+ occurrences):
