@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { launchChrome, stopChrome, isPortInUse, getProfilePort } from '../../browser/chrome.js';
-import { openTab, navigateTo, closeTab, evaluate, clickElement, snapshot, getTabInfo } from '../../browser/cdp.js';
+import { openTab, navigateTo, closeTab, evaluate, clickElement, snapshot, getTabInfo, typeText } from '../../browser/cdp.js';
 import { fileLog, fileError } from '../../util/logger.js';
 
 // ── Browser control API ──────────────────────────────────────
@@ -136,6 +136,21 @@ export async function handleBrowserSnapshot(req: Request, res: Response): Promis
   } catch (err) {
     fileError('browser', 'snapshot failed', { profile, error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to snapshot' });
+  }
+}
+
+export async function handleBrowserType(req: Request, res: Response): Promise<void> {
+  const profile = req.params.profile as string;
+  const { selector, text } = req.body || {};
+  if (!selector || !text) { res.status(400).json({ error: 'selector and text are required' }); return; }
+  try {
+    await ensureChrome(profile);
+    const result = JSON.parse(await typeText(profile, selector, text));
+    fileLog('browser', 'type', { profile, selector, textLen: text.length, ok: result.ok });
+    res.json(result);
+  } catch (err) {
+    fileError('browser', 'type failed', { profile, selector, error: err instanceof Error ? err.message : String(err) });
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to type' });
   }
 }
 

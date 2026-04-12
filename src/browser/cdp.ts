@@ -43,7 +43,6 @@ interface CdpMessage {
 }
 
 async function cdpSend(wsUrl: string, method: string, params: Record<string, unknown> = {}, timeout = 30000): Promise<unknown> {
-  // Dynamic import for ws (we'll use the built-in WebSocket in Node 21+ or ws package)
   const { WebSocket } = await import('ws');
 
   return new Promise((resolve, reject) => {
@@ -65,6 +64,48 @@ async function cdpSend(wsUrl: string, method: string, params: Record<string, unk
         ws.close();
         if (msg.error) reject(new Error(`CDP error: ${msg.error.message}`));
         else resolve(msg.result);
+      }
+    });
+
+    ws.on('error', (err: Error) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+}
+
+// Multi-command session: send multiple CDP commands on one WebSocket connection
+async function cdpSession(wsUrl: string, commands: Array<{ method: string; params?: Record<string, unknown> }>, timeout = 30000): Promise<unknown[]> {
+  const { WebSocket } = await import('ws');
+
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(wsUrl);
+    const results: Map<number, unknown> = new Map();
+    const ids: number[] = [];
+    const timer = setTimeout(() => {
+      ws.close();
+      reject(new Error('CDP session timeout'));
+    }, timeout);
+
+    ws.on('open', async () => {
+      for (const cmd of commands) {
+        const id = msgId++;
+        ids.push(id);
+        ws.send(JSON.stringify({ id, method: cmd.method, params: cmd.params || {} }));
+        // Small delay between commands to ensure ordering
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    });
+
+    ws.on('message', (data: Buffer) => {
+      const msg: CdpMessage = JSON.parse(data.toString());
+      if (ids.includes(msg.id)) {
+        results.set(msg.id, msg.error ? { error: msg.error.message } : msg.result);
+        if (results.size === ids.length) {
+          clearTimeout(timer);
+          ws.close();
+          resolve(ids.map((id) => results.get(id)));
+        }
       }
     });
 
@@ -198,6 +239,62 @@ export async function snapshot(profileName: string, selector?: string, options?:
   })()`;
 
   return evaluate(profileName, js);
+}
+
+export async function typeText(profileName: string, selector: string, text: string): Promise<string> {
+  const port = getProfilePort(profileName);
+  const tab = await getActivePage(port);
+  if (!tab.webSocketDebuggerUrl) throw new Error('No WebSocket URL for active tab');
+
+  // Step 1: Find the element and get its center coordinates via JS evaluate
+  const findResult = await cdpSend(tab.webSocketDebuggerUrl, 'Runtime.evaluate', {
+    expression: `(() => {
+      const el = document.querySelector(${JSON.stringify(selector)});
+      if (!el) return { error: 'Element not found: ${selector.replace(/'/g, "\\'")}' };
+      const rect = el.getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, tag: el.tagName };
+    })()`,
+    returnByValue: true,
+    awaitPromise: false,
+  }) as { result?: { value?: { x?: number; y?: number; tag?: string; error?: string } } };
+
+  const coords = findResult.result?.value;
+  if (!coords || coords.error) {
+    return JSON.stringify({ error: coords?.error || 'Element not found' });
+  }
+
+  // Step 2: Click the element via CDP Input (grants real browser focus)
+  await cdpSend(tab.webSocketDebuggerUrl, 'Input.dispatchMouseEvent', {
+    type: 'mousePressed', x: coords.x, y: coords.y, button: 'left', clickCount: 1,
+  });
+  await cdpSend(tab.webSocketDebuggerUrl, 'Input.dispatchMouseEvent', {
+    type: 'mouseReleased', x: coords.x, y: coords.y, button: 'left', clickCount: 1,
+  });
+
+  // Step 3: Small delay for editor to activate
+  await new Promise((r) => setTimeout(r, 500));
+
+  // Step 4: Type text using CDP Input.insertText (bypasses JS focus entirely)
+  await cdpSend(tab.webSocketDebuggerUrl, 'Input.insertText', { text });
+
+  // Step 5: Verify the text was inserted
+  await new Promise((r) => setTimeout(r, 500));
+  const verifyResult = await cdpSend(tab.webSocketDebuggerUrl, 'Runtime.evaluate', {
+    expression: `(() => {
+      const el = document.querySelector(${JSON.stringify(selector)});
+      if (!el) return { error: 'Element gone' };
+      const content = (el.textContent || el.innerText || '').trim();
+      return { ok: content.length > 0, text: content.slice(0, 100) };
+    })()`,
+    returnByValue: true,
+    awaitPromise: false,
+  }) as { result?: { value?: { ok?: boolean; text?: string; error?: string } } };
+
+  const verify = verifyResult.result?.value;
+  if (verify?.ok) {
+    return JSON.stringify({ ok: true, typed: true, text: verify.text });
+  }
+  return JSON.stringify({ ok: false, error: verify?.error || 'Text not inserted', text: verify?.text || '' });
 }
 
 export async function getTabInfo(profileName: string): Promise<string> {

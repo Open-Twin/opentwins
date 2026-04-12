@@ -2,6 +2,7 @@
 
 **CLI syntax:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}' 2>&1`
 - **evaluate:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d '{"fn":"async () => { ... }"}' 2>&1`
+- **type:** `curl -s -X POST .../type -d '{"selector":"CSS_SELECTOR","text":"text to type"}'` — CDP native text input (handles focus)
 - **snapshot:** `curl -s -X POST .../snapshot -d '{"selector":"...","compact":true,"interactive":true}'`
 - **type:** `curl -s -X POST .../evaluate -d '{"fn":"..."}'` (use evaluate to type into elements)
 - **click:** `curl -s -X POST .../click -d '{"selector":"..."}'`
