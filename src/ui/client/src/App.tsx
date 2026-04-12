@@ -7,6 +7,7 @@ import { Config } from './pages/Config.tsx';
 import { Agents } from './pages/Agents.tsx';
 import { Usage } from './pages/Usage.tsx';
 import { Setup } from './pages/Setup.tsx';
+import { Logs } from './pages/Logs.tsx';
 import { useApi } from './hooks/useApi.ts';
 import { useHealth } from './contexts/HealthContext.tsx';
 
@@ -22,6 +23,7 @@ const navItems = [
   { to: '/usage', label: 'Usage', icon: '$' },
   { to: '/quality', label: 'Quality', icon: '#' },
   { to: '/config', label: 'Config', icon: '@' },
+  { to: '/logs', label: 'Logs', icon: '!' },
 ];
 
 export function App() {
@@ -122,6 +124,7 @@ export function App() {
           <Route path="/usage" element={<Usage />} />
           <Route path="/quality" element={<Quality />} />
           <Route path="/config" element={<Config />} />
+          <Route path="/logs" element={<Logs />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
