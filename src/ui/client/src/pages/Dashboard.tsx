@@ -95,16 +95,16 @@ export function Dashboard() {
   const { enabled: agentsEnabled, reason: agentsDisabledReason } = useAgentsEnabled();
   const { data: status, loading, refetch } = useApi<StatusData>('/api/status');
   const { data: activityResp, refetch: refetchActivity } = useApi<{ sessions: Array<{ platform: string; toolCount: number; eventCount: number }> }>(`/api/activity?date=${today()}`);
-  const { data: quality } = useApi<QualitySummary[]>(`/api/quality?date=${today()}`);
+  const { data: agents, refetch: refetchAgents } = useApi<Array<{ platform: string; limits: { daily: Record<string, { limit: number; current: number }>; weekly?: Record<string, { limit: number; current: number }> } | null }>>('/api/agents');
   const { mutate: startScheduler, loading: startingScheduler } = useMutation('/api/scheduler/start', 'POST');
   const { mutate: stopScheduler, loading: stoppingScheduler } = useMutation('/api/scheduler/stop', 'POST');
   const [schedulerFlash, setSchedulerFlash] = useState<string | null>(null);
 
   // Auto-refresh dashboard every 10 seconds
   useEffect(() => {
-    const id = setInterval(() => { refetch(); refetchActivity(); }, 10000);
+    const id = setInterval(() => { refetch(); refetchActivity(); refetchAgents(); }, 10000);
     return () => clearInterval(id);
-  }, [refetch, refetchActivity]);
+  }, [refetch, refetchActivity, refetchAgents]);
 
   if (loading) {
     return (
@@ -116,18 +116,20 @@ export function Dashboard() {
     );
   }
 
-  const activityByPlatform: Record<string, number> = {};
-  activityResp?.sessions?.forEach((s) => {
-    activityByPlatform[s.platform] = (activityByPlatform[s.platform] || 0) + s.toolCount;
+  // Count meaningful actions from limits (comments, reactions, posts, etc.)
+  const actionsByPlatform: Record<string, number> = {};
+  agents?.forEach((a) => {
+    if (!a.limits) return;
+    let count = 0;
+    for (const v of Object.values(a.limits.daily)) count += v.current || 0;
+    if (a.limits.weekly) for (const v of Object.values(a.limits.weekly)) count += v.current || 0;
+    actionsByPlatform[a.platform] = count;
   });
-
-  const qualityByPlatform: Record<string, QualitySummary> = {};
-  quality?.forEach((q) => { qualityByPlatform[q.platform] = q; });
 
   const lastRun: Record<string, StatusData['recentRuns'][0]> = {};
   status?.recentRuns?.forEach((r) => { if (!lastRun[r.agent_name]) lastRun[r.agent_name] = r; });
 
-  const totalActions = Object.values(activityByPlatform).reduce((a, b) => a + b, 0);
+  const totalActions = Object.values(actionsByPlatform).reduce((a, b) => a + b, 0);
   const totalAgents = status?.platforms.length || 0;
   const enabledAgents = status?.platforms.filter((p) => p.enabled).length || 0;
   const runsToday = status?.recentRuns?.length || 0;
@@ -226,9 +228,9 @@ export function Dashboard() {
           accent={runsToday > 0 ? 'green' : undefined}
         />
         <KpiCard
-          label="Tool Calls"
+          label="Actions"
           value={totalActions}
-          sub="across all sessions"
+          sub={totalActions > 0 ? 'comments, reactions, posts' : 'no actions yet'}
         />
         <KpiCard
           label="Schedule"
@@ -253,8 +255,9 @@ export function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {status?.platforms.map((p, i) => {
             const run = lastRun[p.platform];
-            const acts = activityByPlatform[p.platform] || 0;
-            const q = qualityByPlatform[p.platform];
+            const acts = actionsByPlatform[p.platform] || 0;
+            const agentData = agents?.find((a) => a.platform === p.platform);
+            const comments = agentData?.limits?.daily?.comments?.current || agentData?.limits?.daily?.responses?.current || 0;
             const color = PLATFORM_COLORS[p.platform] || '#888';
             const sched = status.platformSchedules?.find((s) => s.platform === p.platform);
 
@@ -295,8 +298,8 @@ export function Dashboard() {
                     </div>
                     <div>
                       <div className="text-[11px] uppercase tracking-wider mb-1" style={{ color: 'var(--c-text-muted)' }}>Comments</div>
-                      <div className="text-2xl font-semibold tabular-nums leading-none" style={{ color: (q?.comments || 0) > 0 ? 'var(--c-text)' : 'var(--c-text-muted)' }}>
-                        {q?.comments || 0}
+                      <div className="text-2xl font-semibold tabular-nums leading-none" style={{ color: comments > 0 ? 'var(--c-text)' : 'var(--c-text-muted)' }}>
+                        {comments}
                       </div>
                     </div>
                   </div>
@@ -324,28 +327,33 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* ── Recent Runs (full width) ────────────────────────────── */}
+      {/* ── Recent Runs (compact, last 5) ──────────────────────── */}
       <div className="panel noise animate-fade-up stagger-3">
         <div className="panel-header flex items-center justify-between">
           <span>// Recent Runs</span>
-          <span className="mono text-[13px] normal-case tracking-normal" style={{ color: 'var(--c-text-muted)' }}>
-            {runsToday} today
-          </span>
+          {runsToday > 0 && (
+            <button
+              onClick={() => navigate('/activity')}
+              className="mono text-[13px] normal-case tracking-normal transition-colors hover:underline"
+              style={{ color: 'var(--c-teal-dim)' }}
+            >
+              {runsToday > 5 ? `View all ${runsToday} runs →` : `${runsToday} today`}
+            </button>
+          )}
         </div>
         {status?.recentRuns && status.recentRuns.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
-                  <th className="text-left px-5 py-3 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Agent</th>
-                  <th className="text-left px-5 py-3 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Status</th>
-                  <th className="text-left px-5 py-3 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Started</th>
-                  <th className="text-left px-5 py-3 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Ended</th>
-                  <th className="text-right px-5 py-3 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Duration</th>
+                  <th className="text-left px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Agent</th>
+                  <th className="text-left px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Status</th>
+                  <th className="text-left px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Started</th>
+                  <th className="text-right px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Duration</th>
                 </tr>
               </thead>
               <tbody>
-                {status.recentRuns.slice(0, 12).map((run) => {
+                {status.recentRuns.slice(0, 5).map((run) => {
                   const day = run.started_at?.split('T')[0] || today();
                   return (
                     <tr
@@ -355,21 +363,18 @@ export function Dashboard() {
                       onClick={() => navigate(`/activity?date=${day}&platform=${run.agent_name}&session=${run.id}`)}
                       title="Open in Activity Log"
                     >
-                      <td className="px-5 py-3.5">
+                      <td className="px-5 py-2.5">
                         <div className="flex items-center gap-2">
                           <div className="w-1.5 h-1.5 rounded-full" style={{ background: PLATFORM_COLORS[run.agent_name] || '#888' }} />
                           <span className="capitalize text-sm font-medium" style={{ color: 'var(--c-text)' }}>{run.agent_name}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5"><StatusBadge status={run.status} /></td>
-                      <td className="px-5 py-3.5 mono text-[13px]" style={{ color: 'var(--c-text-dim)' }}>
+                      <td className="px-5 py-2.5"><StatusBadge status={run.status} /></td>
+                      <td className="px-5 py-2.5 mono text-[13px]" style={{ color: 'var(--c-text-dim)' }}>
                         {run.started_at ? new Date(run.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
                       </td>
-                      <td className="px-5 py-3.5 mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
-                        {run.completed_at ? new Date(run.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
-                      </td>
-                      <td className="px-5 py-3.5 text-right mono text-[13px] tabular-nums" style={{ color: 'var(--c-text-muted)' }}>
-                        {run.duration_ms ? `${(run.duration_ms / 1000).toFixed(0)}s` : '—'}
+                      <td className="px-5 py-2.5 text-right mono text-[13px] tabular-nums" style={{ color: 'var(--c-text-muted)' }}>
+                        {run.duration_ms ? `${Math.floor(run.duration_ms / 60000)}m ${Math.floor((run.duration_ms % 60000) / 1000)}s` : '—'}
                       </td>
                     </tr>
                   );
@@ -378,9 +383,9 @@ export function Dashboard() {
             </table>
           </div>
         ) : (
-          <div className="p-12 text-center">
-            <div className="text-base mb-2" style={{ color: 'var(--c-text-dim)' }}>No runs today</div>
-            <div className="mono text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
+          <div className="p-8 text-center">
+            <div className="text-sm mb-1" style={{ color: 'var(--c-text-dim)' }}>No runs today</div>
+            <div className="mono text-[12px]" style={{ color: 'var(--c-text-muted)' }}>
               {status?.daemon ? 'Waiting for next scheduled run' : 'Start agents or trigger a manual run from the Agents tab'}
             </div>
           </div>
@@ -455,35 +460,6 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* ── Quality (kept compact) ──────────────────────────────── */}
-      {quality && quality.length > 0 && (
-        <div className="animate-fade-up stagger-5">
-          <div className="section-title mb-4">Signal Quality</div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {quality.map((q) => {
-              const styles = JSON.parse(q.styles || '{}');
-              const styleCount = Object.keys(styles).length;
-              const disagreeRate = q.comments > 0 ? Math.round((q.disagreements / q.comments) * 100) : 0;
-              const color = PLATFORM_COLORS[q.platform] || '#888';
-
-              return (
-                <div key={q.platform} className="panel noise p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
-                    <span className="text-sm font-semibold capitalize" style={{ color: 'var(--c-text)' }}>{q.platform}</span>
-                  </div>
-                  <div className="space-y-2">
-                    <QualityRow label="Avg words" value={q.avg_words} warn={q.avg_words > 100} />
-                    <QualityRow label="Disagree" value={`${disagreeRate}%`} warn={disagreeRate > 35} />
-                    <QualityRow label="Styles" value={styleCount} />
-                    <QualityRow label="Last" value={q.last_style} dim />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
