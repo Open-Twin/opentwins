@@ -107,7 +107,8 @@ describe('browser/chrome isChromeInstalled', () => {
       || existsSync('/usr/bin/google-chrome-stable')
       || existsSync('/usr/bin/chromium')
       || existsSync('/usr/bin/chromium-browser')
-      || existsSync('/snap/bin/chromium');
+      || existsSync('/snap/bin/chromium')
+      || existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
     if (hasChromeLocally) return; // skip on dev machines with Chrome
 
     const { isChromeInstalled } = await import('../browser/chrome.js');
