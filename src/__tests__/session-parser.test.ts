@@ -212,3 +212,109 @@ describe('summarizeSession', () => {
     expect(summary).toBeNull();
   });
 });
+
+describe('session-parser edge cases', () => {
+  it('skips malformed JSONL lines and keeps parsing', () => {
+    const path = resolve(tmpDir, 'mixed.jsonl');
+    const goodLine = JSON.stringify({
+      type: 'assistant',
+      timestamp: '2026-04-11T10:00:00.000Z',
+      message: { content: [{ type: 'text', text: 'real event' }] },
+    });
+    writeFileSync(path, `${goodLine}\n{ this is not valid json\n${goodLine}\n`, 'utf-8');
+
+    const events = extractEventsFromSession(path);
+    // Both good lines should be parsed; the broken line is silently skipped.
+    expect(events).toHaveLength(2);
+    expect(events[0].kind).toBe('thinking');
+  });
+
+  it('ignores blank lines in the JSONL file', () => {
+    const path = resolve(tmpDir, 'blanks.jsonl');
+    const line = JSON.stringify({
+      type: 'assistant',
+      timestamp: '2026-04-11T10:00:00.000Z',
+      message: { content: [{ type: 'text', text: 'x' }] },
+    });
+    writeFileSync(path, `\n\n${line}\n\n\n`, 'utf-8');
+    expect(extractEventsFromSession(path)).toHaveLength(1);
+  });
+
+  it('truncates thinking text longer than 200 chars and stores the full text in detail', () => {
+    const longText = 'x'.repeat(500);
+    const path = resolve(tmpDir, 'long.jsonl');
+    writeFileSync(path, JSON.stringify({
+      type: 'assistant',
+      timestamp: '2026-04-11T10:00:00.000Z',
+      message: { content: [{ type: 'text', text: longText }] },
+    }), 'utf-8');
+
+    const [event] = extractEventsFromSession(path);
+    expect(event.summary.length).toBeLessThanOrEqual(201); // includes ellipsis
+    expect(event.summary.endsWith('…')).toBe(true);
+    expect(event.detail).toBe(longText);
+  });
+
+  it('handles entries with missing timestamp field gracefully', () => {
+    const path = resolve(tmpDir, 'no-ts.jsonl');
+    writeFileSync(path, JSON.stringify({
+      type: 'assistant',
+      // timestamp intentionally missing
+      message: { content: [{ type: 'text', text: 'no ts' }] },
+    }), 'utf-8');
+
+    const events = extractEventsFromSession(path);
+    expect(events).toHaveLength(1);
+    expect(events[0].ts).toBe('');
+  });
+
+  it('summarizeSession returns durationMs=0 when only one timestamped event exists', () => {
+    const path = resolve(tmpDir, 'single.jsonl');
+    writeFileSync(path, JSON.stringify({
+      type: 'assistant',
+      timestamp: '2026-04-11T10:00:00.000Z',
+      message: { content: [{ type: 'text', text: 'just one' }] },
+    }), 'utf-8');
+
+    const summary = summarizeSession(path, 'linkedin');
+    expect(summary!.durationMs).toBe(0);
+    expect(summary!.startedAt).toBe('2026-04-11T10:00:00.000Z');
+    expect(summary!.endedAt).toBe('2026-04-11T10:00:00.000Z');
+  });
+
+  it('handles a tool_result with array content and a text entry', () => {
+    const path = resolve(tmpDir, 'array-err.jsonl');
+    writeFileSync(path, JSON.stringify({
+      type: 'user',
+      timestamp: '2026-04-11T10:00:00.000Z',
+      message: {
+        content: [{
+          type: 'tool_result',
+          is_error: true,
+          content: [{ type: 'text', text: 'Structured error' }],
+        }],
+      },
+    }), 'utf-8');
+
+    const [event] = extractEventsFromSession(path);
+    expect(event.kind).toBe('error');
+    expect(event.detail).toContain('Structured error');
+  });
+
+  it('parses a 1000-line session without crashing (perf sanity)', () => {
+    const path = resolve(tmpDir, 'big.jsonl');
+    const lines: string[] = [];
+    for (let i = 0; i < 1000; i++) {
+      lines.push(JSON.stringify({
+        type: 'assistant',
+        timestamp: `2026-04-11T10:${String(Math.floor(i / 60) % 60).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}.000Z`,
+        message: { content: [{ type: 'text', text: `turn ${i}` }] },
+      }));
+    }
+    writeFileSync(path, lines.join('\n'), 'utf-8');
+
+    const summary = summarizeSession(path, 'linkedin');
+    expect(summary!.eventCount).toBe(1000);
+    expect(summary!.durationMs).toBeGreaterThan(0);
+  });
+});

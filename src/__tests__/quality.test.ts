@@ -139,4 +139,55 @@ describe('Quality Metrics', () => {
     expect(result).toBeInstanceOf(Array);
     expect(result.length).toBe(2);
   });
+
+  it('treats a malformed today_summary.json as null', async () => {
+    const dir = resolve(tmpDir, 'workspaces', 'agent-linkedin', 'memory');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(resolve(dir, 'today_summary.json'), 'not valid json', 'utf-8');
+
+    const { getQualityMetrics } = await import('../ui/api/quality.js');
+    const result = await new Promise<any>((resolve) => {
+      const req = { query: { platform: 'linkedin' } } as any;
+      const res = { json: (data: any) => resolve(data) } as any;
+      getQualityMetrics(req, res);
+    });
+    expect(result.today).toBeNull();
+  });
+
+  it('applies defaults when today_summary.json has missing fields', async () => {
+    const today = new Date().toISOString().split('T')[0];
+    createSummary('linkedin', { date: today }); // no comments/styles/avg_words/…
+
+    const { getQualityMetrics } = await import('../ui/api/quality.js');
+    const result = await new Promise<any>((resolve) => {
+      const req = { query: { platform: 'linkedin' } } as any;
+      const res = { json: (data: any) => resolve(data) } as any;
+      getQualityMetrics(req, res);
+    });
+    expect(result.today).not.toBeNull();
+    expect(result.today.comments).toBe(0);
+    expect(result.today.avg_words).toBe(0);
+    expect(result.today.last_style).toBe('');
+  });
+
+  it('returns empty history when memory dir does not exist', async () => {
+    const { getQualityMetrics } = await import('../ui/api/quality.js');
+    const result = await new Promise<any>((resolve) => {
+      const req = { query: { platform: 'linkedin', days: '7' } } as any;
+      const res = { json: (data: any) => resolve(data) } as any;
+      getQualityMetrics(req, res);
+    });
+    expect(result.history).toEqual([]);
+    expect(result.today).toBeNull();
+  });
+
+  it('getDisagreementRatio returns a plain array even when no data', async () => {
+    const { getDisagreementRatio } = await import('../ui/api/quality.js');
+    const result = await new Promise<any>((resolve) => {
+      const req = { query: { platform: 'linkedin' } } as any;
+      const res = { json: (data: any) => resolve(data) } as any;
+      getDisagreementRatio(req, res);
+    });
+    expect(Array.isArray(result)).toBe(true);
+  });
 });
