@@ -770,7 +770,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
             <span>// Insights</span>
             {agent.insights && <span className="mono text-[12px] normal-case" style={{ color: 'var(--c-text-muted)' }}>click to expand</span>}
           </div>
-          <div className="p-3 overflow-hidden" style={{ maxHeight: '200px', maskImage: agent.insights ? 'linear-gradient(to bottom, black 60%, transparent 100%)' : undefined }}>
+          <div className="p-3 overflow-hidden" style={{ maxHeight: '320px', maskImage: agent.insights ? 'linear-gradient(to bottom, black 75%, transparent 100%)' : undefined }}>
             {agent.insights ? (
               <div className="mono text-[12px] leading-snug" style={{ color: 'var(--c-text-dim)' }}
                 dangerouslySetInnerHTML={{ __html: agent.insights
