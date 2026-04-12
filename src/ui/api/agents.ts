@@ -122,7 +122,7 @@ export function handleGetAgent(req: Request, res: Response): void {
   const limits = hasWorkspace ? readJson(resolve(dir, 'limits.json')) : null;
   const schedule = hasWorkspace ? readJson(resolve(dir, 'schedule.json')) : null;
   const queries = hasWorkspace ? readJson(resolve(dir, 'queries.json')) : null;
-  const insights = hasWorkspace ? readText(resolve(dir, 'INSIGHTS.md'), 1000) : '';
+  const insights = hasWorkspace ? readText(resolve(dir, 'INSIGHTS.md'), 10000) : '';
 
   res.json({
     platform,

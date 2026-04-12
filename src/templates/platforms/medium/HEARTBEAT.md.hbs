@@ -124,7 +124,10 @@ Filter: `status="pending" AND time<=now`, sort by time.
 **Task types:**
 
 - **browse_and_engage** -> Optimized workflow:
-  1. **Search (MAX 2 queries total, strictly enforced).** **Start with a tag/recommended page** (`medium.com/tag/{tag}/recommended`) — these reliably return high-engagement recent articles. **Tag diversity rule:** pick query 2 from a DIFFERENT group than query 1. Groups: **Tech** (`software-development`, `artificial-intelligence`, `programming`, `developer-tools`), **Business** (`startup`, `building-in-public`, `entrepreneurship`), **Productivity** (`productivity`, `self-improvement`). Same-group tags overlap heavily. **Only use search** (`medium.com/search?q=...`) as a second query if tag/recommended yields < 2 usable candidates. ❌ NEVER exceed 2 total queries (tag + search combined). ❌ NEVER try niche tags — they waste navigations.
+  1. **Search (MAX 2 queries total).** Pick from:
+     - **Search:** `medium.com/search?q={query}` — use queries from `queries.json`
+     - **Tags:** `medium.com/tag/{tag}` — use tags relevant to your pillars
+     - ❌ NEVER use `/recommended` suffix on any tag. NEVER exceed 2 queries per task.
   2. Batch extract articles — BROWSER-engage.md § 5. **Extraction auto-filters:** `/@author/` URLs AND publication URLs (`medium.com/{pub}/slug-hash`) + articles ≤14 days old. Publication URLs may redirect to custom domains — this is normal. If any URL causes SSL error → skip immediately.
   3. **🚨 MANDATORY batch grep pre-check BEFORE navigating** — check ALL candidate URLs at once:
      ```bash

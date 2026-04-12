@@ -228,13 +228,6 @@ function HealthPills() {
   return (
     <div className="flex items-center gap-2">
       <HealthPill
-        label="Browser"
-        state={br}
-        subtitle={browserSubtitle}
-        onClick={refetch}
-        checkedAt={lastChecked}
-      />
-      <HealthPill
         label="Claude"
         state={cl}
         subtitle={claudeSubtitle}
