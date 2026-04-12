@@ -286,20 +286,14 @@ browser.act({
     // Wait for editor
     await new Promise(r => setTimeout(r, 2000));
 
-    // Type
+    // Check editor is ready (DO NOT type here - use /type endpoint next)
     var editor = item.querySelector('div.tiptap.ProseMirror[role="textbox"]');
     if (!editor) editor = item.querySelector('[contenteditable="true"][role="textbox"]');
     if (!editor) return { liked: liked, opened: true, error: 'no editor' };
-    editor.focus();
-    var text = "${commentText.replace(/"/g, '\\"').replace(/\n/g, '\\n')}";
-    document.execCommand('insertText', false, text);
-
-    await new Promise(r => setTimeout(r, 500));
     return {
       liked: liked,
       opened: true,
-      typed: true,
-      editorText: editor.textContent.slice(0, 80),
+      editorReady: true,
       submitExists: !!item.querySelector('button[data-view-name="comment-post"]')
     };
   }`,
@@ -308,6 +302,12 @@ browser.act({
 ```
 
 ### Step 2: Submit + verify (ONE async evaluate)
+**Step 1b: Type comment text using CDP native input** (separate step — handles focus reliably):
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/type -H 'Content-Type: application/json' -d '{"selector":"div.tiptap.ProseMirror[role=\"textbox\"]","text":"YOUR_COMMENT_TEXT"}' 2>&1
+```
+If `ok: false`, try alternative selector: `{"selector":"[contenteditable=\"true\"][role=\"textbox\"]","text":"..."}`. This replaces `execCommand('insertText')` which fails in CDP context.
+
 🚨 **Verification MUST check the comment list, not the editor.** The editor can be empty AND the comment can still have failed (LinkedIn silently rejects empty content). We need to find our comment URN in the rendered comment list.
 
 ```javascript
@@ -375,9 +375,13 @@ If `verified: false`: retry ONCE. Still fails → do NOT log, do NOT increment c
 
 🚨 **Pulse articles use QUILL editor, NOT TipTap.** `execCommand('insertText')` inserts text in the DOM but leaves Quill's internal Delta state EMPTY → submit is silently rejected. Must use Quill's API directly.
 
-🚨 **APOSTROPHE SAFETY:** Comment text with apostrophes (`it's`, `don't`, `I've`) WILL break single-quoted `-d '...'` curl bodies. ALWAYS use double-quoted `-d "..."` with inner quotes escaped as `\"`, OR use heredoc: `-d @- <<'ENDJSON'`. NEVER put apostrophes inside single-quoted JSON.
+🚨 **PREFERRED: Use the `/type` endpoint** instead of the Quill API evaluate below. It handles focus and apostrophes automatically:
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/type -H 'Content-Type: application/json' -d '{"selector":".ql-editor[contenteditable=\"true\"]","text":"YOUR_COMMENT_TEXT"}' 2>&1
+```
+If `/type` returns `ok: true` → skip to Step 2 (submit). Only fall back to the Quill API evaluate below if `/type` fails.
 
-**Prerequisite:** Agent has already navigated to the Pulse article URL and confirmed the article loads (dedup/content-read step in HEARTBEAT.md).
+**Prerequisite:** Agent has already navigated to the Pulse article URL and confirmed the article loads (dedup/content-read step in HEARTBEAT.md). Scroll to bottom first to lazy-load comments.
 
 ### Step 1: Scroll to comments + open composer + insert via Quill API (ONE async evaluate)
 ```javascript
