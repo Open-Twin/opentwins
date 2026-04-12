@@ -166,13 +166,7 @@ async () => {
 
 ❌ **Do NOT add a separate scroll step** — `document.querySelector('.tiptap.ProseMirror')` finds the editor regardless of viewport scroll. Scroll wastes 1 step per product.
 
-**Step 1 — PREFERRED: Use `/type` endpoint** (handles focus reliably):
-```bash
-exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/type -H 'Content-Type: application/json' -d '{"selector":".tiptap.ProseMirror","text":"YOUR_COMMENT_TEXT"}' 2>&1
-```
-If `ok: true` → go to Step 2. Fall back to evaluate below only if `/type` fails.
-
-**Step 1 fallback — Set text via evaluate (1.5s wait embedded):**
+**Step 1 — Set text (1.5s wait embedded — NO separate sleep step):**
 ```javascript
 async () => {
   await new Promise(r => setTimeout(r, 1500));

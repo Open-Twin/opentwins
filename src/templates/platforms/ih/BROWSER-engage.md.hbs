@@ -128,12 +128,6 @@ var ta = commentBox.querySelector('textarea');
 if (ta) { ta.focus(); ta.value = commentText; ta.dispatchEvent(new Event('input', {bubbles:true})); }
 ```
 
-🚨 **PREFERRED: Use `/type` endpoint** for text insertion (handles focus reliably):
-```bash
-exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/type -H 'Content-Type: application/json' -d '{"selector":".comment-box .tiptap.ProseMirror","text":"YOUR_COMMENT_TEXT"}' 2>&1
-```
-If `/type` returns `ok: true` → skip Step 1, go to Step 2 (submit). Fall back to evaluate below only if `/type` fails.
-
 🚨 **Two-step pattern** — TipTap needs an event loop tick before submit button enables.
 - ❌ **NEVER** combine text insertion + submit check in ONE evaluate — `submitBtn.disabled` will be `true`
 - ❌ **NEVER** add `.click()` on submit in the same evaluate as `execCommand('insertText')`

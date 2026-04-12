@@ -161,15 +161,25 @@ Returns: `upvoted: 1` = upvoted, `upvoted: 0` = skipped/already. `composer: 'exp
 
 ## 4. Comment on a Post (Top-Level)
 
-**Step 4: Type comment using CDP native input** (handles focus automatically):
-```bash
-exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/type -H 'Content-Type: application/json' -d '{"selector":"[data-lexical-editor=\"true\"]","text":"YOUR_COMMENT_TEXT"}' 2>&1
+**Step 4: Wait 2s + focus + type** (combined — single async evaluate with embedded wait):
+```javascript
+browser.act({
+  kind: "evaluate",
+  fn: `async () => {
+    await new Promise(r => setTimeout(r, 2000));
+    if (window.location.href === 'about:blank' || !window.location.href.includes('reddit.com'))
+      return { error: 'page_lost', url: window.location.href };
+    var editor = document.querySelector('[data-lexical-editor="true"]');
+    if (!editor) return 'no editor';
+    editor.focus();
+    if (document.activeElement !== editor) return 'not focused';
+    var success = document.execCommand('insertText', false, '${commentText.replace(/'/g, "\\'")}');
+    return success ? 'typed' : 'execCommand failed';
+  }`,
+  profile: "{{browser_profile}}"
+})
 ```
-Returns: `{"ok":true,"typed":true,"text":"..."}` on success, `{"ok":false,"error":"..."}` on failure.
-
-🚨 **Use the `/type` endpoint instead of evaluate for ALL text input.** It uses CDP's native `Input.insertText` which bypasses JavaScript focus issues. The evaluate-based `execCommand('insertText')` approach fails on Reddit's Lexical editor because CDP doesn't grant real browser focus.
-
-If `ok: false` → retry once. If still fails → skip this post, log error.
+If `page_lost` → re-navigate to post URL and retry from § 3 (upvote+expand). Do NOT probe with multiple evaluates.
 
 **Step 5: MANDATORY — Verify text (separate evaluate!):**
 Lexical renders async — innerHTML empty in same call. Submit without verify = silent failure.
