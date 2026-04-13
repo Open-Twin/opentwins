@@ -47,7 +47,7 @@ Replace `${pollQuestion}`.
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var host = document.querySelector('#interop-outlet'); var shadow = host.shadowRoot; var ta = shadow.querySelector('textarea[placeholder*=\"How do you commute\"]') || Array.from(shadow.querySelectorAll('textarea')).find(t => t.className.includes('polls-detour')); if (!ta) return { success: false, reason: 'no-question-textarea' }; var nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set; nativeSetter.call(ta, '${pollQuestion}'); ta.dispatchEvent(new Event('input', { bubbles: true })); ta.dispatchEvent(new Event('change', { bubbles: true })); return { success: true, value: ta.value }; }"}
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var host = document.querySelector('#interop-outlet'); var shadow = host.shadowRoot; var ta = shadow.querySelector('textarea[placeholder*=\"How do you commute\"]') || Array.from(shadow.querySelectorAll('textarea')).find(t => t.className.includes('polls-detour')); if (!ta) return { success: false, reason: 'no-question-textarea' }; var nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set; nativeSetter.call(ta, window.__data.text); ta.dispatchEvent(new Event('input', { bubbles: true })); ta.dispatchEvent(new Event('change', { bubbles: true })); return { success: true, value: ta.value }; }", "data": {"text": "YOUR_POLL_QUESTION"}}
 ENDJSON
 ```
 
@@ -57,7 +57,7 @@ Replace `${option1}` and `${option2}`.
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { var host = document.querySelector('#interop-outlet'); var shadow = host.shadowRoot; var opt1 = shadow.querySelector('#poll-option-1'); var opt2 = shadow.querySelector('#poll-option-2'); if (!opt1 || !opt2) return { success: false, reason: 'no-option-inputs' }; var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(opt1, '${option1}'.slice(0, 30)); opt1.dispatchEvent(new Event('input', { bubbles: true })); opt1.dispatchEvent(new Event('change', { bubbles: true })); setter.call(opt2, '${option2}'.slice(0, 30)); opt2.dispatchEvent(new Event('input', { bubbles: true })); opt2.dispatchEvent(new Event('change', { bubbles: true })); return { success: true, opt1: opt1.value, opt2: opt2.value }; }"}
+{"fn":"async () => { var host = document.querySelector('#interop-outlet'); var shadow = host.shadowRoot; var opt1 = shadow.querySelector('#poll-option-1'); var opt2 = shadow.querySelector('#poll-option-2'); if (!opt1 || !opt2) return { success: false, reason: 'no-option-inputs' }; var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(opt1, window.__data.opt1.slice(0, 30)); opt1.dispatchEvent(new Event('input', { bubbles: true })); opt1.dispatchEvent(new Event('change', { bubbles: true })); setter.call(opt2, window.__data.opt2.slice(0, 30)); opt2.dispatchEvent(new Event('input', { bubbles: true })); opt2.dispatchEvent(new Event('change', { bubbles: true })); return { success: true, opt1: opt1.value, opt2: opt2.value }; }", "data": {"opt1": "Option 1 text", "opt2": "Option 2 text"}}
 ENDJSON
 ```
 
@@ -67,7 +67,7 @@ Replace `${option3}`.
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { var host = document.querySelector('#interop-outlet'); var shadow = host.shadowRoot; var addBtn = Array.from(shadow.querySelectorAll('button')).find(b => (b.innerText || '').includes('Add option')); if (!addBtn) return { success: false, reason: 'no-add-option-button' }; addBtn.click(); await new Promise(r => setTimeout(r, 1000)); var opt3 = shadow.querySelector('#poll-option-3'); if (!opt3) return { success: false, reason: 'no-option-3' }; var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(opt3, '${option3}'.slice(0, 30)); opt3.dispatchEvent(new Event('input', { bubbles: true })); opt3.dispatchEvent(new Event('change', { bubbles: true })); return { success: true, value: opt3.value }; }"}
+{"fn":"async () => { var host = document.querySelector('#interop-outlet'); var shadow = host.shadowRoot; var addBtn = Array.from(shadow.querySelectorAll('button')).find(b => (b.innerText || '').includes('Add option')); if (!addBtn) return { success: false, reason: 'no-add-option-button' }; addBtn.click(); await new Promise(r => setTimeout(r, 1000)); var opt3 = shadow.querySelector('#poll-option-3'); if (!opt3) return { success: false, reason: 'no-option-3' }; var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(opt3, window.__data.text.slice(0, 30)); opt3.dispatchEvent(new Event('input', { bubbles: true })); opt3.dispatchEvent(new Event('change', { bubbles: true })); return { success: true, value: opt3.value }; }", "data": {"text": "Option 3 text"}}
 ENDJSON
 ```
 
@@ -77,7 +77,7 @@ Replace `${option4}`.
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { var host = document.querySelector('#interop-outlet'); var shadow = host.shadowRoot; var addBtn = Array.from(shadow.querySelectorAll('button')).find(b => (b.innerText || '').includes('Add option')); if (addBtn) addBtn.click(); await new Promise(r => setTimeout(r, 1000)); var opt4 = shadow.querySelector('#poll-option-4'); if (!opt4) return { success: false, reason: 'no-option-4' }; var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(opt4, '${option4}'.slice(0, 30)); opt4.dispatchEvent(new Event('input', { bubbles: true })); opt4.dispatchEvent(new Event('change', { bubbles: true })); return { success: true, value: opt4.value }; }"}
+{"fn":"async () => { var host = document.querySelector('#interop-outlet'); var shadow = host.shadowRoot; var addBtn = Array.from(shadow.querySelectorAll('button')).find(b => (b.innerText || '').includes('Add option')); if (addBtn) addBtn.click(); await new Promise(r => setTimeout(r, 1000)); var opt4 = shadow.querySelector('#poll-option-4'); if (!opt4) return { success: false, reason: 'no-option-4' }; var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(opt4, window.__data.text.slice(0, 30)); opt4.dispatchEvent(new Event('input', { bubbles: true })); opt4.dispatchEvent(new Event('change', { bubbles: true })); return { success: true, value: opt4.value }; }", "data": {"text": "Option 4 text"}}
 ENDJSON
 ```
 
@@ -93,11 +93,9 @@ Wait 2s for poll preview.
 
 ### Step 8: Add post text (optional intro above poll)
 
-Replace `${postText}`.
-
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var host = document.querySelector('#interop-outlet'); var shadow = host.shadowRoot; var editor = shadow.querySelector('.ql-editor[role=\"textbox\"]') || shadow.querySelector('[contenteditable=\"true\"][role=\"textbox\"]'); if (!editor) return { success: false, reason: 'no-editor' }; editor.focus(); editor.innerHTML = '<p>${postText}</p>'; editor.dispatchEvent(new Event('input', { bubbles: true })); return { success: true, length: editor.innerText.length }; }"}
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var host = document.querySelector('#interop-outlet'); var shadow = host.shadowRoot; var editor = shadow.querySelector('.ql-editor[role=\"textbox\"]') || shadow.querySelector('[contenteditable=\"true\"][role=\"textbox\"]'); if (!editor) return { success: false, reason: 'no-editor' }; editor.focus(); editor.innerHTML = '<p>' + window.__data.text + '</p>'; editor.dispatchEvent(new Event('input', { bubbles: true })); return { success: true, length: editor.innerText.length }; }", "data": {"text": "YOUR_POST_TEXT"}}
 ENDJSON
 ```
 
@@ -127,11 +125,9 @@ ENDJSON
 
 ### Step 2: Type post text
 
-Replace `${postContent}`.
-
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { var host = document.querySelector('#interop-outlet'); var shadow = host.shadowRoot; var editor = shadow.querySelector('.ql-editor[role=\"textbox\"]') || shadow.querySelector('[contenteditable=\"true\"][role=\"textbox\"]'); if (!editor) return { success: false, reason: 'no-editor' }; editor.focus(); var lines = '${postContent}'.split(String.fromCharCode(10)); editor.innerHTML = lines.map(function(line) { return '<p>' + (line.trim() === '' ? '<br>' : line) + '</p>'; }).join(''); editor.dispatchEvent(new Event('input', { bubbles: true })); return { success: true, length: editor.innerText.length }; }"}
+{"fn":"async () => { var host = document.querySelector('#interop-outlet'); var shadow = host.shadowRoot; var editor = shadow.querySelector('.ql-editor[role=\"textbox\"]') || shadow.querySelector('[contenteditable=\"true\"][role=\"textbox\"]'); if (!editor) return { success: false, reason: 'no-editor' }; editor.focus(); var lines = window.__data.text.split(String.fromCharCode(10)); editor.innerHTML = lines.map(function(line) { return '<p>' + (line.trim() === '' ? '<br>' : line) + '</p>'; }).join(''); editor.dispatchEvent(new Event('input', { bubbles: true })); return { success: true, length: editor.innerText.length }; }", "data": {"text": "YOUR_POST_CONTENT"}}
 ENDJSON
 ```
 
@@ -148,7 +144,7 @@ Replace `${targetMinY}` and `${targetMaxY}` with the Y-coordinate range of the t
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var allBtns = Array.from(document.querySelectorAll('button')); var repostBtns = allBtns.filter(function(b) { return b.innerText.trim() === 'Repost' && b.offsetParent !== null; }); var targetBtn = repostBtns.find(function(b) { var top = b.getBoundingClientRect().top; return top > ${targetMinY} && top < ${targetMaxY}; }); if (!targetBtn) return { error: 'no Repost button in range', count: repostBtns.length }; targetBtn.click(); await new Promise(r => setTimeout(r, 1500)); var allDivs = Array.from(document.querySelectorAll('div')); var thoughtsDiv = allDivs.find(function(d) { var t = (d.textContent || '').trim(); return d.offsetParent !== null && t.startsWith('Repost with your thoughts') && t.length < 100; }); if (!thoughtsDiv) return { repostClicked: true, error: 'no thoughts option' }; thoughtsDiv.click(); await new Promise(r => setTimeout(r, 3000)); var host = document.querySelector('#interop-outlet'); if (!host || !host.shadowRoot) return { repostClicked: true, thoughtsClicked: true, error: 'no shadow root' }; var editor = host.shadowRoot.querySelector('.ql-editor'); return { repostClicked: true, thoughtsClicked: true, editorReady: !!editor }; }"}
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var allBtns = Array.from(document.querySelectorAll('button')); var repostBtns = allBtns.filter(function(b) { return b.innerText.trim() === 'Repost' && b.offsetParent !== null; }); var targetBtn = repostBtns.find(function(b) { var top = b.getBoundingClientRect().top; return top > window.__data.minY && top < window.__data.maxY; }); if (!targetBtn) return { error: 'no Repost button in range', count: repostBtns.length }; targetBtn.click(); await new Promise(r => setTimeout(r, 1500)); var allDivs = Array.from(document.querySelectorAll('div')); var thoughtsDiv = allDivs.find(function(d) { var t = (d.textContent || '').trim(); return d.offsetParent !== null && t.startsWith('Repost with your thoughts') && t.length < 100; }); if (!thoughtsDiv) return { repostClicked: true, error: 'no thoughts option' }; thoughtsDiv.click(); await new Promise(r => setTimeout(r, 3000)); var host = document.querySelector('#interop-outlet'); if (!host || !host.shadowRoot) return { repostClicked: true, thoughtsClicked: true, error: 'no shadow root' }; var editor = host.shadowRoot.querySelector('.ql-editor'); return { repostClicked: true, thoughtsClicked: true, editorReady: !!editor }; }", "data": {"minY": 200, "maxY": 600}}
 ENDJSON
 ```
 
@@ -158,7 +154,7 @@ Replace `${commentaryText}`.
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { var host = document.querySelector('#interop-outlet'); if (!host || !host.shadowRoot) return { error: 'no shadow root' }; var editor = host.shadowRoot.querySelector('.ql-editor'); if (!editor) return { error: 'no editor' }; editor.focus(); editor.innerHTML = '<p>${commentaryText}</p>'; editor.dispatchEvent(new Event('input', { bubbles: true })); await new Promise(r => setTimeout(r, 1000)); var postBtn = Array.from(host.shadowRoot.querySelectorAll('button')).find(function(b) { return b.innerText.trim() === 'Post' && !b.disabled; }); if (!postBtn) return { typed: true, error: 'no Post button' }; postBtn.click(); await new Promise(r => setTimeout(r, 3000)); var editorGone = !host.shadowRoot.querySelector('.ql-editor'); return { posted: true, editorGone: editorGone }; }"}
+{"fn":"async () => { var host = document.querySelector('#interop-outlet'); if (!host || !host.shadowRoot) return { error: 'no shadow root' }; var editor = host.shadowRoot.querySelector('.ql-editor'); if (!editor) return { error: 'no editor' }; editor.focus(); editor.innerHTML = '<p>' + window.__data.text + '</p>'; editor.dispatchEvent(new Event('input', { bubbles: true })); await new Promise(r => setTimeout(r, 1000)); var postBtn = Array.from(host.shadowRoot.querySelectorAll('button')).find(function(b) { return b.innerText.trim() === 'Post' && !b.disabled; }); if (!postBtn) return { typed: true, error: 'no Post button' }; postBtn.click(); await new Promise(r => setTimeout(r, 3000)); var editorGone = !host.shadowRoot.querySelector('.ql-editor'); return { posted: true, editorGone: editorGone }; }", "data": {"text": "YOUR_COMMENTARY"}}
 ENDJSON
 ```
 

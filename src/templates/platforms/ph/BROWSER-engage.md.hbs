@@ -133,7 +133,7 @@ ENDJSON
 **Step 1 — Set text (1.5s wait embedded — NO separate sleep step):**
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); const editor = document.querySelector('.tiptap.ProseMirror'); if (!editor) return { error: 'editor_not_found' }; editor.focus(); document.execCommand('selectAll', false, null); document.execCommand('delete', false, null); document.execCommand('insertText', false, '${commentText}'); return { set: true, text: editor.textContent.slice(0, 50) }; }"}
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); const editor = document.querySelector('.tiptap.ProseMirror'); if (!editor) return { error: 'editor_not_found' }; editor.focus(); document.execCommand('selectAll', false, null); document.execCommand('delete', false, null); document.execCommand('insertText', false, window.__data.text); return { set: true, text: editor.textContent.slice(0, 50) }; }", "data": {"text": "YOUR_COMMENT_HERE"}}
 ENDJSON
 ```
 
@@ -163,7 +163,7 @@ Homepage vote buttons work with JS `.click()`.
 **Single evaluate — count before, click, wait, count after (ONE step, NO separate sleep):**
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { const btns = document.querySelectorAll('button[data-test=\"vote-button\"]'); let votedBefore = 0; for (const btn of btns) { const filled = btn.querySelector('[data-filled]'); if (filled && filled.getAttribute('data-filled') === 'true') votedBefore++; } const maxUpvotes = ${Math.min(2, availableUpvotes)}; let clicked = 0; for (const btn of btns) { if (clicked >= maxUpvotes) break; const filled = btn.querySelector('[data-filled]'); if (filled && filled.getAttribute('data-filled') === 'true') continue; btn.click(); clicked++; } await new Promise(r => setTimeout(r, 1500)); let votedAfter = 0; for (const btn of btns) { const filled = btn.querySelector('[data-filled]'); if (filled && filled.getAttribute('data-filled') === 'true') votedAfter++; } const delta = votedAfter - votedBefore; return { clicked, votedBefore, votedAfter, delta, verified: delta === clicked }; }"}
+{"fn":"async () => { const btns = document.querySelectorAll('button[data-test=\"vote-button\"]'); let votedBefore = 0; for (const btn of btns) { const filled = btn.querySelector('[data-filled]'); if (filled && filled.getAttribute('data-filled') === 'true') votedBefore++; } const maxUpvotes = window.__data.maxUpvotes; let clicked = 0; for (const btn of btns) { if (clicked >= maxUpvotes) break; const filled = btn.querySelector('[data-filled]'); if (filled && filled.getAttribute('data-filled') === 'true') continue; btn.click(); clicked++; } await new Promise(r => setTimeout(r, 1500)); let votedAfter = 0; for (const btn of btns) { const filled = btn.querySelector('[data-filled]'); if (filled && filled.getAttribute('data-filled') === 'true') votedAfter++; } const delta = votedAfter - votedBefore; return { clicked, votedBefore, votedAfter, delta, verified: delta === clicked }; }", "data": {"maxUpvotes": 2}}
 ENDJSON
 ```
 

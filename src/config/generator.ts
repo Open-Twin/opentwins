@@ -317,6 +317,13 @@ export async function generateAgentFiles(config: OpenTwinsConfig): Promise<{ gen
     if (!existsSync(schedulePath)) {
       writeFileSync(schedulePath, '{}', 'utf-8');
     }
+
+    // Seed INSIGHTS.md for new agents
+    const insightsPath = join(outputDir, 'INSIGHTS.md');
+    if (!existsSync(insightsPath)) {
+      const platformLabel = platformAccount.platform.charAt(0).toUpperCase() + platformAccount.platform.slice(1);
+      writeFileSync(insightsPath, `# INSIGHTS.md — ${platformLabel} Agent Strategy\n\n*Updated after first memory cycle*\n\n## What Works\n\n- No data yet (first run)\n\n## What Hurts\n\n- No data yet (first run)\n`, 'utf-8');
+    }
   }
 
   // Generate pipeline workspace

@@ -48,7 +48,7 @@ Wait 3s for editor to load — URL changes to /compose/articles/edit/{id}
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var title = document.querySelector('textarea[name=\"Article Title\"]'); if (!title) return { error: 'no title field' }; title.focus(); await new Promise(r => setTimeout(r, 300)); var dt = new DataTransfer(); dt.setData('text/plain', '${articleTitle}'); title.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 500)); return { typed: title.value || title.innerText }; }"}
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var title = document.querySelector('textarea[name=\"Article Title\"]'); if (!title) return { error: 'no title field' }; title.focus(); await new Promise(r => setTimeout(r, 300)); var dt = new DataTransfer(); dt.setData('text/plain', window.__data.text); title.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 500)); return { typed: title.value || title.innerText }; }", "data": {"text": "YOUR_ARTICLE_TITLE"}}
 ENDJSON
 ```
 
@@ -62,7 +62,7 @@ Build HTML string with formatting, mentions, hashtags. Then paste:
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { var editor = document.querySelector('[data-testid=\"composer\"]'); if (!editor) return { error: 'no editor' }; editor.focus(); editor.click(); await new Promise(r => setTimeout(r, 500)); var html = ${articleHtml}; var plain = ${articlePlainText}; var dt = new DataTransfer(); dt.setData('text/plain', plain); dt.setData('text/html', html); editor.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 3000)); var result = editor.innerText; var blockCount = editor.querySelectorAll('[data-block]').length; return { pasted: true, wordCount: result.split(/\\s+/).length, blocks: blockCount }; }"}
+{"fn":"async () => { var editor = document.querySelector('[data-testid=\"composer\"]'); if (!editor) return { error: 'no editor' }; editor.focus(); editor.click(); await new Promise(r => setTimeout(r, 500)); var dt = new DataTransfer(); dt.setData('text/plain', window.__data.plain); dt.setData('text/html', window.__data.html); editor.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 3000)); var result = editor.innerText; var blockCount = editor.querySelectorAll('[data-block]').length; return { pasted: true, wordCount: result.split(/\\s+/).length, blocks: blockCount }; }", "data": {"html": "<p>YOUR_ARTICLE_HTML</p>", "plain": "YOUR_ARTICLE_TEXT"}}
 ENDJSON
 ```
 

@@ -102,7 +102,7 @@ if (ta) { ta.focus(); ta.value = commentText; ta.dispatchEvent(new Event('input'
 ```bash
 # Step 1 of 3: Insert text ONLY (no submit attempt!)
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { var commentText = '${commentText.replace(/'/g, \"\\\\'\")}'; var commentBox = document.querySelector('.comment-box'); if (!commentBox) return { error: 'comment_box_not_found' }; var editor = commentBox.querySelector('.tiptap.ProseMirror'); if (!editor) return { error: 'editor_not_found' }; editor.focus(); document.execCommand('selectAll', false, null); document.execCommand('delete', false, null); document.execCommand('insertText', false, commentText); editor.dispatchEvent(new InputEvent('input', { data: commentText, inputType: 'insertText', bubbles: true })); return { inserted: true, textLen: editor.innerText.length }; }"}
+{"fn":"async () => { var commentBox = document.querySelector('.comment-box'); if (!commentBox) return { error: 'comment_box_not_found' }; var editor = commentBox.querySelector('.tiptap.ProseMirror'); if (!editor) return { error: 'editor_not_found' }; editor.focus(); document.execCommand('selectAll', false, null); document.execCommand('delete', false, null); document.execCommand('insertText', false, window.__data.text); editor.dispatchEvent(new InputEvent('input', { data: window.__data.text, inputType: 'insertText', bubbles: true })); return { inserted: true, textLen: editor.innerText.length }; }", "data": {"text": "YOUR_COMMENT_HERE"}}
 ENDJSON
 ```
 

@@ -454,7 +454,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
         }
 
         scheduleEntries.push({
-          time: String(t.time || t.time_scheduled || '-'),
+          time: String(t.time || t.time_scheduled || t.scheduled_at || '-'),
           action: meta ? `${meta.icon} ${meta.label}` : typeKey,
           desc,
           detail: detail || undefined,

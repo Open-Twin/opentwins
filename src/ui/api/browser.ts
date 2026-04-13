@@ -97,8 +97,9 @@ export async function handleBrowserEvaluate(req: Request, res: Response): Promis
   if (!fn) { res.status(400).json({ error: 'fn is required' }); return; }
   try {
     await ensureChrome(profile);
-    const result = JSON.parse(await evaluate(profile, fn));
-    fileLog('browser', 'evaluate', { profile, fn, ok: !result.error });
+    const data = req.body?.data;
+    const result = JSON.parse(await evaluate(profile, fn, data));
+    fileLog('browser', 'evaluate', { profile, fnLen: fn.length, hasData: !!data, ok: !result.error });
     res.json(result);
   } catch (err) {
     fileError('browser', 'evaluate failed', { profile, fnLen: fn.length, error: err instanceof Error ? err.message : String(err) });

@@ -105,10 +105,18 @@ export async function closeTab(profileName: string, tabId?: string): Promise<str
   return JSON.stringify({ ok: true, closed: tab.id });
 }
 
-export async function evaluate(profileName: string, fn: string): Promise<string> {
+export async function evaluate(profileName: string, fn: string, data?: unknown): Promise<string> {
   const port = getProfilePort(profileName);
   const tab = await getActivePage(port);
   if (!tab.webSocketDebuggerUrl) throw new Error('No WebSocket URL for active tab');
+
+  // Inject data as global variable if provided
+  if (data !== undefined) {
+    await cdpSend(tab.webSocketDebuggerUrl, 'Runtime.evaluate', {
+      expression: `window.__data = ${JSON.stringify(data)}`,
+      returnByValue: true,
+    });
+  }
 
   // Wrap in IIFE if it looks like a function declaration
   let expression = fn;

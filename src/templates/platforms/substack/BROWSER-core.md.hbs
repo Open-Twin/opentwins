@@ -28,7 +28,7 @@ Wait 3s (embed in next evaluate).
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var ta = document.querySelector('textarea[name=\"body\"]'); if (!ta) return { error: 'no comment textarea found' }; var text = COMMENT_TEXT_PLACEHOLDER; ta.focus(); ta.value = text; ta.dispatchEvent(new Event('input', { bubbles: true })); ta.dispatchEvent(new Event('change', { bubbles: true })); await new Promise(r => setTimeout(r, 1000)); var btns = Array.from(document.querySelectorAll('button')); var submitBtn = btns.find(b => b.innerText.trim() === 'Post' && !b.disabled); if (!submitBtn) { await new Promise(r => setTimeout(r, 2000)); btns = Array.from(document.querySelectorAll('button')); submitBtn = btns.find(b => b.innerText.trim() === 'Post' && !b.disabled); } if (!submitBtn) return { typed: true, len: ta.value.length, error: 'no Post button' }; submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); return { typed: true, submitted: true, len: ta.value.length }; }"}
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var ta = document.querySelector('textarea[name=\"body\"]'); if (!ta) return { error: 'no comment textarea found' }; ta.focus(); ta.value = window.__data.text; ta.dispatchEvent(new Event('input', { bubbles: true })); ta.dispatchEvent(new Event('change', { bubbles: true })); await new Promise(r => setTimeout(r, 1000)); var btns = Array.from(document.querySelectorAll('button')); var submitBtn = btns.find(function(b) { return b.innerText.trim() === 'Post' && !b.disabled; }); if (!submitBtn) { await new Promise(r => setTimeout(r, 2000)); btns = Array.from(document.querySelectorAll('button')); submitBtn = btns.find(function(b) { return b.innerText.trim() === 'Post' && !b.disabled; }); } if (!submitBtn) return { typed: true, len: ta.value.length, error: 'no Post button' }; submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); return { typed: true, submitted: true, len: ta.value.length }; }", "data": {"text": "YOUR_COMMENT_HERE"}}
 ENDJSON
 ```
 
@@ -36,7 +36,7 @@ ENDJSON
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var snippet = COMMENT_SNIPPET_PLACEHOLDER; var verified = document.body.innerText.includes(snippet); return { verified: verified }; }"}
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var verified = document.body.innerText.includes(window.__data.snippet); return { verified: verified }; }", "data": {"snippet": "first 30 chars of comment"}}
 ENDJSON
 ```
 

@@ -27,14 +27,14 @@ TWO editors on page when reply open: `editors[0]` = top-level, `editors[last]` =
 **Step 1 — Click Reply button for target comment (by commentId):**
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { var commentId = '${commentId}'; var commentEl = document.getElementById('comment-' + commentId); if (!commentEl) return { error: 'comment_element_not_found', commentId: commentId }; var replyBtn = Array.from(commentEl.querySelectorAll('button')).find(b => b.innerText.trim() === 'Reply'); if (!replyBtn) return { error: 'no_reply_btn_in_comment', commentId: commentId }; replyBtn.click(); return { clicked: true, totalReplyBtns: document.querySelectorAll('button').length }; }"}
+{"fn":"async () => { var commentId = window.__data.commentId; var commentEl = document.getElementById('comment-' + commentId); if (!commentEl) return { error: 'comment_element_not_found', commentId: commentId }; var replyBtn = Array.from(commentEl.querySelectorAll('button')).find(b => b.innerText.trim() === 'Reply'); if (!replyBtn) return { error: 'no_reply_btn_in_comment', commentId: commentId }; replyBtn.click(); return { clicked: true, totalReplyBtns: document.querySelectorAll('button').length }; }", "data": {"commentId": "COMMENT_ID"}}
 ENDJSON
 ```
 
 **Step 2 — Set reply text (1.5s wait embedded — NO separate sleep step):**
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); const editors = document.querySelectorAll('.tiptap.ProseMirror'); if (editors.length < 2) return { error: 'reply_editor_not_found', editorsCount: editors.length }; const replyEditor = editors[editors.length - 1]; replyEditor.focus(); document.execCommand('selectAll', false, null); document.execCommand('delete', false, null); document.execCommand('insertText', false, '${replyText}'); return { set: true, text: replyEditor.textContent.slice(0, 50), editorsCount: editors.length }; }"}
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); const editors = document.querySelectorAll('.tiptap.ProseMirror'); if (editors.length < 2) return { error: 'reply_editor_not_found', editorsCount: editors.length }; const replyEditor = editors[editors.length - 1]; replyEditor.focus(); document.execCommand('selectAll', false, null); document.execCommand('delete', false, null); document.execCommand('insertText', false, window.__data.text); return { set: true, text: replyEditor.textContent.slice(0, 50), editorsCount: editors.length }; }", "data": {"text": "YOUR_REPLY_HERE"}}
 ENDJSON
 ```
 
@@ -48,7 +48,7 @@ ENDJSON
 **Step 4 — Verify (3s wait embedded — NO separate sleep step):**
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); const editors = document.querySelectorAll('.tiptap.ProseMirror'); const snippet = '${replyText.slice(0, 40)}'; const bodyText = document.body.innerText; return { submitted: editors.length <= 1, textOnPage: bodyText.includes(snippet), editorsCount: editors.length, url: window.location.href }; }"}
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); const editors = document.querySelectorAll('.tiptap.ProseMirror'); const snippet = window.__data.snippet; const bodyText = document.body.innerText; return { submitted: editors.length <= 1, textOnPage: bodyText.includes(snippet), editorsCount: editors.length, url: window.location.href }; }", "data": {"snippet": "first 40 chars of reply"}}
 ENDJSON
 ```
 
@@ -64,7 +64,7 @@ Page count + our comment detection + new reply extraction in a SINGLE evaluate.
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); const cutoff = new Date('${lastReplyAt}'); const pageLinks = Array.from(document.querySelectorAll('a[href*=\"?page=\"]')); const pageNums = pageLinks.map(a => { const m = a.href.match(/page=(\\d+)/); return m ? parseInt(m[1]) : 0; }).filter(n => n > 0); const pageCount = pageNums.length > 0 ? Math.max(...pageNums) : 1; const timeEls = Array.from(document.querySelectorAll('time')); const comments = timeEls.map((t, idx) => { const dt = t.getAttribute('datetime'); let el = t; let author = null; for (let i = 0; i < 8 && el; i++) { el = el.parentElement; if (!el) break; const profileLink = el.querySelector('a[href*=\"/@\"]'); if (profileLink && !el.closest('header') && (el.innerText || '').length > 50) { author = profileLink.href.match(/@([^/?]+)/)?.[1] || null; break; } } return { idx, dt, author }; }); const ourComments = comments.filter(c => c.author === '{{handle_slug}}'); const hasOurComment = ourComments.length > 0; const lastOurIdx = hasOurComment ? ourComments[ourComments.length - 1].idx : -1; const newReplies = comments.filter(c => c.idx > lastOurIdx && c.dt && new Date(c.dt) > cutoff && c.author !== '{{handle_slug}}' ).map(c => ({ author: c.author, time: c.dt })); return { pageCount, hasOurComment, lastOurIdx, newReplies, url: window.location.href }; }"}
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); const cutoff = new Date(window.__data.lastReplyAt); const pageLinks = Array.from(document.querySelectorAll('a[href*=\"?page=\"]')); const pageNums = pageLinks.map(a => { const m = a.href.match(/page=(\\d+)/); return m ? parseInt(m[1]) : 0; }).filter(n => n > 0); const pageCount = pageNums.length > 0 ? Math.max(...pageNums) : 1; const timeEls = Array.from(document.querySelectorAll('time')); const comments = timeEls.map((t, idx) => { const dt = t.getAttribute('datetime'); let el = t; let author = null; for (let i = 0; i < 8 && el; i++) { el = el.parentElement; if (!el) break; const profileLink = el.querySelector('a[href*=\"/@\"]'); if (profileLink && !el.closest('header') && (el.innerText || '').length > 50) { author = profileLink.href.match(/@([^/?]+)/)?.[1] || null; break; } } return { idx, dt, author }; }); const ourComments = comments.filter(c => c.author === '{{handle_slug}}'); const hasOurComment = ourComments.length > 0; const lastOurIdx = hasOurComment ? ourComments[ourComments.length - 1].idx : -1; const newReplies = comments.filter(c => c.idx > lastOurIdx && c.dt && new Date(c.dt) > cutoff && c.author !== '{{handle_slug}}' ).map(c => ({ author: c.author, time: c.dt })); return { pageCount, hasOurComment, lastOurIdx, newReplies, url: window.location.href }; }", "data": {"lastReplyAt": "2026-04-13T00:00:00Z"}}
 ENDJSON
 ```
 

@@ -23,58 +23,19 @@
 ## § 1 — Typing (clipboard paste)
 
 **For replies (on tweet page) — ONE evaluate call: paste + submit:**
-```javascript
-// Call via: exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-// {"fn":"async () => { ... }"}
-// ENDJSON
-async () => {
-  await new Promise(r => setTimeout(r, 1000));
-  var ta = document.querySelector('[data-testid="tweetTextarea_0"]');
-  if (!ta) return { error: 'no textarea' };
-  ta.focus();
-  await new Promise(r => setTimeout(r, 300));
-  var dt = new DataTransfer();
-  dt.setData('text/plain', '${replyText}');
-  ta.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
-  await new Promise(r => setTimeout(r, 500));
-  var typed = ta.innerText.trim();
-  if (!typed) return { error: 'paste failed' };
-  var btn = document.querySelector('[data-testid="tweetButtonInline"]');
-  if (!btn || btn.disabled) return { error: 'button disabled', text: typed.slice(0, 80) };
-  btn.click();
-  await new Promise(r => setTimeout(r, 3000));
-  return { posted: true, text: typed.slice(0, 80) };
-}
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var ta = document.querySelector('[data-testid=\"tweetTextarea_0\"]'); if (!ta) return { error: 'no textarea' }; ta.focus(); await new Promise(r => setTimeout(r, 300)); var dt = new DataTransfer(); dt.setData('text/plain', window.__data.text); ta.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 500)); var typed = ta.innerText.trim(); if (!typed) return { error: 'paste failed' }; var btn = document.querySelector('[data-testid=\"tweetButtonInline\"]'); if (!btn || btn.disabled) return { error: 'button disabled', text: typed.slice(0, 80) }; btn.click(); await new Promise(r => setTimeout(r, 3000)); return { posted: true, text: typed.slice(0, 80) }; }", "data": {"text": "YOUR_REPLY_HERE"}}
+ENDJSON
 ```
 
 **For compose dialog (original tweet, quote tweet):**
 
 **Full flow (ONE evaluate — clear + paste + submit):**
-```javascript
-async () => {
-  await new Promise(r => setTimeout(r, 2000));
-  var ta = document.querySelector('[role="dialog"] [data-testid="tweetTextarea_0"]');
-  if (!ta) return { error: 'no textarea' };
-  ta.focus();
-  // Clear any residual text
-  document.execCommand('selectAll');
-  document.execCommand('delete');
-  await new Promise(r => setTimeout(r, 300));
-  // Paste full tweet as HTML (line breaks = <br>)
-  var text = ${JSON.stringify(tweetText)};
-  var dt = new DataTransfer();
-  dt.setData('text/html', text.replace(/\n/g, '<br>'));
-  dt.setData('text/plain', text);
-  ta.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
-  // Draft.js renders paste async — wait for text to appear
-  await new Promise(r => setTimeout(r, 2000));
-  // Submit
-  var btn = document.querySelector('[role="dialog"] [data-testid="tweetButton"]');
-  if (!btn || btn.disabled) return { error: 'button disabled', text: ta.innerText.slice(0, 100) };
-  btn.click();
-  await new Promise(r => setTimeout(r, 3000));
-  return { posted: !document.querySelector('[role="dialog"]'), len: text.length };
-}
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); var ta = document.querySelector('[role=\"dialog\"] [data-testid=\"tweetTextarea_0\"]'); if (!ta) return { error: 'no textarea' }; ta.focus(); document.execCommand('selectAll'); document.execCommand('delete'); await new Promise(r => setTimeout(r, 300)); var text = window.__data.text; var dt = new DataTransfer(); dt.setData('text/html', text.replace(/\\n/g, '<br>')); dt.setData('text/plain', text); ta.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 2000)); var btn = document.querySelector('[role=\"dialog\"] [data-testid=\"tweetButton\"]'); if (!btn || btn.disabled) return { error: 'button disabled', text: ta.innerText.slice(0, 100) }; btn.click(); await new Promise(r => setTimeout(r, 3000)); return { posted: !document.querySelector('[role=\"dialog\"]'), len: text.length }; }", "data": {"text": "YOUR_TWEET_HERE"}}
+ENDJSON
 ```
 
 **Format rules for original tweets:**
@@ -100,6 +61,6 @@ ENDJSON
 To like a specific tweet on a feed/search page (without the combined read):
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { const tweets = Array.from(document.querySelectorAll('article[data-testid=\"tweet\"]')); const target = tweets.find(t => { const link = t.querySelector('a[href*=\"/status/\"]'); return link?.getAttribute('href')?.includes('/${tweetId}'); }); if (!target) return { error: 'tweet not found' }; const likeBtn = target.querySelector('[data-testid=\"like\"]'); if (!likeBtn) { if (target.querySelector('[data-testid=\"unlike\"]')) return { already_liked: true }; return { error: 'like button not found' }; } likeBtn.click(); return { clicked: true }; }"}
+{"fn":"async () => { const tweets = Array.from(document.querySelectorAll('article[data-testid=\"tweet\"]')); const target = tweets.find(t => { const link = t.querySelector('a[href*=\"/status/\"]'); return link?.getAttribute('href')?.includes('/' + window.__data.tweetId); }); if (!target) return { error: 'tweet not found' }; const likeBtn = target.querySelector('[data-testid=\"like\"]'); if (!likeBtn) { if (target.querySelector('[data-testid=\"unlike\"]')) return { already_liked: true }; return { error: 'like button not found' }; } likeBtn.click(); return { clicked: true }; }", "data": {"tweetId": "TWEET_ID"}}
 ENDJSON
 ```

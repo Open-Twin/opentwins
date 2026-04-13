@@ -21,14 +21,14 @@
 ```bash
 # Step 1: Set title (Ember textarea — use .value + input event)
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { var titleArea = document.querySelector('textarea.post-page__title-field'); if (!titleArea) return { error: 'title_field_not_found' }; titleArea.focus(); titleArea.value = '${postTitle}'; titleArea.dispatchEvent(new Event('input', { bubbles: true })); titleArea.dispatchEvent(new Event('change', { bubbles: true })); return { success: true, titleLen: titleArea.value.length }; }"}
+{"fn":"async () => { var titleArea = document.querySelector('textarea.post-page__title-field'); if (!titleArea) return { error: 'title_field_not_found' }; titleArea.focus(); titleArea.value = window.__data.text; titleArea.dispatchEvent(new Event('input', { bubbles: true })); titleArea.dispatchEvent(new Event('change', { bubbles: true })); return { success: true, titleLen: titleArea.value.length }; }", "data": {"text": "YOUR_POST_TITLE"}}
 ENDJSON
 ```
 
 ```bash
 # Step 2: Set body (Ember textarea — use .value + input event)
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { var bodyArea = document.querySelector('textarea.edit-post__body-field'); if (!bodyArea) return { error: 'body_field_not_found' }; bodyArea.focus(); bodyArea.value = '${postBody}'; bodyArea.dispatchEvent(new Event('input', { bubbles: true })); bodyArea.dispatchEvent(new Event('change', { bubbles: true })); return { success: true, bodyLen: bodyArea.value.length }; }"}
+{"fn":"async () => { var bodyArea = document.querySelector('textarea.edit-post__body-field'); if (!bodyArea) return { error: 'body_field_not_found' }; bodyArea.focus(); bodyArea.value = window.__data.text; bodyArea.dispatchEvent(new Event('input', { bubbles: true })); bodyArea.dispatchEvent(new Event('change', { bubbles: true })); return { success: true, bodyLen: bodyArea.value.length }; }", "data": {"text": "YOUR_POST_BODY"}}
 ENDJSON
 ```
 

@@ -49,7 +49,7 @@ The script below tries "Publish reply" first, falls back to "Publish post" — w
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); const dialog = document.querySelector('[role=\"dialog\"]'); if (!dialog) return { error: 'no_dialog' }; const textbox = dialog.querySelector('[role=\"textbox\"][contenteditable=\"true\"]'); if (!textbox) return { error: 'no_textbox' }; textbox.focus(); document.execCommand('insertText', false, '${commentText}'); await new Promise(r => setTimeout(r, 500)); const submitBtn = dialog.querySelector('button[aria-label=\"Publish reply\"]') || dialog.querySelector('button[aria-label=\"Publish post\"]'); if (!submitBtn) return { typed: true, error: 'no_submit_button' }; submitBtn.click(); return { typed: true, submitted: true }; }"}
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); const dialog = document.querySelector('[role=\"dialog\"]'); if (!dialog) return { error: 'no_dialog' }; const textbox = dialog.querySelector('[role=\"textbox\"][contenteditable=\"true\"]'); if (!textbox) return { error: 'no_textbox' }; textbox.focus(); document.execCommand('insertText', false, window.__data.text); await new Promise(r => setTimeout(r, 500)); const submitBtn = dialog.querySelector('button[aria-label=\"Publish reply\"]') || dialog.querySelector('button[aria-label=\"Publish post\"]'); if (!submitBtn) return { typed: true, error: 'no_submit_button' }; submitBtn.click(); return { typed: true, submitted: true }; }", "data": {"text": "YOUR_COMMENT_HERE"}}
 ENDJSON
 ```
 
