@@ -151,8 +151,10 @@ export function Agents() {
     };
     const result = await saveConfig({ platforms: [...config.platforms, entry] }) as { ok?: boolean; regenerated?: number } | null;
     if (result?.ok) {
+      const addedPlatform = newPlatform;
       setAddingPlatform(false); setNewPlatform(''); setNewHandle('');
-      setFlash(`Added ${PLATFORM_LABELS[newPlatform]} - ${result.regenerated} files generated`);
+      setSelected(addedPlatform);
+      setFlash(`Added ${PLATFORM_LABELS[addedPlatform]} - ${result.regenerated} files generated`);
       refetch(); refetchConfig();
       setTimeout(() => setFlash(null), 4000);
     }
