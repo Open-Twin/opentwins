@@ -127,10 +127,10 @@ Filter `schedule.json`: `status="pending"` AND `time <= now`
    - Navigate to post URL
    - 🚨 **MANDATORY: Run BROWSER-engage.md S 4a** (has 3s embedded wait — duplicate check + post text in ONE evaluate)
      If `alreadyCommented: true` → append post_id to `memory/commented_posts.txt` (backfill), skip to next candidate.
-   - 🚨 **MANDATORY: Follow FIRST** — Run BROWSER-engage.md S 7 (from post page, no navigation needed). Every engagement = follow.
    - 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/E/F) — check if defaulting to agree+expand, check length variation across batch, apply anti-AI checks, use short-and-punchy style for high-engagement posts
    - Run BROWSER-engage.md S 4b (Click Reply Button)
    - Run BROWSER-core.md S 5 (ONE evaluate: 1.5s wait + type + 0.5s wait + submit)
+   - 🚨 **MANDATORY: Follow AFTER comment** — Run BROWSER-engage.md S 7 (from post page, no navigation needed). Every engagement = follow.
    - Language: ALWAYS English (Ukrainian only if post is Ukrainian, per SOUL.md)
 7. **After each successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
 8. Log: Type = "Comment", increment `comments_done` in memory
@@ -143,10 +143,10 @@ Filter `schedule.json`: `status="pending"` AND `time <= now`
 1. If `weekly.quotes.current >= limit` -> mark done, skip
 2. Multi-query search + filter (same as engagement steps 2-4 — run all assigned queries, merge candidates)
 3. Navigate to post, wait 3s
-4. 🚨 **MANDATORY: Follow FIRST** — Run BROWSER-engage.md S 7 (from post page, no navigation needed)
-5. Run BROWSER-engage.md S 6 (Click Quote)
-6. 🚨 **MANDATORY: Apply Quote Post Quality Rules** (PLAYBOOK.md §C) — must include personal experience, specific detail, or strong opinion. NO abstract reframes.
-7. Run BROWSER-core.md **S 5b** (multiline paste flow) -- use SOUL.md voice, 1-2 sentences + hashtags. Use `\n\n` between text and hashtags.
+4. Run BROWSER-engage.md S 6 (Click Quote)
+5. 🚨 **MANDATORY: Apply Quote Post Quality Rules** (PLAYBOOK.md §C) — must include personal experience, specific detail, or strong opinion. NO abstract reframes.
+6. Run BROWSER-core.md **S 5b** (multiline paste flow) -- use SOUL.md voice, 1-2 sentences + hashtags. Use `\n\n` between text and hashtags.
+7. 🚨 **MANDATORY: Follow AFTER quote** — Run BROWSER-engage.md S 7 (from post page, no navigation needed)
 8. Log: Type = "Quote", increment `weekly.quotes.current`, mark done
 
 ### Content-Ready Override (publish tasks only)

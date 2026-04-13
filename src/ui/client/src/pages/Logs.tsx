@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface LogEntry {
   ts: string;
@@ -111,7 +111,7 @@ export function Logs() {
       </div>
 
       {/* Filters bar */}
-      <div className="panel noise animate-fade-up">
+      <div className="panel noise animate-fade-up" style={{ overflow: 'visible' }}>
         <div className="px-4 py-3 flex items-center gap-3 flex-wrap">
           {/* Date picker */}
           <input
@@ -145,17 +145,7 @@ export function Logs() {
           </div>
 
           {/* Module filter */}
-          <select
-            value={modFilter}
-            onChange={(e) => setModFilter(e.target.value)}
-            className="mono text-[12px] bg-transparent outline-none px-2 py-1.5 rounded"
-            style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }}
-          >
-            <option value="">All modules</option>
-            {modules.map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
+          <ModuleDropdown value={modFilter} options={modules} onChange={setModFilter} />
 
           {/* Search */}
           <input
@@ -248,6 +238,63 @@ export function Logs() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function ModuleDropdown({ value, options, onChange }: { value: string; options: string[]; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="mono text-[12px] px-2 py-1.5 rounded flex items-center gap-1.5"
+        style={{
+          color: value ? 'var(--c-teal)' : 'var(--c-text-dim)',
+          border: '1px solid var(--c-border-dim)',
+        }}
+      >
+        {value || 'All modules'}
+        <span className="text-[9px]" style={{ color: 'var(--c-text-muted)' }}>▼</span>
+      </button>
+      {open && (
+        <div
+          className="absolute top-full left-0 mt-1 py-1 rounded-lg z-50 min-w-[140px]"
+          style={{
+            background: 'var(--c-panel)',
+            border: '1px solid var(--c-border-dim)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+          }}
+        >
+          <button
+            onClick={() => { onChange(''); setOpen(false); }}
+            className="w-full text-left mono text-[12px] px-3 py-1.5 transition-colors hover:bg-white/[0.05]"
+            style={{ color: !value ? 'var(--c-teal)' : 'var(--c-text-dim)' }}
+          >
+            All modules
+          </button>
+          {options.map((m) => (
+            <button
+              key={m}
+              onClick={() => { onChange(m); setOpen(false); }}
+              className="w-full text-left mono text-[12px] px-3 py-1.5 transition-colors hover:bg-white/[0.05]"
+              style={{ color: value === m ? 'var(--c-teal)' : 'var(--c-text-dim)' }}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -232,9 +232,9 @@ export function Agents() {
             </div>
             <div className="flex items-center gap-3">
               <span className="mono text-[14px] uppercase tracking-wider w-20 shrink-0" style={{ color: 'var(--c-text-muted)' }}>Handle</span>
-              <div className="flex-1">
-                <input value={newHandle} onChange={(e) => setNewHandle(e.target.value)} placeholder={PLATFORM_HANDLE_HINT[newPlatform] || 'username'} className="mono text-sm w-full bg-transparent outline-none px-2 py-1.5 rounded transition-colors" style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }} onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'} onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'} />
-                {newHandle && <div className="mono text-[14px] mt-1.5" style={{ color: 'var(--c-text-muted)' }}>{PLATFORM_URL_PREFIX[newPlatform]}{newPlatform === 'bluesky' && !newHandle.includes('.') ? newHandle + '.bsky.social' : newHandle}</div>}
+              <div className="flex-1 flex items-center rounded overflow-hidden" style={{ border: '1px solid var(--c-border-dim)' }} onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'} onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'}>
+                <span className="mono text-[12px] px-2 py-1.5 shrink-0 select-none" style={{ color: 'var(--c-text-muted)', background: 'rgba(255,255,255,0.03)' }}>{PLATFORM_URL_PREFIX[newPlatform]}</span>
+                <input value={newHandle} onChange={(e) => setNewHandle(e.target.value.replace(/^https?:\/\/.*\//, ''))} placeholder={PLATFORM_HANDLE_HINT[newPlatform] || 'username'} className="mono text-sm flex-1 bg-transparent outline-none px-2 py-1.5" style={{ color: 'var(--c-text-dim)' }} />
               </div>
             </div>
             {newPlatform && DEFAULT_LIMITS[newPlatform] && (
@@ -466,7 +466,7 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
 
   // Compute header stats
   const scheduleTasksTotal = scheduleEntries.length;
-  const scheduleTasksDone = scheduleEntries.filter((t) => t.status === 'completed').length;
+  const scheduleTasksDone = scheduleEntries.filter((t) => t.status === 'completed' || t.status === 'done').length;
   const dailyLimitsTotal = agent.limits?.daily ? Object.values(agent.limits.daily).reduce((s, v) => s + (v.current || 0), 0) : 0;
   const dailyLimitsMax = agent.limits?.daily ? Object.values(agent.limits.daily).reduce((s, v) => s + (v.limit || 0), 0) : 0;
   const fullProfileUrl = profileUrl(platform, agent.handle);
@@ -584,36 +584,35 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
               )}
             </div>
           </div>
-          <div className="p-5 space-y-3">
+          <div className={editApiKeys ? 'p-5 space-y-3' : 'px-5 py-3 space-y-1'}>
             {agent.requiredApiKeys.map((rk) => {
               const value = editApiKeys ? (editApiKeys[rk.key] || '') : (agent.api_keys[rk.key] || '');
               const isSet = value.length > 0;
-              return (
+              return editApiKeys ? (
                 <div key={rk.key}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="mono text-[13px]" style={{ color: 'var(--c-text-dim)' }}>{rk.label}</span>
-                    {!editApiKeys && (
-                      <span className="mono text-[13px]" style={{ color: isSet ? 'var(--c-green)' : '#fb923c' }}>
-                        {isSet ? 'configured' : 'missing'}
-                      </span>
-                    )}
                   </div>
-                  {editApiKeys ? (
-                    <input
-                      type="password"
-                      value={editApiKeys[rk.key] || ''}
-                      onChange={(e) => setEditApiKeys({ ...editApiKeys, [rk.key]: e.target.value })}
-                      placeholder={rk.hint}
-                      className="mono text-[13px] w-full bg-transparent outline-none px-2 py-1.5 rounded transition-colors"
-                      style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }}
-                      onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'}
-                      onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'}
-                    />
-                  ) : (
-                    <div className="mono text-[14px]" style={{ color: 'var(--c-text-muted)' }}>
-                      {isSet ? '****' + value.slice(-4) : rk.hint}
-                    </div>
-                  )}
+                  <input
+                    type="password"
+                    value={editApiKeys[rk.key] || ''}
+                    onChange={(e) => setEditApiKeys({ ...editApiKeys, [rk.key]: e.target.value })}
+                    placeholder={rk.hint}
+                    className="mono text-[13px] w-full bg-transparent outline-none px-2 py-1.5 rounded transition-colors"
+                    style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }}
+                    onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'}
+                    onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'}
+                  />
+                </div>
+              ) : (
+                <div key={rk.key} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="mono text-[13px]" style={{ color: 'var(--c-text-dim)' }}>{rk.label}</span>
+                    <span className="mono text-[12px]" style={{ color: 'var(--c-text-muted)' }}>{isSet ? '····' + value.slice(-4) : rk.hint}</span>
+                  </div>
+                  <span className="mono text-[12px]" style={{ color: isSet ? 'var(--c-green)' : '#fb923c' }}>
+                    {isSet ? 'configured' : 'missing'}
+                  </span>
                 </div>
               );
             })}
@@ -1313,8 +1312,9 @@ function ScheduleTaskList({ entries, color }: { entries: Array<{ time: string; a
       {entries.map((t, i) => {
         const isOpen = expanded.has(i);
         const hasDetail = !!t.detail;
+        const isDone = t.status === 'completed' || t.status === 'done';
         const statusColor =
-          t.status === 'completed' ? 'var(--c-green)' :
+          isDone              ? 'var(--c-green)' :
           t.status === 'failed'    ? 'var(--c-red)' :
           t.status === 'running'   ? 'var(--c-blue)' :
           'var(--c-text-muted)';
@@ -1338,11 +1338,11 @@ function ScheduleTaskList({ entries, color }: { entries: Array<{ time: string; a
               {t.status && (
                 <span className="mono text-[11px] uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0" style={{
                   color: statusColor,
-                  background: t.status === 'completed' ? 'rgba(52,211,153,0.1)' :
+                  background: isDone                   ? 'rgba(52,211,153,0.1)' :
                               t.status === 'failed'    ? 'rgba(248,113,113,0.1)' :
                               t.status === 'running'   ? 'rgba(96,165,250,0.12)' :
                               'rgba(148,163,184,0.08)',
-                }}>{t.status}</span>
+                }}>{isDone ? 'completed' : t.status}</span>
               )}
             </div>
             {isOpen && t.detail && (
