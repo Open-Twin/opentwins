@@ -309,55 +309,41 @@ export function ActivityLog() {
                     style={{ background: s.status === 'running' ? 'var(--c-blue)' : s.status === 'completed' ? 'var(--c-green)' : 'var(--c-amber)' }}
                   />
 
-                  <div className="p-5 pl-6 flex items-center justify-between gap-6 flex-wrap">
+                  <div className={`${isExpanded ? 'p-5 pl-6' : 'px-5 pl-6 py-3'} flex items-center justify-between gap-6 flex-wrap`}>
                     {/* Identity */}
-                    <div className="flex items-center gap-4 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                        className="w-2 h-2 rounded-full shrink-0"
                         style={{
-                          background: `${color}15`,
-                          border: `1px solid ${color}30`,
+                          background: color,
+                          boxShadow: s.status === 'running' ? `0 0 12px ${color}` : `0 0 8px ${color}40`,
                         }}
+                      />
+                      <span className="text-sm font-semibold capitalize" style={{ color: 'var(--c-text)' }}>
+                        {s.platform}
+                      </span>
+                      <span
+                        className="mono text-[10px] uppercase tracking-wider font-medium px-2 py-0.5 rounded-full"
+                        style={{ color: st.color, background: st.bg, border: `1px solid ${st.border}` }}
                       >
-                        <div
-                          className="w-2 h-2 rounded-full"
-                          style={{
-                            background: color,
-                            boxShadow: s.status === 'running' ? `0 0 12px ${color}` : `0 0 8px ${color}40`,
-                          }}
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <span className="text-base font-semibold capitalize" style={{ color: 'var(--c-text)' }}>
-                            {s.platform}
-                          </span>
-                          <span
-                            className="mono text-[11px] uppercase tracking-wider font-medium px-2.5 py-1 rounded-full"
-                            style={{ color: st.color, background: st.bg, border: `1px solid ${st.border}` }}
-                          >
-                            {s.status === 'running' && <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 animate-pulse" style={{ background: st.color }} />}
-                            {st.label}
-                          </span>
-                        </div>
-                        <div className="mono text-[13px] mt-1 flex items-center gap-2" style={{ color: 'var(--c-text-muted)' }}>
-                          <span>{formatTime(s.startedAt)} → {formatTime(s.endedAt)}</span>
-                          <span style={{ color: 'var(--c-border)' }}>·</span>
-                          <span>{formatDuration(s.durationMs)}</span>
-                          <span style={{ color: 'var(--c-border)' }}>·</span>
-                          <span style={{ color: 'var(--c-border)' }}>{s.sessionId.slice(0, 8)}</span>
-                        </div>
+                        {s.status === 'running' && <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 animate-pulse" style={{ background: st.color }} />}
+                        {st.label}
+                      </span>
+                      <div className="mono text-[12px] flex items-center gap-2" style={{ color: 'var(--c-text-muted)' }}>
+                        <span>{formatTime(s.startedAt)} → {formatTime(s.endedAt)}</span>
+                        <span style={{ color: 'var(--c-border)' }}>·</span>
+                        <span>{formatDuration(s.durationMs)}</span>
                       </div>
                     </div>
 
                     {/* Metrics */}
-                    <div className="flex items-center gap-6 shrink-0">
+                    <div className="flex items-center gap-5 shrink-0">
                       <Metric label="Events" value={s.eventCount} />
                       <Metric label="Tools"  value={s.toolCount} />
                       {s.errorCount > 0 && (
                         <Metric label="Errors" value={s.errorCount} color="var(--c-red)" />
                       )}
-                      <span className="text-lg transition-transform duration-200" style={{
+                      <span className="text-sm transition-transform duration-200" style={{
                         color: 'var(--c-teal-dim)',
                         transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
                       }}>
