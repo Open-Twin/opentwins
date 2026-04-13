@@ -74,14 +74,12 @@ printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"a
    - 🚨 `/navigate` to post URL (reuse existing tab, do NOT `/open`)
    - 🚨 **Do NOT use page-level `alreadyReplied` check** (looking for our profile link on page) — false positives because our ORIGINAL comment is always present on notification pages. The tracking file grep is the authoritative dedup.
    - 🚨 **Consecutive reply limit** (check BEFORE replying): Count our comments on this post page:
-     ```javascript
-     var comments = Array.from(document.querySelectorAll('article[class*="comment"]'));
-     var ourReplies = comments.filter(function(c) {
-       return c.innerText.includes('{{name}}') || c.innerText.includes('{{handle_slug}}');
-     }).length;
-     if (ourReplies >= 2) return { skipped: true, reason: 'too_many_replies_on_post', count: ourReplies };
+     ```bash
+     exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+     {"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var comments = Array.from(document.querySelectorAll('article[class*=\"comment\"]')); var ourReplies = comments.filter(function(c) { return c.innerText.includes('{{name}}') || c.innerText.includes('{{handle_slug}}'); }).length; if (ourReplies >= 2) return { skipped: true, reason: 'too_many_replies_on_post', count: ourReplies }; return { count: ourReplies }; }"}
+     ENDJSON
      ```
-     - `ourReplies >= 2` → skip reply, append tracking key, log `Type=Reply Skipped, Reason=too_many_replies_on_post, count={N}`
+     - `ourReplies >= 2` → skip reply, append tracking key, log `Type=Reply Skipped`
    - 🚨 **MUST use threaded reply flow:** BROWSER-notifications.md SS 5 Step 0 (click Reply on target comment) → Step 1 (type in "Add a reply..." editor) → Step 2 (submit). Do NOT use top-level "Add a comment..." box — that creates a new top-level comment instead of a threaded reply.
    - 🚨 **ALWAYS @mention the person** you're replying to at the start of your reply text (e.g. `@Ofir Shentzer good point about...`). LinkedIn threads are flat — @mention makes it clear who you're addressing and triggers a notification to them.
    - Language: ALWAYS English (Ukrainian only if comment is Ukrainian, per SOUL.md)
@@ -111,17 +109,7 @@ Before executing any `publish_post` or `publish_article` task:
 1. Read the file at `config.content_source`
 2. Find the first post with `status: pending`
 3. Use that content for publishing
-4. 🚨 **LinkedIn post formatting:** Each line becomes its own `<p>` tag. Empty lines (paragraph breaks) use `<p><br></p>`. This is how LinkedIn's Quill editor natively stores content:
-   ```javascript
-   // Split on \n, wrap each line in <p>, empty lines become <p><br></p>
-   var lines = postText.split('\n');
-   var html = lines.map(function(line) {
-     return '<p>' + (line.trim() === '' ? '<br>' : line) + '</p>';
-   }).join('');
-   editor.innerHTML = html;
-   editor.dispatchEvent(new Event('input', { bubbles: true }));
-   ```
-   🚨 **Shell quoting:** HTML angle brackets break shell quoting. Write the JS function to a temp file first, then evaluate from file.
+4. Use BROWSER-post.md SS 10 Step 2 to type post content (handles line formatting via `data` field).
 5. After verified publish → update the file: change `status: pending` to `status: published` for that post
 
 ### search_and_comment
@@ -131,16 +119,10 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
 1. **Priority targets first** (if `config.priority_targets` exists):
    - Grep pre-check on activity ID/slug before navigating
    - Navigate to target URL, then **age check + page dedup in ONE evaluate:**
-   ```javascript
-   async () => {
-     await new Promise(r => setTimeout(r, 3000));
-     var timeEl = document.querySelector('time');
-     var age = timeEl ? timeEl.innerText.trim() : '';
-     var tooOld = /\d+\s*(mo|yr)/.test(age) || (/(\d+)w/.test(age) && parseInt(age) > 1);
-     var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle_slug}}"]'));
-     var alreadyCommented = ourLinks.filter(a => !a.href.includes('sidebar_menu')).length > 0;
-     return { age: age, tooOld: tooOld, alreadyCommented: alreadyCommented };
-   }
+   ```bash
+   exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+   {"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var timeEl = document.querySelector('time'); var age = timeEl ? timeEl.innerText.trim() : ''; var tooOld = /\\d+\\s*(mo|yr)/.test(age) || (/\\d+w/.test(age) && parseInt(age) > 1); var ourLinks = Array.from(document.querySelectorAll('a[href*=\"/in/{{handle_slug}}\"]')); var alreadyCommented = ourLinks.filter(function(a) { return !a.href.includes('sidebar_menu'); }).length > 0; return { age: age, tooOld: tooOld, alreadyCommented: alreadyCommented }; }"}
+   ENDJSON
    ```
    If `tooOld` → skip immediately. If `alreadyCommented` → **backfill tracking** (`grep -qF "{trackId}" memory/commented_posts.txt || echo "{trackId}" >> memory/commented_posts.txt`), then skip.
    If page shows "Something went wrong" → URL is invalid, skip immediately.
@@ -159,30 +141,17 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
 8. **Comment — three paths based on post type:**
    - **Feed posts with `postUrl` (`isPulse: false`, `trackId` exists):** Comment INLINE using SS 4 (do NOT navigate). 🚨 Use the `content` field from SS 2 extraction to inform your comment — your comment MUST directly address the post's topic. Step 1 + Step 2.
    - **Feed posts WITHOUT `postUrl` (`trackId` empty):** These posts have no URL in search DOM. Click into the post from search results (evaluate: `items[idx].querySelector('span').click()` or similar), wait 3s, then 🚨 **MANDATORY: Read post content** (BROWSER-engage.md SS 3c — your comment MUST directly address the returned `text`), then extract trackId + page-level dedup in ONE evaluate:
-     ```javascript
-     async () => {
-       await new Promise(r => setTimeout(r, 3000));
-       var url = window.location.href;
-       var m = url.match(/(\d{16,20})/);
-       var trackId = m ? m[1] : '';
-       var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle_slug}}"]'));
-       var alreadyCommented = ourLinks.filter(a => !a.href.includes('sidebar_menu')).length > 0;
-       return { trackId: trackId, alreadyCommented: alreadyCommented, url: url };
-     }
+     ```bash
+     exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+     {"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var url = window.location.href; var m = url.match(/(\\d{16,20})/); var trackId = m ? m[1] : ''; var ourLinks = Array.from(document.querySelectorAll('a[href*=\"/in/{{handle_slug}}\"]')); var alreadyCommented = ourLinks.filter(function(a) { return !a.href.includes('sidebar_menu'); }).length > 0; return { trackId: trackId, alreadyCommented: alreadyCommented, url: url }; }"}
+     ENDJSON
      ```
      If `alreadyCommented` → backfill trackId, skip. Otherwise comment using TipTap editor on the post page.
    - **Pulse articles (`isPulse: true`):** Navigate to `postUrl` directly. Then run ONE evaluate for dedup + content read:
-     ```javascript
-     async () => {
-       await new Promise(r => setTimeout(r, 3000));
-       var ourLinks = Array.from(document.querySelectorAll('a[href*="/in/{{handle_slug}}"]'));
-       var alreadyCommented = ourLinks.filter(a => !a.href.includes('sidebar_menu')).length > 0;
-       if (alreadyCommented) return { alreadyCommented: true };
-       var article = document.querySelector('article') || document.querySelector('.reader-article-content');
-       var content = article ? article.innerText.slice(0, 1200) : document.body.innerText.slice(0, 1200);
-       var title = (document.querySelector('h1') || {}).innerText || '';
-       return { alreadyCommented: false, title: title, content: content };
-     }
+     ```bash
+     exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+     {"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var ourLinks = Array.from(document.querySelectorAll('a[href*=\"/in/{{handle_slug}}\"]')); var alreadyCommented = ourLinks.filter(function(a) { return !a.href.includes('sidebar_menu'); }).length > 0; if (alreadyCommented) return { alreadyCommented: true }; var article = document.querySelector('article') || document.querySelector('.reader-article-content'); var content = article ? article.innerText.slice(0, 1200) : document.body.innerText.slice(0, 1200); var title = (document.querySelector('h1') || {}).innerText || ''; return { alreadyCommented: false, title: title, content: content }; }"}
+     ENDJSON
      ```
      🚨 **If `alreadyCommented: true` → MUST backfill tracking file immediately** (previous heartbeat may have commented but got cut off before tracking):
      ```bash

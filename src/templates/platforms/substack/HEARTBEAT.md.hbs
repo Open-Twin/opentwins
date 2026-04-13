@@ -106,12 +106,12 @@ printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"a
    - 🚨 **Page-level dedup (post pages only):** On `/p/` URLs (article pages), check for `a[href*="/@{{handle}}"]` — if found, already replied.
      On `/note/` URLs — **SKIP page-level check.** Our profile link always appears as note author → false positive. The grep pre-check (step 4) is authoritative for notes. Proceed directly to reply.
    - 🚨 **Consecutive reply limit** (check BEFORE replying): Count our name on the page:
-     ```javascript
-     var bodyText = document.body.innerText;
-     var ourReplies = (bodyText.match(/{{name}}/g) || []).length;
-     if (ourReplies >= 3) return { skipped: true, reason: 'too_many_replies_in_thread', count: ourReplies };
+     ```bash
+     exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+     {"fn":"async () => { var bodyText = document.body.innerText; var matches = bodyText.match(/{{name}}/g) || []; if (matches.length >= 3) return { skipped: true, reason: 'too_many_replies_in_thread', count: matches.length }; return { count: matches.length }; }"}
+     ENDJSON
      ```
-     - `ourReplies >= 3` → skip reply, append tracking key, log `Type=Reply Skipped, Reason=too_many_replies_in_thread, count={N}`
+     - `count >= 3` → skip reply, append tracking key, log `Type=Reply Skipped`
    - **Choose reply method by URL pattern:**
      - URL contains `/note/c-` (comment-thread view): use **SS 3B** ("Leave a reply..." button). This replies to the thread correctly.
      - URL contains `/note/p-` (post note view): use **SS 3C** (find replier's per-comment Comment button). If SS 3C fails to find the button → fall back to SS 3B.
@@ -153,29 +153,10 @@ Before executing any `publish_newsletter` or `publish_note` task:
      ```
      Only navigate to "OK:" posts.
   4. Per selected post (grep returned "OK"): Navigate to `{post_url}/comments` directly. Then **paywall probe + dedup check (ONE evaluate):**
-     ```javascript
-     async () => {
-       await new Promise(r => setTimeout(r, 5000));
-       var textarea = document.querySelector('textarea[name="body"]');
-       if (!textarea) return { canComment: false, paywall: true };
-       // Probe: type a char to trigger paid-only popup (Substack shows textarea but blocks on submit)
-       textarea.focus();
-       textarea.value = 'x';
-       textarea.dispatchEvent(new Event('input', { bubbles: true }));
-       await new Promise(r => setTimeout(r, 1500));
-       var paidPopup = document.body.innerText.includes('Only paid subscribers can comment');
-       if (paidPopup) return { canComment: false, paywall: true, reason: 'paid_subscribers_only' };
-       // Clear probe text
-       textarea.value = '';
-       textarea.dispatchEvent(new Event('input', { bubbles: true }));
-       // Dedup check (post pages only - skip on /note/ URLs)
-       var url = window.location.href;
-       var hasOwnComment = false;
-       if (!url.includes('/note/')) {
-         hasOwnComment = Array.from(document.querySelectorAll('a')).some(a => (a.href || '').includes('/@{{handle}}'));
-       }
-       return { canComment: true, paywall: false, alreadyCommented: hasOwnComment };
-     }
+     ```bash
+     exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+     {"fn":"async () => { await new Promise(r => setTimeout(r, 5000)); var textarea = document.querySelector('textarea[name=\"body\"]'); if (!textarea) return { canComment: false, paywall: true }; textarea.focus(); textarea.value = 'x'; textarea.dispatchEvent(new Event('input', { bubbles: true })); await new Promise(r => setTimeout(r, 1500)); var paidPopup = document.body.innerText.includes('Only paid subscribers can comment'); if (paidPopup) return { canComment: false, paywall: true, reason: 'paid_subscribers_only' }; textarea.value = ''; textarea.dispatchEvent(new Event('input', { bubbles: true })); var url = window.location.href; var hasOwnComment = false; if (!url.includes('/note/')) { hasOwnComment = Array.from(document.querySelectorAll('a')).some(function(a) { return (a.href || '').includes('/@{{handle}}'); }); } return { canComment: true, paywall: false, alreadyCommented: hasOwnComment }; }"}
+     ENDJSON
      ```
      If `paywall: true` → skip immediately. If `alreadyCommented: true` → backfill tracking, skip.
      Otherwise: Like post (BROWSER-engage.md SS 4, scroll up) -> 🚨 **Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) -> comment (BROWSER-core.md SS 3, textarea already visible) -> **after commenting: subscribe** if not already subscribed and `daily.subscribes.current < limit` (BROWSER-engage.md SS 6) -> restack with a note if high-quality and `daily.restacks.current < limit` (BROWSER-restack.md SS 10)

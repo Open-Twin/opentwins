@@ -3,10 +3,10 @@
 ## Shadow DOM
 
 LinkedIn's post/poll/repost creation modal lives inside shadow DOM. All modal UI elements are inside `#interop-outlet` shadowRoot:
-```javascript
-const host = document.querySelector('#interop-outlet');
-const shadow = host.shadowRoot;
-shadow.querySelector('button');  // finds modal buttons
+```
+host = document.querySelector('#interop-outlet')
+shadow = host.shadowRoot
+shadow.querySelector('button')  // finds modal buttons
 ```
 
 ---

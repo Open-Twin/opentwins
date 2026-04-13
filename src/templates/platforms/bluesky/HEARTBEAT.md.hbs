@@ -144,46 +144,21 @@ Before executing any `original_post` task:
 2. Draft post using TOOLS.md "Original Post Strategy" + SOUL.md voice. 1-3 sentences + 3-5 hashtags (read from `queries.json → hashtags` array).
 3. Click compose button: `button[aria-label="Compose new post"]` (text: "New Post")
 4. 🚨 **300 character limit.** Bluesky disables publish above 300 chars. Verify post text is under 300 before typing.
-5. Type in dialog textbox using **char-by-char with keyboard events** (React requires this — bulk `execCommand` does NOT enable the publish button):
-   ```javascript
-   var dialog = document.querySelector('[role="dialog"]');
-   var textbox = dialog.querySelector('[role="textbox"][contenteditable="true"]');
-   textbox.focus();
-   for (var i = 0; i < text.length; i++) {
-     var c = text[i];
-     if (c === '\n') {
-       textbox.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
-       document.execCommand('insertLineBreak');
-       textbox.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
-     } else {
-       textbox.dispatchEvent(new KeyboardEvent('keydown', { key: c, bubbles: true }));
-       document.execCommand('insertText', false, c);
-       textbox.dispatchEvent(new KeyboardEvent('keyup', { key: c, bubbles: true }));
-     }
-   }
+5. Type in dialog textbox using char-by-char with keyboard events, then click publish:
+   ```bash
+   exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+   {"fn":"async () => { var text = window.__data.text; var dialog = document.querySelector('[role=\"dialog\"]'); if (!dialog) return { error: 'no dialog' }; var textbox = dialog.querySelector('[role=\"textbox\"][contenteditable=\"true\"]'); if (!textbox) return { error: 'no textbox' }; textbox.focus(); for (var i = 0; i < text.length; i++) { var c = text[i]; if (c === String.fromCharCode(10)) { textbox.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true })); document.execCommand('insertLineBreak'); textbox.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true })); } else { textbox.dispatchEvent(new KeyboardEvent('keydown', { key: c, bubbles: true })); document.execCommand('insertText', false, c); textbox.dispatchEvent(new KeyboardEvent('keyup', { key: c, bubbles: true })); } } await new Promise(r => setTimeout(r, 1500)); var publishBtn = document.querySelector('[data-testid=\"composerPublishBtn\"]'); if (!publishBtn || publishBtn.disabled) return { error: 'publish_button_disabled', textLen: textbox.innerText.length }; publishBtn.click(); await new Promise(r => setTimeout(r, 5000)); return { clicked: true, dialogClosed: !document.querySelector('[role=\"dialog\"]') }; }", "data": {"text": "YOUR_POST_TEXT"}}
+   ENDJSON
    ```
-6. Wait 1.5s, then check publish button is enabled:
-   ```javascript
-   var publishBtn = document.querySelector('[data-testid="composerPublishBtn"]');
-   if (publishBtn.disabled) return { error: 'publish_button_still_disabled', textLen: textbox.innerText.length };
-   publishBtn.click();
-   await new Promise(r => setTimeout(r, 5000));
-   var dialogGone = !document.querySelector('[role="dialog"]');
-   return { clicked: true, dialogClosed: dialogGone };
-   ```
-   If `publish_button_still_disabled` → text is likely over 300 chars. Shorten and retry.
-6. 🚨 **Post-publish verification (MANDATORY):** Wait 5s, then navigate to profile and check:
-   ```javascript
-   // Navigate to {{profile_url}}
-   // Wait 4s for page load
-   var firstPost = document.querySelector('[data-testid="postText"]');
-   if (!firstPost) return { verified: false, reason: 'no_posts_on_profile' };
-   var snippet = postText.slice(0, 30); // first 30 chars of what we typed
-   var verified = firstPost.innerText.includes(snippet);
-   return { verified: verified, firstPostPreview: firstPost.innerText.slice(0, 100) };
+   If `publish_button_disabled` → text is likely over 300 chars. Shorten and retry.
+6. 🚨 **Post-publish verification (MANDATORY):** Navigate to profile, wait 4s, check:
+   ```bash
+   exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+   {"fn":"async () => { await new Promise(r => setTimeout(r, 4000)); var firstPost = document.querySelector('[data-testid=\"postText\"]'); if (!firstPost) return { verified: false, reason: 'no_posts_on_profile' }; var verified = firstPost.innerText.includes(window.__data.snippet); return { verified: verified, firstPostPreview: firstPost.innerText.slice(0, 100) }; }", "data": {"snippet": "first 30 chars of post"}}
+   ENDJSON
    ```
    - `verified: true` → post confirmed live. Proceed to log + update.
-   - `verified: false` → post failed silently. Do NOT mark as published. Do NOT update limits. Log `Type=Post Failed, Reason=not_on_profile`. Mark task pending for retry.
+   - `verified: false` → post failed silently. Do NOT mark as published. Log `Type=Post Failed`. Mark task pending for retry.
 7. Log: Type = "Post". Increment `weekly.posts.current`
 8. Mark done
 

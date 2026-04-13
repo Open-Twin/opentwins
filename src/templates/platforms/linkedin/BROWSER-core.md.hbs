@@ -19,10 +19,10 @@ exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/close
 
 LinkedIn renders the post creation modal inside `#interop-outlet` shadow DOM.
 **ALL post creation UI (buttons, inputs, editors) are ONLY accessible via shadowRoot:**
-```javascript
-const host = document.querySelector('#interop-outlet');
-const shadow = host.shadowRoot;
-shadow.querySelector('button');  // finds modal buttons
+```
+host = document.querySelector('#interop-outlet')
+shadow = host.shadowRoot
+shadow.querySelector('button')  // finds modal buttons
 ```
 
 See **BROWSER-post.md** for full post/poll/repost patterns.

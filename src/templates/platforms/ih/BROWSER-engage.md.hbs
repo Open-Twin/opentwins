@@ -88,11 +88,7 @@ ENDJSON
 
 Comment box already visible on post page (no reply click needed).
 
-⚠️ **Some posts use plain `<textarea>` instead of TipTap.** If `.tiptap.ProseMirror` not found, fall back to:
-```javascript
-var ta = commentBox.querySelector('textarea');
-if (ta) { ta.focus(); ta.value = commentText; ta.dispatchEvent(new Event('input', {bubbles:true})); }
-```
+⚠️ **Some posts use plain `<textarea>` instead of TipTap.** If `.tiptap.ProseMirror` not found, fall back to `textarea.value = window.__data.text` + input event.
 
 🚨 **Two-step pattern** — TipTap needs an event loop tick before submit button enables.
 - ❌ **NEVER** combine text insertion + submit check in ONE evaluate — `submitBtn.disabled` will be `true`

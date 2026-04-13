@@ -75,8 +75,10 @@ printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"a
 1. `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://www.indiehackers.com/"}' 2>&1`
 2. If error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
 3. **Dismiss cookie banner** (first evaluate after page load):
-   ```javascript
-   fn: `() => { var b = document.querySelector('#onetrust-accept-btn-handler'); if (b) { b.click(); return {dismissed:true}; } return {noBanner:true}; }`
+   ```bash
+   exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+   {"fn":"async () => { var b = document.querySelector('#onetrust-accept-btn-handler'); if (b) { b.click(); return {dismissed:true}; } return {noBanner:true}; }"}
+   ENDJSON
    ```
 
 ## 3. Reply Check (FIRST - MANDATORY)
@@ -88,11 +90,7 @@ Empty notifications is normal — skip to § 4.
 Before any scheduled tasks. No exceptions.
 
 1. Navigate to `https://www.indiehackers.com/{{handle}}/notifications`
-2. Extract notifications with 3s page-load wait built in:
-   ```javascript
-   fn: `() => new Promise(function(resolve) { setTimeout(function() { /* S 1 extraction code here */ resolve(result); }, 3000); })`
-   ```
-   Use BROWSER-replies.md S 1 code inside the Promise. Do NOT use a separate `exec sleep 3`.
+2. Extract notifications using BROWSER-replies.md S 1 (has embedded 3s wait).
 3. 🚨 **MANDATORY: Grep pre-check** — for each notification, build a tracking key as `{commentId}_{date}` (e.g. `VUuxlmI34G59IxCwrC5k_2026-02-19`):
    - Extract `commentId` from URL query param `?commentId=XXX`
    - Extract `date` from notification text (e.g. "FEB 19 2026" → `2026-02-19`)
@@ -108,20 +106,10 @@ Before any scheduled tasks. No exceptions.
      - ❌ **NEVER** use `document.body.innerText.includes('{{handle}}')` — this finds our TOP-LEVEL comment, causing false positives
      - ✅ See BROWSER-replies.md S 3 for the correct scoped pattern
    - 🚨 **Thread depth + consecutive reply check** (in the SAME evaluate as scoped duplicate check):
-     ```javascript
-     // Check thread depth via comment-tree--level-N
-     var tree = selected.closest('.comment-tree');
-     var levelMatch = tree ? tree.className.match(/level-(\d+)/) : null;
-     var level = levelMatch ? parseInt(levelMatch[1]) : 1;
-     if (level >= 4) return { skipped: true, reason: 'thread_too_deep', level: level };
-
-     // Count our replies in this thread (walk up from selected through parent trees)
-     var allComments = Array.from(document.querySelectorAll('.comment'));
-     var ourRepliesInThread = allComments.filter(function(c) {
-       var t = c.closest('.comment-tree');
-       return t && c.innerText.includes('{{handle}}');
-     }).length;
-     if (ourRepliesInThread >= 3) return { skipped: true, reason: 'too_many_replies_in_thread', count: ourRepliesInThread };
+     ```bash
+     exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+     {"fn":"async () => { var selected = document.querySelector('.comment--selected'); if (!selected) return { noSelected: true }; var tree = selected.closest('.comment-tree'); var levelMatch = tree ? tree.className.match(/level-(\\d+)/) : null; var level = levelMatch ? parseInt(levelMatch[1]) : 1; if (level >= 4) return { skipped: true, reason: 'thread_too_deep', level: level }; var allComments = Array.from(document.querySelectorAll('.comment')); var ourRepliesInThread = allComments.filter(function(c) { var t = c.closest('.comment-tree'); return t && c.innerText.includes('{{handle}}'); }).length; if (ourRepliesInThread >= 3) return { skipped: true, reason: 'too_many_replies_in_thread', count: ourRepliesInThread }; return { level: level, ourReplies: ourRepliesInThread }; }"}
+     ENDJSON
      ```
      - `level >= 4` → skip reply, append tracking key, log `Type=Reply Skipped, Reason=thread_too_deep`
      - `ourRepliesInThread >= 3` → skip reply, append tracking key, log `Type=Reply Skipped, Reason=too_many_replies`
@@ -159,19 +147,11 @@ if daily.comments.current >= limit: mark_done("daily limit reached")
    If "SKIP" → exclude from candidates (already commented, cheaper than browser navigation)
 4. Select 1-2 qualifying posts from remaining candidates
 5. For each: navigate → 🚨 **MANDATORY: Read post before commenting** (BROWSER-engage.md S 3 — your comment MUST directly address the returned `title` and `body`) → wait 3s inside first evaluate → **on-page duplicate check** → upvote (S 6, 1 eval) → 🚨 **Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) → comment (S 5, 3 evals) = **6 evaluates per post**
-   - ✅ Combine page-load wait + duplicate check into upvote evaluate:
-     ```javascript
-     new Promise(r => setTimeout(() => {
-       // Check if we already commented on this post
-       var comments = document.querySelectorAll('.comment');
-       var alreadyCommented = false;
-       comments.forEach(function(c) { if (c.innerText.indexOf('{{handle}}') >= 0) alreadyCommented = true; });
-       if (alreadyCommented) return r({ skipped: true, reason: 'already_commented_on_page' });
-       // Upvote
-       var postUpvote = document.querySelector('.post-liker');
-       /* ... upvote logic ... */
-       r(result);
-     }, 3000))
+   - ✅ Combine page-load wait + duplicate check + upvote into one evaluate:
+     ```bash
+     exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+     {"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var comments = document.querySelectorAll('.comment'); var alreadyCommented = false; comments.forEach(function(c) { if (c.innerText.indexOf('{{handle}}') >= 0) alreadyCommented = true; }); if (alreadyCommented) return { skipped: true, reason: 'already_commented_on_page' }; var postUpvote = document.querySelector('.post-liker'); if (postUpvote && !postUpvote.classList.contains('post-liker--liked')) { postUpvote.click(); } return { upvoted: true }; }"}
+     ENDJSON
      ```
    - 🚨 If `skipped: true, reason: 'already_commented_on_page'`: skip comment, append post_id to tracking file, and move on
 6. **After each successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
@@ -199,50 +179,7 @@ Write post (real data + numbers). Self-review (SOUL.md). Then follow these EXACT
 ```
 
 **Post creation — 4 evaluates total (steps are in BROWSER-post.md S 7):**
-1. Navigate to `https://www.indiehackers.com/new-post` via the `/navigate` endpoint
-2. **Evaluate 1:** Dismiss cookie banner + set title
-   ```javascript
-   fn: `() => {
-     var b = document.querySelector('#onetrust-accept-btn-handler');
-     if (b) b.click();
-     return new Promise(function(resolve) {
-       setTimeout(function() {
-         var t = document.querySelector('textarea.post-page__title-field');
-         if (!t) return resolve({error:'title_field_not_found'});
-         t.focus(); t.value = '${postTitle}';
-         t.dispatchEvent(new Event('input',{bubbles:true}));
-         t.dispatchEvent(new Event('change',{bubbles:true}));
-         resolve({success:true, titleLen:t.value.length});
-       }, 2000);
-     });
-   }`
-   ```
-3. **Evaluate 2:** Set body (plain textarea, NOT TipTap)
-   ```javascript
-   fn: `() => {
-     var b = document.querySelector('textarea.edit-post__body-field');
-     if (!b) return {error:'body_field_not_found'};
-     b.focus(); b.value = '${postBody}';
-     b.dispatchEvent(new Event('input',{bubbles:true}));
-     b.dispatchEvent(new Event('change',{bubbles:true}));
-     return {success:true, bodyLen:b.value.length};
-   }`
-   ```
-4. **Evaluate 3:** Wait 500ms + click submit
-   ```javascript
-   fn: `() => new Promise(function(r) { setTimeout(function() {
-     var s = document.querySelector('.post-page__submit-button');
-     if (!s) return r({error:'submit_not_found'});
-     if (s.disabled) return r({error:'submit_disabled'});
-     s.click(); r({success:true});
-   }, 500); })`
-   ```
-5. **Evaluate 4:** Wait 4s + verify URL changed
-   ```javascript
-   fn: `() => new Promise(function(r) { setTimeout(function() {
-     r({ url:location.href, isPublished:!location.href.includes('/new-post'), title:document.title });
-   }, 4000); })`
-   ```
+Use BROWSER-post.md S 7 (Steps 1-4: navigate → set title → set body → submit → verify). All curl commands are in that file.
 6. If `isPublished: true`: update `weekly.posts.current++`, log `Type="Post Published"`, mark_done()
 7. If `isPublished: false`: retry evaluate 3 once. Still false → HEARTBEAT_BLOCKED
 
