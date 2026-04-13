@@ -4,6 +4,7 @@
 
 Returns only `url` (for grep dedup) and `handle` (for reply context). Filters out our own tweets.
 🚨 Includes embedded 2s wait — do NOT add separate `exec sleep` before this.
+🚨 `count: 0` is a valid result — it means no mentions exist. Do NOT retry or probe the DOM. Accept it and move on.
 
 ```javascript
 // Use on https://x.com/notifications/mentions — embedded 2s wait

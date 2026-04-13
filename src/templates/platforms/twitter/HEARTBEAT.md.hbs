@@ -70,11 +70,12 @@ MANDATORY before scheduled tasks.
 TWO-STEP process — do NOT skip grep filter (PRIMARY duplicate prevention).
 
 **Step 1:** Extract mentions using BROWSER-notifications.md § 2 pattern.
-**Step 2:** Filter via tracking file:
+🚨 **Zero mentions is normal** — new accounts or quiet periods will return `count: 0, items: []`. This is NOT a page load failure. If count is 0, skip directly to § 5. Do NOT retry, probe the DOM, or try alternative selectors.
+**Step 2:** If count > 0, filter via tracking file:
 ```bash
 printf '%s\n' "URL1" "URL2" | grep -vxF -f memory/replied_tweets.txt || true
 ```
-Empty result → no unreplied mentions → skip to § 5.
+Empty result after filter → no unreplied mentions → skip to § 5.
 
 ### 3c. Follow-back
 Check if mention author has Follow button → click (evaluate). Log: `Type: "Follow Back"`.
