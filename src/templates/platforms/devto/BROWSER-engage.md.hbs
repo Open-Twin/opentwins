@@ -76,94 +76,39 @@ Re-read your text before submitting. Check these 4 things:
 
 Returns the article title and body text. Run this BEFORE reacting or typing a comment. Use the returned `title` and `body` to inform your comment — your comment MUST directly address this specific article's topic.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    var h1 = document.querySelector('h1');
-    var title = h1 ? h1.innerText.trim() : '';
-    var article = document.querySelector('#article-body') || document.querySelector('article');
-    var body = article ? article.innerText.trim().slice(0, 500) : '';
-    return { title, body };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var h1 = document.querySelector('h1'); var title = h1 ? h1.innerText.trim() : ''; var article = document.querySelector('#article-body') || document.querySelector('article'); var body = article ? article.innerText.trim().slice(0, 500) : ''; return { title, body }; }"}
+ENDJSON
 ```
 
 ---
 
 ## SS 3: Comment on Article (3 steps total)
 
-🚨 **ALL waits MUST be embedded in evaluate using `await new Promise(r => setTimeout(r, N))`** — NEVER use separate `browser.act({ kind: "wait" })` steps.
-
 ### Step 1: Navigate to article URL
 
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"ARTICLE_URL"}' 2>&1
+```
+
 ### Step 2: React + dedup + type (ONE async evaluate — combines SS 4 react + dedup + scroll + type):
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    // 1. Dedup check
-    if (document.querySelectorAll('#comment-trees-container a[href*="/{{handle}}"]').length > 0) {
-      return { alreadyCommented: true };
-    }
-    // 2. React (Like + Unicorn)
-    var reactionsAdded = 0;
-    var likeBtn = document.querySelector('button[aria-label="Like"]');
-    var alreadyReacted = likeBtn && likeBtn.getAttribute('aria-pressed') === 'true';
-    if (!alreadyReacted) {
-      var drawerBtn = document.querySelector('button[aria-label="reaction-drawer-trigger"]');
-      if (drawerBtn) {
-        drawerBtn.click();
-        await new Promise(r => setTimeout(r, 1500));
-        var unicornBtn = document.querySelector('button[aria-label="Unicorn"]');
-        if (unicornBtn && unicornBtn.getAttribute('aria-pressed') !== 'true') {
-          unicornBtn.click();
-          reactionsAdded = 2;
-        } else {
-          reactionsAdded = 1;
-        }
-        await new Promise(r => setTimeout(r, 500));
-      }
-    }
-    // 3. Scroll to comment section + type
-    var textarea = document.getElementById('text-area');
-    if (textarea) textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    await new Promise(r => setTimeout(r, 500));
-    if (!textarea) return { alreadyCommented: false, reactionsAdded, error: 'no textarea' };
-    textarea.click(); textarea.focus();
-    textarea.value = ${JSON.stringify(commentText)};
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    textarea.dispatchEvent(new Event('change', { bubbles: true }));
-    return { alreadyCommented: false, alreadyReacted, reactionsAdded, typed: true, length: textarea.value.length };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); if (document.querySelectorAll('#comment-trees-container a[href*=\"/{{handle}}\"]').length > 0) { return { alreadyCommented: true }; } var reactionsAdded = 0; var likeBtn = document.querySelector('button[aria-label=\"Like\"]'); var alreadyReacted = likeBtn && likeBtn.getAttribute('aria-pressed') === 'true'; if (!alreadyReacted) { var drawerBtn = document.querySelector('button[aria-label=\"reaction-drawer-trigger\"]'); if (drawerBtn) { drawerBtn.click(); await new Promise(r => setTimeout(r, 1500)); var unicornBtn = document.querySelector('button[aria-label=\"Unicorn\"]'); if (unicornBtn && unicornBtn.getAttribute('aria-pressed') !== 'true') { unicornBtn.click(); reactionsAdded = 2; } else { reactionsAdded = 1; } await new Promise(r => setTimeout(r, 500)); } } var textarea = document.getElementById('text-area'); if (textarea) textarea.scrollIntoView({ behavior: 'smooth', block: 'center' }); await new Promise(r => setTimeout(r, 500)); if (!textarea) return { alreadyCommented: false, reactionsAdded, error: 'no textarea' }; textarea.click(); textarea.focus(); textarea.value = COMMENT_TEXT_HERE; textarea.dispatchEvent(new Event('input', { bubbles: true })); textarea.dispatchEvent(new Event('change', { bubbles: true })); return { alreadyCommented: false, alreadyReacted, reactionsAdded, typed: true, length: textarea.value.length }; }"}
+ENDJSON
 ```
 If `alreadyCommented` → backfill tracking, skip. If `error: 'no textarea'` → skip comment, still track reactions.
 
 ### Step 3: Submit + verify (ONE async evaluate):
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 500));
-    var submitBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText === 'Submit');
-    if (!submitBtn) return { error: 'no submit button' };
-    submitBtn.click();
-    await new Promise(r => setTimeout(r, 5000));
-    var posted = document.querySelectorAll('#comment-trees-container a[href*="/{{handle}}"]').length > 0;
-    return { submitted: true, verified: posted };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 500)); var submitBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText === 'Submit'); if (!submitBtn) return { error: 'no submit button' }; submitBtn.click(); await new Promise(r => setTimeout(r, 5000)); var posted = document.querySelectorAll('#comment-trees-container a[href*=\"/{{handle}}\"]').length > 0; return { submitted: true, verified: posted }; }"}
+ENDJSON
 ```
 If `verified: false` → retry once (same evaluate). Still false → don't log, retry next heartbeat.
 
 🚨 **NEVER use `document.body.innerText.includes()`** for verification — false positives from editor textarea. Always check comment tree DOM for username link.
-❌ **NEVER use separate `browser.act({ kind: "wait" })` steps** — embed in evaluate.
 
 ---
 
@@ -174,38 +119,10 @@ Clicking reaction-drawer-trigger auto-activates Like (1 reaction). Then Unicorn 
 Drawer click + Unicorn click + verify ALL in ONE evaluate. Do NOT split into separate calls.
 
 **ONE evaluate — drawer + unicorn + verify (3s initial wait + 1.5s between clicks):**
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    // Check already reacted
-    const likeBtn = document.querySelector('button[aria-label="Like"]');
-    if (likeBtn && likeBtn.getAttribute('aria-pressed') === 'true') return { alreadyReacted: true };
-    // Check 404
-    if (document.body.innerText.includes('PAGE NOT FOUND')) return { error: 'is404' };
-    // Click drawer (auto-Likes)
-    const drawerBtn = document.querySelector('button[aria-label="reaction-drawer-trigger"]');
-    if (!drawerBtn) return { error: 'no reaction drawer' };
-    drawerBtn.click();
-    await new Promise(r => setTimeout(r, 1500));
-    // Click Unicorn
-    const unicornBtn = document.querySelector('button[aria-label="Unicorn"]');
-    if (!unicornBtn) return { drawerClicked: true, error: 'no unicorn button' };
-    if (unicornBtn.getAttribute('aria-pressed') === 'true') return { drawerClicked: true, alreadyUnicorned: true, reactionsAdded: 1 };
-    unicornBtn.click();
-    // Verify
-    await new Promise(r => setTimeout(r, 1000));
-    const likeVerify = document.querySelector('button[aria-label="Like"]');
-    const unicornVerify = document.querySelector('button[aria-label="Unicorn"]');
-    return {
-      reactionsAdded: 2,
-      likePressed: likeVerify ? likeVerify.getAttribute('aria-pressed') : null,
-      unicornPressed: unicornVerify ? unicornVerify.getAttribute('aria-pressed') : null
-    };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); const likeBtn = document.querySelector('button[aria-label=\"Like\"]'); if (likeBtn && likeBtn.getAttribute('aria-pressed') === 'true') return { alreadyReacted: true }; if (document.body.innerText.includes('PAGE NOT FOUND')) return { error: 'is404' }; const drawerBtn = document.querySelector('button[aria-label=\"reaction-drawer-trigger\"]'); if (!drawerBtn) return { error: 'no reaction drawer' }; drawerBtn.click(); await new Promise(r => setTimeout(r, 1500)); const unicornBtn = document.querySelector('button[aria-label=\"Unicorn\"]'); if (!unicornBtn) return { drawerClicked: true, error: 'no unicorn button' }; if (unicornBtn.getAttribute('aria-pressed') === 'true') return { drawerClicked: true, alreadyUnicorned: true, reactionsAdded: 1 }; unicornBtn.click(); await new Promise(r => setTimeout(r, 1000)); const likeVerify = document.querySelector('button[aria-label=\"Like\"]'); const unicornVerify = document.querySelector('button[aria-label=\"Unicorn\"]'); return { reactionsAdded: 2, likePressed: likeVerify ? likeVerify.getAttribute('aria-pressed') : null, unicornPressed: unicornVerify ? unicornVerify.getAttribute('aria-pressed') : null }; }"}
+ENDJSON
 ```
 
 - If `alreadyReacted: true` → skip article. **Backfill:** `grep -qxF "{slug}" memory/reacted_articles.txt || echo "{slug}" >> memory/reacted_articles.txt`
@@ -223,20 +140,10 @@ Counting: each article = 2 reactions (Like+Unicorn). Update reactions_done += 2.
 🚨 **MANDATORY after every comment.** Every comment = follow. No limit.
 Article pages have a Follow button on the author sidebar card (`button.follow-action-button`). Multiple in DOM, only one visible. Click → changes to "Following".
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 500));
-    var allBtns = Array.from(document.querySelectorAll('button.follow-action-button'));
-    var visibleBtn = allBtns.find(b => b.getBoundingClientRect().width > 0 && b.innerText.trim() === 'Follow');
-    if (!visibleBtn) return { alreadyFollowing: true };
-    visibleBtn.click();
-    await new Promise(r => setTimeout(r, 1000));
-    return { followed: true };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 500)); var allBtns = Array.from(document.querySelectorAll('button.follow-action-button')); var visibleBtn = allBtns.find(b => b.getBoundingClientRect().width > 0 && b.innerText.trim() === 'Follow'); if (!visibleBtn) return { alreadyFollowing: true }; visibleBtn.click(); await new Promise(r => setTimeout(r, 1000)); return { followed: true }; }"}
+ENDJSON
 ```
 
 If `alreadyFollowing`: skip silently. If error: skip follow, proceed.

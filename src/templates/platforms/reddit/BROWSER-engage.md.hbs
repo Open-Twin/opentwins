@@ -76,184 +76,69 @@ Re-read your text before submitting. Check these 4 things:
 
 ---
 
-## 2. Extract Posts from Subreddit
+## § 2. Extract Posts from Subreddit
 
-Returns only the fields needed for filtering + navigation + dedup. `id` is stripped of `t3_` prefix to match `commented_posts.txt` format. Do NOT run a second extraction — all needed fields are here.
+Returns fields for filtering + navigation + dedup. `id` is stripped of `t3_` prefix to match `commented_posts.txt`.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const posts = Array.from(document.querySelectorAll('shreddit-post')).slice(0, 15);
-    return posts.map(p => ({
-      title: p.getAttribute('post-title'),
-      score: parseInt(p.getAttribute('score') || '0'),
-      comments: parseInt(p.getAttribute('comment-count') || '0'),
-      permalink: p.getAttribute('permalink'),
-      id: (p.getAttribute('id') || '').replace('t3_', ''),
-      author: p.getAttribute('author'),
-      postType: p.getAttribute('post-type') || 'text',
-      isLinkOnly: p.hasAttribute('is-link-post') && !p.querySelector('[slot="text-body"]')
-    }));
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const posts = Array.from(document.querySelectorAll('shreddit-post')).slice(0, 15); return posts.map(p => ({ title: p.getAttribute('post-title'), score: parseInt(p.getAttribute('score') || '0'), comments: parseInt(p.getAttribute('comment-count') || '0'), permalink: p.getAttribute('permalink'), id: (p.getAttribute('id') || '').replace('t3_', ''), author: p.getAttribute('author'), postType: p.getAttribute('post-type') || 'text', isLinkOnly: p.hasAttribute('is-link-post') && !p.querySelector('[slot=\"text-body\"]') })); }"}
+ENDJSON
 ```
 
-## 2b. Extract Post Content (after navigating to post page)
+## § 2b. Extract Post Content (after navigating to post page)
 
-Returns the post title and body text from the current post page. Run this BEFORE upvoting or expanding the composer. Use the returned `title` and `body` to inform your comment — your comment MUST directly address this specific post's topic.
+Run BEFORE upvoting or expanding composer. Your comment MUST address this post's topic.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const post = document.querySelector('shreddit-post');
-    if (!post) return { error: 'no post element' };
-    const title = post.getAttribute('post-title') || '';
-    const bodyEl = post.querySelector('[slot="text-body"]');
-    const body = bodyEl ? bodyEl.textContent.trim().slice(0, 500) : '';
-    return { title, body };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); const post = document.querySelector('shreddit-post'); if (!post) return { error: 'no post element' }; const title = post.getAttribute('post-title') || ''; const bodyEl = post.querySelector('[slot=\"text-body\"]'); const body = bodyEl ? bodyEl.textContent.trim().slice(0, 500) : ''; return { title, body }; }"}
+ENDJSON
 ```
 
-## 3. Upvote + Expand Composer (combined)
+## § 3. Upvote + Expand Composer (combined — ONE evaluate)
 
-After navigating to post page + wait 3s. Best effort upvote — skip if quota exhausted. Combines upvote + composer expansion into ONE evaluate.
+After navigating to post page. Combines upvote + composer expansion.
 
-**Step 1: Navigate + wait 3s**
-
-**Step 2: Upvote + expand composer** (single evaluate):
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    let upvoted = 0;
-    const post = document.querySelector('shreddit-post');
-    if (post) {
-      const upBtn = post.shadowRoot?.querySelector('button[upvote]');
-      if (upBtn && upBtn.getAttribute('aria-pressed') !== 'true') {
-        upBtn.click();
-        upvoted = 1;
-      }
-    }
-    const triggers = document.querySelectorAll('faceplate-textarea-input[data-testid="trigger-button"]');
-    const trigger = triggers[1];
-    if (!trigger) return { upvoted, composer: 'no trigger at index 1' };
-    const textarea = trigger.shadowRoot?.querySelector('textarea');
-    if (!textarea) return { upvoted, composer: 'no textarea in shadow' };
-    textarea.focus();
-    const rect = textarea.getBoundingClientRect();
-    const opts = { bubbles: true, cancelable: true, composed: true,
-                   clientX: rect.left + rect.width/2, clientY: rect.top + rect.height/2, button: 0 };
-    textarea.dispatchEvent(new PointerEvent('pointerdown', opts));
-    textarea.dispatchEvent(new PointerEvent('pointerup', opts));
-    textarea.dispatchEvent(new MouseEvent('click', opts));
-    return { upvoted, composer: 'expanded' };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); let upvoted = 0; const post = document.querySelector('shreddit-post'); if (post) { const upBtn = post.shadowRoot?.querySelector('button[upvote]'); if (upBtn && upBtn.getAttribute('aria-pressed') !== 'true') { upBtn.click(); upvoted = 1; } } const triggers = document.querySelectorAll('faceplate-textarea-input[data-testid=\"trigger-button\"]'); const trigger = triggers[1]; if (!trigger) return { upvoted, composer: 'no trigger at index 1' }; const textarea = trigger.shadowRoot?.querySelector('textarea'); if (!textarea) return { upvoted, composer: 'no textarea in shadow' }; textarea.focus(); const rect = textarea.getBoundingClientRect(); const opts = { bubbles: true, cancelable: true, composed: true, clientX: rect.left + rect.width/2, clientY: rect.top + rect.height/2, button: 0 }; textarea.dispatchEvent(new PointerEvent('pointerdown', opts)); textarea.dispatchEvent(new PointerEvent('pointerup', opts)); textarea.dispatchEvent(new MouseEvent('click', opts)); return { upvoted, composer: 'expanded' }; }"}
+ENDJSON
 ```
 
 Returns: `upvoted: 1` = upvoted, `upvoted: 0` = skipped/already. `composer: 'expanded'` = ready for typing.
 
-## 4. Comment on a Post (Top-Level)
+## § 4. Comment on a Post (Top-Level)
 
-**Step 4: Expand composer + focus + type** (single async evaluate):
+**Step 4: Focus + type** (ONE evaluate):
+Replace `${commentText}` with your comment. Use heredoc to avoid apostrophe issues.
 
-Reddit collapses the comment composer by default. Must click the trigger button first, then use focusin + Selection API to activate Lexical editor. Do NOT use `.focus()` - it doesn't work with Lexical.
-
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 2000));
-    if (window.location.href === 'about:blank' || !window.location.href.includes('reddit.com'))
-      return { error: 'page_lost', url: window.location.href };
-    // Expand composer if collapsed
-    var composer = document.querySelector('comment-composer-host:not([reply-mode])');
-    if (composer) {
-      var trigger = composer.querySelector('[data-testid="trigger-button"]');
-      if (trigger) { trigger.click(); await new Promise(r => setTimeout(r, 1500)); }
-    }
-    var editor = document.querySelector('[data-lexical-editor="true"]');
-    if (!editor) return { error: 'no editor' };
-    // Activate Lexical via focusin event + Selection API (NOT .focus())
-    editor.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 300));
-    var sel = window.getSelection();
-    var range = document.createRange();
-    range.selectNodeContents(editor);
-    range.collapse(false);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    await new Promise(r => setTimeout(r, 200));
-    document.execCommand('insertText', false, '${commentText.replace(/'/g, "\\'")}');
-    await new Promise(r => setTimeout(r, 500));
-    return { typed: true, text: editor.textContent.trim().slice(0, 80) };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); if (window.location.href === 'about:blank' || !window.location.href.includes('reddit.com')) return { error: 'page_lost', url: window.location.href }; var composer = document.querySelector('comment-composer-host:not([reply-mode])'); if (composer) { var trigger = composer.querySelector('[data-testid=\"trigger-button\"]'); if (trigger) { trigger.click(); await new Promise(r => setTimeout(r, 1500)); } } var editor = document.querySelector('[data-lexical-editor=\"true\"]'); if (!editor) return { error: 'no editor' }; editor.dispatchEvent(new FocusEvent('focusin', { bubbles: true })); await new Promise(r => setTimeout(r, 300)); var sel = window.getSelection(); var range = document.createRange(); range.selectNodeContents(editor); range.collapse(false); sel.removeAllRanges(); sel.addRange(range); await new Promise(r => setTimeout(r, 200)); document.execCommand('insertText', false, '${commentText}'); await new Promise(r => setTimeout(r, 500)); return { typed: true, text: editor.textContent.trim().slice(0, 80) }; }"}
+ENDJSON
 ```
-If `page_lost` → re-navigate to post URL and retry from § 3 (upvote+expand). If `no editor` → retry once after 2s.
+If `page_lost` → re-navigate to post URL and retry from § 3. If `no editor` → retry once after 2s.
 
-**Step 5: MANDATORY — Verify text (separate evaluate!):**
-Lexical renders async — innerHTML empty in same call. Submit without verify = silent failure.
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const editor = document.querySelector('[data-lexical-editor="true"]');
-    if (!editor) return { error: 'no editor' };
-    const text = editor.textContent.trim();
-    if (!text) return { error: 'editor empty — text not inserted' };
-    return { verified: true, text: text.slice(0, 100) };
-  }`,
-  profile: "{{browser_profile}}"
-})
+**Step 5: Verify text** (separate evaluate — Lexical renders async):
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const editor = document.querySelector('[data-lexical-editor=\"true\"]'); if (!editor) return { error: 'no editor' }; const text = editor.textContent.trim(); if (!text) return { error: 'editor empty' }; return { verified: true, text: text.slice(0, 100) }; }"}
+ENDJSON
 ```
-If `editor empty` -> STOP, retry from step 2.
+If `editor empty` → STOP, retry from step 4.
 
-**Step 6: Submit** — MUST be async. Button is in regular DOM (NOT shadowRoot). Must use dispatchEvent with scrollIntoView + delay.
-- Selector: `comment-composer-host:not([reply-mode])` targets MAIN composer.
-- NEVER use just `comment-composer-host` — could select reply composer!
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    var composer = document.querySelector('comment-composer-host:not([reply-mode])');
-    if (!composer) return { error: 'no main composer' };
-    var submitBtn = composer.querySelector('button[type="submit"]');
-    if (!submitBtn) return { error: 'no submit button' };
-    if (!submitBtn.textContent.includes('Comment')) return { error: 'wrong button text' };
-    submitBtn.scrollIntoView({ block: 'center' });
-    await new Promise(r => setTimeout(r, 300));
-    submitBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-    submitBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
-    submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    await new Promise(r => setTimeout(r, 500));
-    return { status: 'submitted' };
-  }`,
-  profile: "{{browser_profile}}"
-})
+**Step 6: Submit:**
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var composer = document.querySelector('comment-composer-host:not([reply-mode])'); if (!composer) return { error: 'no main composer' }; var submitBtn = composer.querySelector('button[type=\"submit\"]'); if (!submitBtn) return { error: 'no submit button' }; if (!submitBtn.textContent.includes('Comment')) return { error: 'wrong button text' }; submitBtn.scrollIntoView({ block: 'center' }); await new Promise(r => setTimeout(r, 300)); submitBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); submitBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true })); submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 500)); return { status: 'submitted' }; }"}
+ENDJSON
 ```
 
-**Step 7: Verify with embedded 3s wait (max 2 attempts):**
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    var comments = Array.from(document.querySelectorAll('shreddit-comment'));
-    var ourComment = comments.find(function(c) { return c.getAttribute('author') === '{{handle_slug}}'; });
-    if (!ourComment) return { verified: false, totalComments: comments.length };
-    var slot = ourComment.querySelector('div[slot="comment"]');
-    var text = slot ? slot.textContent.trim() : '';
-    return { verified: true, text: text.slice(0, 100) };
-  }`,
-  profile: "{{browser_profile}}"
-})
+**Step 7: Verify comment posted (embedded 3s wait):**
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var comments = Array.from(document.querySelectorAll('shreddit-comment')); var ourComment = comments.find(function(c) { return c.getAttribute('author') === '{{handle_slug}}'; }); if (!ourComment) return { verified: false, totalComments: comments.length }; var slot = ourComment.querySelector('div[slot=\"comment\"]'); var text = slot ? slot.textContent.trim() : ''; return { verified: true, text: text.slice(0, 100) }; }"}
+ENDJSON
 ```
-If `verified: false`: retry ONCE (will wait another 3s inside). Still fails → HEARTBEAT_BLOCKED, do NOT update limits.json.
+If `verified: false`: retry ONCE (another 3s wait). Still fails → HEARTBEAT_BLOCKED, do NOT update limits.json.

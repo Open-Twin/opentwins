@@ -256,11 +256,11 @@ function StepWelcome({ status, draft, update, onNext }: {
   return (
     <div className="space-y-5">
       {/* Prereq check (all green) */}
-      <div className="panel noise p-6">
-        <div className="text-[12px] uppercase tracking-[0.12em] font-medium mb-4" style={{ color: 'var(--c-text-muted)' }}>
+      <div className="panel noise px-5 py-3 flex items-center justify-between">
+        <div className="text-[12px] uppercase tracking-[0.12em] font-medium" style={{ color: 'var(--c-text-muted)' }}>
           Prerequisites
         </div>
-        <div className="space-y-3">
+        <div className="flex items-center gap-5">
           <PrereqRow label="Claude Code CLI" ok={status.prereqs.claude} install="npm install -g @anthropic-ai/claude-code" />
           <PrereqRow label="Google Chrome"    ok={status.prereqs.chrome} install="npm install -g chrome" />
         </div>
@@ -268,8 +268,16 @@ function StepWelcome({ status, draft, update, onNext }: {
 
       {/* Auth */}
       <div className="panel noise p-6">
-        <div className="text-[12px] uppercase tracking-[0.12em] font-medium mb-4" style={{ color: 'var(--c-text-muted)' }}>
-          Authentication
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-[12px] uppercase tracking-[0.12em] font-medium" style={{ color: 'var(--c-text-muted)' }}>
+            Authentication
+          </div>
+          <span className="text-[11px]" style={{ color: 'var(--c-text-muted)' }}>
+            Powered by Anthropic Claude ·{' '}
+            <a href="https://github.com/Open-Twin/opentwins" target="_blank" rel="noopener" className="hover:underline" style={{ color: 'var(--c-teal)' }}>
+              add more providers
+            </a>
+          </span>
         </div>
 
         {/* Mode selector */}
@@ -994,16 +1002,14 @@ function StepReview({ draft, onBack }: {
 
 function PrereqRow({ label, ok, install }: { label: string; ok: boolean; install: string }) {
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2.5">
-        <div className="w-2 h-2 rounded-full" style={{
-          background: ok ? 'var(--c-green)' : 'var(--c-red)',
-          boxShadow: ok ? '0 0 8px rgba(52,211,153,0.5)' : undefined,
-        }} />
-        <span className="text-sm font-medium" style={{ color: 'var(--c-text)' }}>{label}</span>
-      </div>
+    <div className="flex items-center gap-2">
+      <div className="w-2 h-2 rounded-full" style={{
+        background: ok ? 'var(--c-green)' : 'var(--c-red)',
+        boxShadow: ok ? '0 0 8px rgba(52,211,153,0.5)' : undefined,
+      }} />
+      <span className="text-[13px] font-medium" style={{ color: 'var(--c-text-dim)' }}>{label}</span>
       {ok ? (
-        <span className="mono text-[12px]" style={{ color: 'var(--c-green)' }}>installed</span>
+        <span className="mono text-[11px]" style={{ color: 'var(--c-green)' }}>installed</span>
       ) : (
         <CopyableCmd cmd={install} />
       )}

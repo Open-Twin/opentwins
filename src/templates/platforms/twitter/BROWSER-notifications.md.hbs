@@ -3,131 +3,44 @@
 ## § 2 — Extract Mentions
 
 Returns only `url` (for grep dedup) and `handle` (for reply context). Filters out our own tweets.
-🚨 Includes embedded 2s wait — do NOT add separate `exec sleep` before this.
 🚨 `count: 0` is a valid result — it means no mentions exist. Do NOT retry or probe the DOM. Accept it and move on.
 
-```javascript
-// Use on https://x.com/notifications/mentions — embedded 2s wait
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    return new Promise(resolve => setTimeout(() => {
-      const mentions = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
-      resolve({
-        count: mentions.length,
-        items: mentions.slice(0, 15).map(article => {
-          const user = article.querySelector('[data-testid="User-Name"]');
-          const link = article.querySelector('a[href*="/status/"]');
-          return {
-            url: link ? 'https://x.com' + link.getAttribute('href') : '',
-            handle: user ? (user.innerText.split('\\n').find(l => l.startsWith('@')) || '') : ''
-          };
-        }).filter(m => m.url && m.handle !== '@{{handle_slug}}')
-      });
-    }, 2000));
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); const mentions = Array.from(document.querySelectorAll('article[data-testid=\"tweet\"]')); return { count: mentions.length, items: mentions.slice(0, 15).map(article => { const user = article.querySelector('[data-testid=\"User-Name\"]'); const link = article.querySelector('a[href*=\"/status/\"]'); return { url: link ? 'https://x.com' + link.getAttribute('href') : '', handle: user ? (user.innerText.split(String.fromCharCode(10)).find(l => l.startsWith('@')) || '') : '' }; }).filter(m => m.url && m.handle !== '@{{handle_slug}}') }; }"}
+ENDJSON
 ```
 
 ## § 2b — Combined Thread Context + Like (on tweet page)
 
-After navigating to a mention tweet, extract thread context AND like in ONE evaluate. Includes embedded 2s wait (do NOT use separate `exec sleep`):
+After navigating to a mention tweet, extract thread context AND like in ONE evaluate. Includes embedded 2s wait:
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    return new Promise(resolve => setTimeout(() => {
-      const articles = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
-      // Find target tweet by status ID (partial match — Twitter may redirect/append /photo/1)
-      const statusId = '${tweetUrl}'.match(/status\\/([\\d]+)/)?.[1] || '';
-      const target = articles.find(a => {
-        const link = a.querySelector('a[href*="/status/"]');
-        return link && link.getAttribute('href')?.includes(statusId);
-      });
-      if (!target) { resolve({ error: 'tweet not found', count: articles.length }); return; }
-
-      // Extract text
-      const text = target.querySelector('[data-testid="tweetText"]')?.innerText || '';
-
-      // Like (if not already liked)
-      let liked = false;
-      const likeBtn = target.querySelector('[data-testid="like"]');
-      if (likeBtn) { likeBtn.click(); liked = true; }
-      else if (target.querySelector('[data-testid="unlike"]')) { liked = true; }
-
-      // Check if we already replied (look for @{{handle_slug}} in replies below)
-      const targetIdx = articles.indexOf(target);
-      const alreadyReplied = articles.slice(targetIdx + 1).some(a => {
-        const handle = a.querySelector('[data-testid="User-Name"]')?.innerText?.split('\\n').find(l => l.startsWith('@'));
-        return handle === '@{{handle_slug}}';
-      });
-
-      // Count our total replies in this thread (depth check)
-      var ourReplyCount = articles.filter(a => {
-        var h = a.querySelector('[data-testid="User-Name"]')?.innerText?.split('\\n').find(l => l.startsWith('@'));
-        return h === '@{{handle_slug}}';
-      }).length;
-      var tooDeep = ourReplyCount >= 3;
-
-      resolve({ text, liked, alreadyReplied, ourReplyCount, tooDeep });
-    }, 2000));
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); const articles = Array.from(document.querySelectorAll('article[data-testid=\"tweet\"]')); const statusId = '${tweetUrl}'.match(/status\\/(\\d+)/)?.[1] || ''; const target = articles.find(a => { const link = a.querySelector('a[href*=\"/status/\"]'); return link && link.getAttribute('href')?.includes(statusId); }); if (!target) return { error: 'tweet not found', count: articles.length }; const text = (target.querySelector('[data-testid=\"tweetText\"]') || {}).innerText || ''; let liked = false; const likeBtn = target.querySelector('[data-testid=\"like\"]'); if (likeBtn) { likeBtn.click(); liked = true; } else if (target.querySelector('[data-testid=\"unlike\"]')) { liked = true; } const targetIdx = articles.indexOf(target); const alreadyReplied = articles.slice(targetIdx + 1).some(a => { const handle = (a.querySelector('[data-testid=\"User-Name\"]') || {}).innerText?.split(String.fromCharCode(10)).find(l => l.startsWith('@')); return handle === '@{{handle_slug}}'; }); var ourReplyCount = articles.filter(a => { var h = (a.querySelector('[data-testid=\"User-Name\"]') || {}).innerText?.split(String.fromCharCode(10)).find(l => l.startsWith('@')); return h === '@{{handle_slug}}'; }).length; return { text, liked, alreadyReplied, ourReplyCount, tooDeep: ourReplyCount >= 3 }; }"}
+ENDJSON
 ```
 
-If `alreadyReplied` → track and skip. Otherwise proceed with CDP typing (§ 1).
+If `alreadyReplied` → track and skip. Otherwise proceed with clipboard paste reply (BROWSER-core.md § 1).
 
 ## § 6 — Reply Verification (MANDATORY — never skip)
 
 🚨 ALWAYS verify after EVERY reply. Skipping leads to phantom replies tracked but never posted.
 
-```javascript
-// After posting reply — embedded 1.5s wait, then verify
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    return new Promise(resolve => setTimeout(() => {
-      const articles = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
-      const statusId = '${tweetUrl}'.match(/status\/([\d]+)/)?.[1] || '';
-      let targetIdx = -1;
-      articles.forEach((article, idx) => {
-        const link = article.querySelector('a[href*="/status/"]');
-        if (link && link.getAttribute('href')?.includes(statusId)) targetIdx = idx;
-      });
-      const hasOurReply = articles.slice(targetIdx + 1).some(article => {
-        const handle = article.querySelector('[data-testid="User-Name"]')?.innerText.split('\\n').find(l => l.startsWith('@'));
-        return handle === '@{{handle_slug}}';
-      });
-      resolve({ success: hasOurReply });
-    }, 1500));
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); const articles = Array.from(document.querySelectorAll('article[data-testid=\"tweet\"]')); const statusId = '${tweetUrl}'.match(/status\\/(\\d+)/)?.[1] || ''; let targetIdx = -1; articles.forEach((article, idx) => { const link = article.querySelector('a[href*=\"/status/\"]'); if (link && link.getAttribute('href')?.includes(statusId)) targetIdx = idx; }); const hasOurReply = articles.slice(targetIdx + 1).some(article => { const handle = (article.querySelector('[data-testid=\"User-Name\"]') || {}).innerText?.split(String.fromCharCode(10)).find(l => l.startsWith('@')); return handle === '@{{handle_slug}}'; }); return { success: hasOurReply }; }"}
+ENDJSON
 ```
 
 ## § 11 — Follow User (from tweet page — no navigation needed)
 
 🚨 **MANDATORY after every promo and strategic reply.** Every engagement = follow. Button on tweet page: `[data-testid$="-follow"]` → after click: `[data-testid$="-unfollow"]`.
 
-```javascript
-// Use on tweet page — already there after replying. ONE evaluate, no navigation.
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    // Find ALL follow buttons, pick the topmost one (tweet author, not commenters)
-    const btns = Array.from(document.querySelectorAll('[data-testid$="-follow"]'));
-    if (!btns.length) return { alreadyFollowing: true };
-    const topBtn = btns.reduce((best, b) =>
-      b.getBoundingClientRect().y < best.getBoundingClientRect().y ? b : best
-    );
-    topBtn.click();
-    return { followed: true };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const btns = Array.from(document.querySelectorAll('[data-testid$=\"-follow\"]')); if (!btns.length) return { alreadyFollowing: true }; const topBtn = btns.reduce((best, b) => b.getBoundingClientRect().y < best.getBoundingClientRect().y ? b : best); topBtn.click(); return { followed: true }; }"}
+ENDJSON
 ```
 
 If `alreadyFollowing`: skip silently. If error: skip follow, don't block engagement.

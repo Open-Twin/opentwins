@@ -1,160 +1,62 @@
 # BROWSER-post.md - Create a Post
 
-1. Navigate to `https://www.reddit.com/r/{subreddit}/submit`, wait 3s
+## 1. Navigate to submit page
 
-2. **Set title (shadow DOM):**
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const titleElement = document.querySelector('faceplate-textarea-input[name="title"]');
-    const textarea = titleElement?.shadowRoot?.querySelector('textarea');
-    if (!textarea) return { error: 'title textarea not found' };
-    textarea.focus();
-    textarea.value = '${postTitle.replace(/'/g, "\\'")}';
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    return { status: 'title set' };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://www.reddit.com/r/${subreddit}/submit"}' 2>&1
 ```
 
-3. **Focus body editor** (find visible Lexical):
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const editors = document.querySelectorAll('[data-lexical-editor="true"]');
-    let bodyEditor = null;
-    for (const editor of editors) {
-      const rect = editor.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) { bodyEditor = editor; break; }
-    }
-    if (!bodyEditor) return { error: 'body editor not found' };
-    bodyEditor.focus();
-    bodyEditor.click();
-    return { status: 'editor focused' };
-  }`,
-  profile: "{{browser_profile}}"
-})
+## 2. Set title (shadow DOM)
+
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); const titleElement = document.querySelector('faceplate-textarea-input[name=\"title\"]'); const textarea = titleElement?.shadowRoot?.querySelector('textarea'); if (!textarea) return { error: 'title textarea not found' }; textarea.focus(); textarea.value = '${postTitle}'; textarea.dispatchEvent(new Event('input', { bubbles: true })); return { status: 'title set' }; }"}
+ENDJSON
 ```
 
-4. **Type body with paragraph formatting:**
+## 3. Focus body editor + type body with paragraphs
 
-`execCommand('insertText')` types into one `<p>`. Split by paragraph + Enter between them. Bold: `Meta+B`.
+Replace `${bodyParagraphs}` with a JSON array of strings (one per paragraph). Bold lines wrapped in `**...**`.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 1000));
-    var editors = document.querySelectorAll('[data-lexical-editor="true"]');
-    var editor = Array.from(editors).find(e => e.getBoundingClientRect().height > 0);
-    if (!editor) return { error: 'no visible editor' };
-    editor.focus();
-    await new Promise(r => setTimeout(r, 300));
-
-    var paragraphs = ${JSON.stringify(bodyParagraphs)};  // array of strings, one per paragraph
-
-    function enterKey() {
-      editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
-      editor.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
-      editor.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
-    }
-    function metaBold() {
-      editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', code: 'KeyB', keyCode: 66, which: 66, metaKey: true, bubbles: true, cancelable: true }));
-    }
-
-    for (var i = 0; i < paragraphs.length; i++) {
-      var p = paragraphs[i];
-      // If paragraph starts with "**" and ends with "**", type it bold (strip markers)
-      if (p.startsWith('**') && p.endsWith('**')) {
-        metaBold();
-        document.execCommand('insertText', false, p.slice(2, -2));
-        metaBold();
-      } else {
-        document.execCommand('insertText', false, p);
-      }
-      if (i < paragraphs.length - 1) {
-        await new Promise(r => setTimeout(r, 150));
-        enterKey();
-        await new Promise(r => setTimeout(r, 150));
-      }
-    }
-    await new Promise(r => setTimeout(r, 500));
-    return { typed: true, paragraphs: paragraphs.length };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var editors = document.querySelectorAll('[data-lexical-editor=\"true\"]'); var editor = Array.from(editors).find(e => e.getBoundingClientRect().height > 0); if (!editor) return { error: 'no visible editor' }; editor.focus(); await new Promise(r => setTimeout(r, 300)); var paragraphs = ${bodyParagraphs}; function enterKey() { editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true })); editor.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true })); editor.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true })); } function metaBold() { editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', code: 'KeyB', keyCode: 66, which: 66, metaKey: true, bubbles: true, cancelable: true })); } for (var i = 0; i < paragraphs.length; i++) { var p = paragraphs[i]; if (p.startsWith('**') && p.endsWith('**')) { metaBold(); document.execCommand('insertText', false, p.slice(2, -2)); metaBold(); } else { document.execCommand('insertText', false, p); } if (i < paragraphs.length - 1) { await new Promise(r => setTimeout(r, 150)); enterKey(); await new Promise(r => setTimeout(r, 150)); } } await new Promise(r => setTimeout(r, 500)); return { typed: true, paragraphs: paragraphs.length }; }"}
+ENDJSON
 ```
 
-**Usage:** Split post body into array of paragraphs. Wrap lines you want bold in `**...**`. Example:
-```javascript
-var bodyParagraphs = [
-  "Anthropic published internal model details this week - including docs framing their model as posing unprecedented cybersecurity risks.",
-  "**The governance angle is what matters here.**",
-  "If your org is running AI tools in production - chatbots, code assistants, whatever - how often are you actually reassessing vendor risk?",
-  "At my org we have quarterly AI vendor reviews but honestly that cadence feels arbitrary now. Model updates ship weekly.",
-  "Curious if anyone has a formal process for this or if it is mostly vibes."
-];
+**Usage:** Split post body into array of paragraphs. Wrap bold lines in `**...**`. Example:
+```json
+["First paragraph text.", "**Bold heading line.**", "Third paragraph with details."]
 ```
 
 **Formatting:** Enter = paragraph. `Meta+B` = bold. `Meta+I` = italic. No bullets/headings/markdown.
 
-5. **[Optional] Select flair:**
-```javascript
-// Open flair modal
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const flairButton = document.querySelector('#edit-post-flair-button');
-    if (!flairButton) return { error: 'no flair button' };
-    flairButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    return { status: 'flair modal opened' };
-  }`,
-  profile: "{{browser_profile}}"
-})
-```
-Wait 1s, then select flair radio + click "Add":
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const modal = document.querySelector('r-post-flairs-modal');
-    if (!modal) return { error: 'modal not found' };
-    const inputs = modal.querySelectorAll('faceplate-radio-input[id^="post-flair-radio-input-"]');
-    let selected = null;
-    for (const input of inputs) {
-      const label = input.querySelector('label');
-      if (label && label.innerText.includes('${flairText}')) { selected = input; break; }
-    }
-    if (!selected) return { error: 'flair not found', available: Array.from(inputs).map(r => r.innerText) };
-    const radio = selected.querySelector('input[type="radio"]');
-    if (radio) radio.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    setTimeout(() => {
-      const addBtn = Array.from(modal.querySelectorAll('button')).find(b => b.innerText.trim() === 'Add');
-      if (addBtn) addBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    }, 500);
-    return { status: 'flair selected' };
-  }`,
-  profile: "{{browser_profile}}"
-})
+## 4. [Optional] Select flair
+
+```bash
+# Open flair modal
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const flairButton = document.querySelector('#edit-post-flair-button'); if (!flairButton) return { error: 'no flair button' }; flairButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); return { status: 'flair modal opened' }; }"}
+ENDJSON
+
+# Wait 1s, select flair + click Add (replace ${flairText} with target flair)
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); const modal = document.querySelector('r-post-flairs-modal'); if (!modal) return { error: 'modal not found' }; const inputs = modal.querySelectorAll('faceplate-radio-input[id^=\"post-flair-radio-input-\"]'); let selected = null; for (const input of inputs) { const label = input.querySelector('label'); if (label && label.innerText.includes('${flairText}')) { selected = input; break; } } if (!selected) return { error: 'flair not found', available: Array.from(inputs).map(r => r.innerText) }; const radio = selected.querySelector('input[type=\"radio\"]'); if (radio) radio.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 500)); const addBtn = Array.from(modal.querySelectorAll('button')).find(b => b.innerText.trim() === 'Add'); if (addBtn) addBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); return { status: 'flair selected' }; }"}
+ENDJSON
 ```
 
-6. **Click Post (shadow DOM):**
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const submitComponent = document.querySelector('r-post-form-submit-button#submit-post-button');
-    if (!submitComponent) return { error: 'submit component not found' };
-    const submitButton = submitComponent.shadowRoot?.querySelector('#inner-post-submit-button');
-    if (!submitButton) return { error: 'button not found in shadow' };
-    submitButton.click();
-    return { status: 'post button clicked' };
-  }`,
-  profile: "{{browser_profile}}"
-})
+## 5. Click Post (shadow DOM)
+
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const submitComponent = document.querySelector('r-post-form-submit-button#submit-post-button'); if (!submitComponent) return { error: 'submit component not found' }; const submitButton = submitComponent.shadowRoot?.querySelector('#inner-post-submit-button'); if (!submitButton) return { error: 'button not found in shadow' }; submitButton.click(); return { status: 'post button clicked' }; }"}
+ENDJSON
 ```
 
-7. Wait 4s, verify redirect (URL no longer contains `/submit`).
+## 6. Verify (wait 4s, check URL)
+
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 4000)); return { url: window.location.href, success: !window.location.href.includes('/submit') }; }"}
+ENDJSON
+```

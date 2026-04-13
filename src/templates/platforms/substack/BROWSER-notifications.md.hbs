@@ -10,68 +10,10 @@ Substack calls notifications "Activity". Tabs: All, Replies, Restacks. Only proc
 
 🚨 **"Replied to your note" notifications have NO post URL in the DOM** — only the author profile link. When a notification has `isReply=true` but no `/note/` or `/p/` link, the agent must click the row to discover the URL, then navigate back to `/activity` before continuing extraction. See Step 2 below.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    // Click "Replies" tab to filter to actionable items
-    var tabs = Array.from(document.querySelectorAll('button'));
-    var repliesTab = tabs.find(b => b.innerText.trim() === 'Replies');
-    if (repliesTab) {
-      repliesTab.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-      await new Promise(r => setTimeout(r, 2000));
-    }
-
-    // Check for empty state
-    if (document.body.innerText.includes("don't have any activity")) {
-      return { count: 0, items: [], empty: true };
-    }
-
-    // Extract notification rows — linkRow contains nested linkRows, so dedup by URL+snippet
-    var rows = Array.from(document.querySelectorAll("[class*='linkRow']"));
-    var seen = new Set();
-    var items = [];
-    for (var row of rows) {
-      var text = row.innerText || '';
-      var isReply = /replied|commented|response/i.test(text);
-      if (!isReply) continue;
-      var author = text.split('\\n')[0] || '';
-      if (/{{name}}|{{handle}}/i.test(author)) continue;
-      var link = Array.from(row.querySelectorAll('a[href]')).find(a => {
-        var h = a.href || '';
-        return h.includes('/note/') || h.includes('/p/') || h.includes('/comment/');
-      });
-      if (!link) continue;
-      var url = link.href.split('?')[0];
-      // Extract reply body snippet — find first line >20 chars that is NOT the "replied to..." header
-      var lines = text.split('\\n').filter(l => l.trim());
-      var snippet = '';
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim();
-        if (line.length > 20 && !/replied|commented|liked|your comment on/i.test(line) && !/^\\d+[hmd]$/.test(line)) {
-          snippet = line.slice(0, 30);
-          break;
-        }
-      }
-      // Dedup by URL + snippet (same URL can have multiple replies with different snippets)
-      var key = url + '|' + snippet;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      items.push({
-        type: 'reply',
-        author: author.slice(0, 40),
-        postUrl: url,
-        snippet: snippet,
-        rowIndex: Array.from(document.querySelectorAll("[class*='linkRow']")).indexOf(row),
-        needsClick: !url
-      });
-      if (items.length >= 10) break;
-    }
-    return { count: items.length, items };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var tabs = Array.from(document.querySelectorAll('button')); var repliesTab = tabs.find(b => b.innerText.trim() === 'Replies'); if (repliesTab) { repliesTab.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 2000)); } if (document.body.innerText.includes(\"don't have any activity\")) { return { count: 0, items: [], empty: true }; } var rows = Array.from(document.querySelectorAll(\"[class*='linkRow']\")); var seen = new Set(); var items = []; for (var row of rows) { var text = row.innerText || ''; var isReply = /replied|commented|response/i.test(text); if (!isReply) continue; var author = text.split(String.fromCharCode(10))[0] || ''; if (/{{name}}|{{handle}}/i.test(author)) continue; var link = Array.from(row.querySelectorAll('a[href]')).find(a => { var h = a.href || ''; return h.includes('/note/') || h.includes('/p/') || h.includes('/comment/'); }); if (!link) continue; var url = link.href.split('?')[0]; var lines = text.split(String.fromCharCode(10)).filter(l => l.trim()); var snippet = ''; for (var i = 0; i < lines.length; i++) { var line = lines[i].trim(); if (line.length > 20 && !/replied|commented|liked|your comment on/i.test(line) && !/^\\d+[hmd]$/.test(line)) { snippet = line.slice(0, 30); break; } } var key = url + '|' + snippet; if (seen.has(key)) continue; seen.add(key); items.push({ type: 'reply', author: author.slice(0, 40), postUrl: url, snippet: snippet, rowIndex: Array.from(document.querySelectorAll(\"[class*='linkRow']\")).indexOf(row), needsClick: !url }); if (items.length >= 10) break; } return { count: items.length, items }; }"}
+ENDJSON
 ```
 
 ---
@@ -86,25 +28,17 @@ For each item with `needsClick: true`:
 3. Navigate back to `https://substack.com/activity` and re-click "Replies" tab
 4. Store the discovered URL in the item's `postUrl`
 
-```javascript
-// Step 1: Click the row to discover URL
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 1000));
-    var rows = Array.from(document.querySelectorAll("[class*='linkRow']"));
-    var targetRow = rows[${rowIndex}];
-    if (!targetRow) return { error: 'row not found at index ${rowIndex}' };
-    var clickable = targetRow.querySelector("[class*='isClickable']") || targetRow;
-    clickable.click();
-    await new Promise(r => setTimeout(r, 3000));
-    return { url: window.location.href };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var rows = Array.from(document.querySelectorAll(\"[class*='linkRow']\")); var targetRow = rows[ROW_INDEX_PLACEHOLDER]; if (!targetRow) return { error: 'row not found at index' }; var clickable = targetRow.querySelector(\"[class*='isClickable']\") || targetRow; clickable.click(); await new Promise(r => setTimeout(r, 3000)); return { url: window.location.href }; }"}
+ENDJSON
 ```
 
-After getting the URL, navigate back: `browser.navigate("https://substack.com/activity")`, wait 3s, click "Replies" tab again.
+After getting the URL, navigate back:
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://substack.com/activity"}' 2>&1
+```
+Wait 3s, click "Replies" tab again.
 
 🚨 **Do this BEFORE the grep pre-check** — items need URLs for dedup to work.
 

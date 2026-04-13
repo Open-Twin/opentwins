@@ -1,17 +1,15 @@
 # HEARTBEAT.md - Threads Agent
 
 **Read every heartbeat:** `limits.json`, `schedule.json`, `BROWSER-core.md`
-🚨 **NEVER write your own browser JavaScript.** The BROWSER-*.md files contain exact, tested evaluate functions for every action (extract, click, type, navigate, like). Copy-paste them verbatim. Do NOT improvise selectors, write custom querySelectorAll, or modify the provided JS. If a function does not exist for what you need, skip the action.
 🚨 **APOSTROPHE SAFETY:** Comment text with apostrophes (it's, don't) breaks single-quoted curl `-d '...'` bodies. Use double-quoted `-d "..."` with `\"` for inner quotes, or heredoc `-d @- <<'ENDJSON'`.
 
 **File loading:** BROWSER-core.md is ALWAYS read. Other BROWSER-*.md files are read ON-DEMAND only when needed.
 
 **CLI syntax:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}' 2>&1`
 - **evaluate:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d '{"fn":"async () => { ... }"}' 2>&1` (JS goes after `--fn`)
-- **type:** `curl -s -X POST .../type -d '{"selector":"CSS_SELECTOR","text":"text to type"}'` — CDP native text input (handles focus)
 - **open/navigate/close:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"URL"}' 2>&1`
 - 🚨 **Tab reuse:** Use `open` ONLY for the FIRST page. Use `navigate` for ALL subsequent pages. Opening new tabs wastes resources and causes close errors.
-- 🚨 Embed waits at START of evaluate fn. NEVER `sessions_spawn` or sub-sessions.
+- 
 
 ---
 
@@ -20,7 +18,7 @@
 ```
 Heartbeat
 -> Read limits.json + schedule.json + BROWSER-core.md (global rules/shared patterns)
--> Browser startup (retry if CDP fails)
+-> Browser startup (retry if error)
 -> Reply check (activity/replies) -> reply loop
    (🚨 Read BROWSER-replies.md BEFORE extracting posts)
 -> Schedule check -> execute pending tasks
@@ -62,9 +60,11 @@ printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"a
 ## 2. Browser Startup (with retry)
 
 1. `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://www.threads.net/activity/replies"}' 2>&1`
-2. If CDP error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
+2. If error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
 
 ## 3. Reply Check (MANDATORY FIRST)
+
+Empty notifications is normal — skip to § 4.
 
 **Read BROWSER-replies.md first.**
 
@@ -212,7 +212,7 @@ ALWAYS send even when 0 actions. Outputting HEARTBEAT_OK without Slack report = 
 ## 6. Error Handling
 
 Browser timeout: close tab, reopen URL, retry once. Still fails → skip browser tasks.
-NEVER `browser.stop()` (kills Chrome).
+Do not kill Chrome (kills Chrome).
 
 ## 7. Close & Exit
 

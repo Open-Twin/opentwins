@@ -5,7 +5,6 @@
 - **open/close:** `curl -s -X POST .../open -d '{"url":"URL"}'` / `.../close`
 - 🚨 **Keep evaluate JS under 1000 chars.** If longer, split into 2 evaluates. The CLI truncates/breaks JS over ~1500 chars.
 - **Editor:** BROWSER-core.md § 3 (inline Slate, NOT dialog). Split into 2 evaluates: (1) scroll+clear+type, (2) find Respond+click+verify.
-🚨 **NEVER write your own browser JavaScript.** The BROWSER-*.md files contain exact, tested evaluate functions for every action (extract, click, type, navigate, like). Copy-paste them verbatim. Do NOT improvise selectors, write custom querySelectorAll, or modify the provided JS. If a function does not exist for what you need, skip the action.
 🚨 **APOSTROPHE SAFETY:** Comment text with apostrophes (it's, don't) breaks single-quoted curl `-d '...'` bodies. Use double-quoted `-d "..."` with `\"` for inner quotes, or heredoc `-d @- <<'ENDJSON'`.
 - **500 errors after submit are NORMAL** — response IS saved. Verify via responses panel, not `body.innerText`.
 - **Submit:** `dispatchEvent(new MouseEvent('click'))` — never `.click()`.
@@ -32,7 +31,6 @@ Heartbeat
 
 Required order: All replies FIRST, then schedule tasks.
 🚨 **ALL steps mandatory every heartbeat.** Browser + notifications MUST run even if no tasks are due.
-🚨 **NEVER use `sessions_spawn` or sub-sessions.** Execute ALL commands directly — no child sessions.
 
 ---
 
@@ -78,7 +76,7 @@ printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"a
 ## § 2. Browser Startup (with retry)
 
 1. `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://medium.com/me/notifications"}' 2>&1`
-2. If CDP error:
+2. If error:
    - Wait 3s, retry once
    - Still fails -> skip all browser tasks, log error, return HEARTBEAT_OK
 
@@ -89,7 +87,7 @@ printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"a
 **Read BROWSER-notifications.md first.**
 
 1. Navigate `https://medium.com/me/notifications`
-2. Extract notifications — BROWSER-notifications.md § 1 (has 3s embedded wait)
+2. Extract notifications — BROWSER-notifications.md § 1 (has 3s embedded wait). Empty result is normal — skip to § 4.
 3. Filter: process type="response" and type="note" only
 4. **MANDATORY batch grep pre-check** — build keys for ALL notifications and check at once:
    ```bash
@@ -225,7 +223,7 @@ ALWAYS send even when 0 actions. Increment = ADD 1. limits.json = source of trut
 
 ## § 7. Close Browser
 
-`browser.close({ profile: "{{browser_profile}}" })`. If fails -> `browser.start({ profile: "{{browser_profile}}" })` (restarts cleanly). NEVER browser.stop() or pkill.
+Close browser via the `/close` endpoint. If fails -> restart via the `/start` endpoint (restarts cleanly). Do not kill Chrome or pkill.
 
 ---
 

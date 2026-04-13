@@ -1,17 +1,9 @@
 # BROWSER-core.md - PH Global Rules
 
-All evaluate/snapshot calls MUST include `profile: "{{browser_profile}}"`.
+
 
 **Global rules:**
-- `evaluate()` for data extraction, text input, state checks
-- `snapshot()` ONLY before clicks. CLI flags are booleans — NO values:
-  ```
-  curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/snapshot -H 'Content-Type: application/json' -d '{"selector":"...","compact":true,"interactive":true,"depth":6}'
-  ```
-  ❌ `--compact true` / `--interactive true` — these fail ("too many arguments")
-  ✅ `--compact --interactive` — correct boolean flag syntax
-- Wait 3s before first snapshot on any page
-- NEVER use `args` in evaluate — inline via template literals
+- `evaluate()` for all browser interaction: data extraction, text input, clicks, state checks
 - PH editor = TipTap/ProseMirror (`.tiptap.ProseMirror`). NEVER set `textContent`/`innerHTML`/`value` — use `execCommand('insertText')`
 - `click` takes ref as **positional argument**, not an option:
   ```
@@ -19,9 +11,7 @@ All evaluate/snapshot calls MUST include `profile: "{{browser_profile}}"`.
   ```
   ❌ `click --ref e1` — fails ("unknown option --ref")
   ✅ `click e1` — correct positional argument
-- ❌ NEVER use `browser.act({ kind: "navigate" })` — "navigate" is NOT a valid kind. Use `curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -d '{"url":"URL"}'`
-- ❌ NEVER use separate `exec sleep N` for page load waits — combine waits into the NEXT evaluate call using a leading `await new Promise(r => setTimeout(r, 3000));` or simply accept that the evaluate will run immediately (PH pages load fast)
-- `evaluate --fn` takes **inline code**, not a file path. Pass the function body directly:
+- Embed waits at START of each evaluate: `await new Promise(r => setTimeout(r, 3000))`
   ```
   curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d '{"fn":"function(){return document.title;}"}'
   ```
@@ -37,8 +27,8 @@ All evaluate/snapshot calls MUST include `profile: "{{browser_profile}}"`.
 
 ## Recovery Rules
 
-- Browser timeout → close tab, reopen URL. If fails → `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/start`, wait 3s, retry once. NEVER use `browser.stop()`.
-- "matched N elements" error → snapshot selector too broad, use narrower selector
-- evaluate() unexpected data → 1 snapshot to inspect DOM, use discovered selector
-- Click fails after snapshot → retry snapshot with narrower selector, retry click
+- Browser timeout → close tab, reopen URL. If fails → `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/start`, wait 3s, retry once. Do not kill Chrome.
+- "matched N elements" error → selector too broad, use narrower selector
+- evaluate() unexpected data → check URL, re-navigate if wrong page
+- Click fails → retry via evaluate. Still fails → skip, log Error
 - Retry also fails → skip, log Error, move to next task

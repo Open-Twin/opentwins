@@ -157,7 +157,7 @@ Track what resonates (ours + others). Log insights → INSIGHTS.md when patterns
 
 ## Browser Rules
 
-**🚨 CRITICAL:** `profile: "{{browser_profile}}"` on EVERY call (open, navigate, snapshot, click, type, evaluate, close, ALL).
+**🚨 CRITICAL:** All browser calls use the profile in the URL path.
 
 **Typing fallback:** Timeout → `evaluate` set `element.value='text'` + dispatch `input` event.
 

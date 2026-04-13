@@ -74,6 +74,10 @@ Re-read your text before submitting. Check these 4 things:
 **Called once per query** (see HEARTBEAT.md §4 for multi-query loop).
 Navigate to `https://www.threads.com/search?q={QUERY}&serp_type=default&filter=recent`, then extract with 3s embedded wait.
 
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://www.threads.com/search?q={QUERY}&serp_type=default&filter=recent"}' 2>&1
+```
+
 Returns enriched posts with `bio`, `ageHours` fields. `postId` extracted from URL — use directly for grep pre-check.
 
 **Filters applied inline:**
@@ -83,87 +87,10 @@ Returns enriched posts with `bio`, `ageHours` fields. `postId` extracted from UR
 - Skips posts with 0 likes AND 0 replies (zero engagement — not worth commenting)
 - Skips posts older than 4h with 0 likes (nobody cared)
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    const posts = [];
-    const links = Array.from(document.querySelectorAll('a[href*="/post/"]'));
-    const seen = new Set();
-    const noiseKw = ['hiring', 'job seekers', 'apply now', 'dm me for', 'check my link', 'onlyfans', 'follow back'];
-
-    links.forEach(link => {
-      if (link.href.includes('/media')) return;
-      if (seen.has(link.href) || posts.length >= 10) return;
-      seen.add(link.href);
-
-      let container = link;
-      for (let i = 0; i < 9; i++) {
-        container = container.parentElement;
-        if (!container) return;
-      }
-
-      const author = link.href.split('/')[3].replace('@', '');
-      const postId = link.href.match(/\\/post\\/([^/?]+)/)?.[1] || '';
-      const lines = container.innerText.split('\\n').filter(l => l.trim());
-
-      // lines[0]=username, lines[1]=bio OR timestamp, lines[2]=timestamp OR text
-      const tsPattern = /^\\d+[smhdw]$|^\\d+\\/\\d+\\/\\d+$/;
-      let bio = '', timeStr = '', contentStart = 1;
-      if (lines[1] && !tsPattern.test(lines[1])) {
-        bio = lines[1]; timeStr = lines[2] || ''; contentStart = 3;
-      } else {
-        timeStr = lines[1] || ''; contentStart = 2;
-      }
-
-      // Parse age in hours
-      let ageHours = 0;
-      const tsMatch = timeStr.match(/^(\\d+)([smhdw])$/);
-      if (tsMatch) {
-        const n = parseInt(tsMatch[1]), u = tsMatch[2];
-        if (u === 's') ageHours = n / 3600;
-        else if (u === 'm') ageHours = n / 60;
-        else if (u === 'h') ageHours = n;
-        else if (u === 'd') ageHours = n * 24;
-        else if (u === 'w') ageHours = n * 168;
-      } else if (/^\\d+\\/\\d+\\/\\d+$/.test(timeStr)) {
-        ageHours = 72; // date shown = old post
-      }
-
-      const contentLines = lines.slice(contentStart);
-      const numbers = contentLines.filter(l => /^\\d+$/.test(l));
-      const likes = numbers.length > 0 ? parseInt(numbers[0]) : 0;
-      const replies = numbers.length > 1 ? parseInt(numbers[1]) : 0;
-      const textLines = contentLines.filter(l => !/^\\d+$/.test(l));
-      const text = textLines.join(' ').slice(0, 200);
-
-      // Noise filter
-      const textLower = text.toLowerCase();
-      if (noiseKw.some(kw => textLower.includes(kw))) return;
-      if (textLines.join('').replace(/\\s/g, '').length < 30) return;
-
-      // Reply filter: skip posts that are replies to other posts (navigating shows parent, not this post)
-      var isReply = lines.some(function(l) { return l.trim().startsWith('Replying to'); });
-      if (isReply) return;
-
-      // Engagement filter: skip posts with zero engagement (0 likes AND 0 replies)
-      if (likes === 0 && replies === 0) return;
-      // Age filter: skip posts > 4h with 0 likes
-      if (ageHours > 4 && likes === 0) return;
-
-      // Media detection — can't see images, meme posts get wrong-tone replies
-      var imgs = Array.from(container.querySelectorAll('img')).filter(img => img.getBoundingClientRect().width > 100);
-      var hasMedia = imgs.length > 0 || container.querySelectorAll('video').length > 0;
-      var isMemeLikely = hasMedia && text.length < 80;
-
-      posts.push({ author, postId, url: link.href, text, likes, replies, bio, ageHours, hasMedia, isMemeLikely });
-    });
-
-    return posts;
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); const posts = []; const links = Array.from(document.querySelectorAll('a[href*=\"/post/\"]')); const seen = new Set(); const noiseKw = ['hiring', 'job seekers', 'apply now', 'dm me for', 'check my link', 'onlyfans', 'follow back']; links.forEach(link => { if (link.href.includes('/media')) return; if (seen.has(link.href) || posts.length >= 10) return; seen.add(link.href); let container = link; for (let i = 0; i < 9; i++) { container = container.parentElement; if (!container) return; } const author = link.href.split('/')[3].replace('@', ''); const postId = link.href.match(/\\/post\\/([^/?]+)/)?.[1] || ''; const lines = container.innerText.split(String.fromCharCode(10)).filter(l => l.trim()); const tsPattern = /^\\d+[smhdw]$|^\\d+\\/\\d+\\/\\d+$/; let bio = '', timeStr = '', contentStart = 1; if (lines[1] && !tsPattern.test(lines[1])) { bio = lines[1]; timeStr = lines[2] || ''; contentStart = 3; } else { timeStr = lines[1] || ''; contentStart = 2; } let ageHours = 0; const tsMatch = timeStr.match(/^(\\d+)([smhdw])$/); if (tsMatch) { const n = parseInt(tsMatch[1]), u = tsMatch[2]; if (u === 's') ageHours = n / 3600; else if (u === 'm') ageHours = n / 60; else if (u === 'h') ageHours = n; else if (u === 'd') ageHours = n * 24; else if (u === 'w') ageHours = n * 168; } else if (/^\\d+\\/\\d+\\/\\d+$/.test(timeStr)) { ageHours = 72; } const contentLines = lines.slice(contentStart); const numbers = contentLines.filter(l => /^\\d+$/.test(l)); const likes = numbers.length > 0 ? parseInt(numbers[0]) : 0; const replies = numbers.length > 1 ? parseInt(numbers[1]) : 0; const textLines = contentLines.filter(l => !/^\\d+$/.test(l)); const text = textLines.join(' ').slice(0, 200); const textLower = text.toLowerCase(); if (noiseKw.some(kw => textLower.includes(kw))) return; if (textLines.join('').replace(/\\s/g, '').length < 30) return; var isReply = lines.some(function(l) { return l.trim().startsWith('Replying to'); }); if (isReply) return; if (likes === 0 && replies === 0) return; if (ageHours > 4 && likes === 0) return; var imgs = Array.from(container.querySelectorAll('img')).filter(img => img.getBoundingClientRect().width > 100); var hasMedia = imgs.length > 0 || container.querySelectorAll('video').length > 0; var isMemeLikely = hasMedia && text.length < 80; posts.push({ author, postId, url: link.href, text, likes, replies, bio, ageHours, hasMedia, isMemeLikely }); }); return posts; }"}
+ENDJSON
 ```
 
 ---
@@ -172,22 +99,10 @@ browser.act({
 
 After navigating to post. Combines 3s wait + DOM duplicate check + post text read into ONE evaluate:
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    const alreadyCommented = document.querySelectorAll('a[href*="/@{{handle_slug}}"]').length > 1;
-    const links = Array.from(document.querySelectorAll('a[href*="/post/"]'));
-    if (!links[0]) return { alreadyCommented, text: 'no post' };
-    let container = links[0];
-    for (let i = 0; i < 9; i++) container = container.parentElement;
-    const lines = container ? container.innerText.split('\\n').filter(l => l.trim()) : [];
-    const text = lines.slice(2).filter(l => !/^\\d+$/.test(l)).join(' ').slice(0, 400);
-    return { alreadyCommented, text };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); const alreadyCommented = document.querySelectorAll('a[href*=\"/@{{handle_slug}}\"]').length > 1; const links = Array.from(document.querySelectorAll('a[href*=\"/post/\"]')); if (!links[0]) return { alreadyCommented, text: 'no post' }; let container = links[0]; for (let i = 0; i < 9; i++) container = container.parentElement; const lines = container ? container.innerText.split(String.fromCharCode(10)).filter(l => l.trim()) : []; const text = lines.slice(2).filter(l => !/^\\d+$/.test(l)).join(' ').slice(0, 400); return { alreadyCommented, text }; }"}
+ENDJSON
 ```
 
 If `alreadyCommented: true` → backfill to `memory/commented_posts.txt`, skip to next candidate.
@@ -196,25 +111,10 @@ If `alreadyCommented: true` → backfill to `memory/commented_posts.txt`, skip t
 
 Use when commenting on posts (NOT for replies from activity page).
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const icons = document.querySelectorAll('svg[aria-label="Reply"]');
-    if (!icons[0]) return { error: 'no_reply_button' };
-
-    let el = icons[0];
-    while (el && el !== document.body) {
-      if (el.getAttribute && el.getAttribute('role') == 'button') {
-        el.click();
-        return { clicked: true };
-      }
-      el = el.parentElement;
-    }
-    return { error: 'button_not_found' };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const icons = document.querySelectorAll('svg[aria-label=\"Reply\"]'); if (!icons[0]) return { error: 'no_reply_button' }; let el = icons[0]; while (el && el !== document.body) { if (el.getAttribute && el.getAttribute('role') == 'button') { el.click(); return { clicked: true }; } el = el.parentElement; } return { error: 'button_not_found' }; }"}
+ENDJSON
 ```
 
 After clicking, the 1.5s wait is embedded in S 5 (Reply/Comment Flow).
@@ -227,28 +127,10 @@ After clicking, the 1.5s wait is embedded in S 5 (Reply/Comment Flow).
 🚨 **Menu items use `[role="menuitem"]`**, NOT `div[role="button"]`.
 
 **Step 1:** Click repost icon → wait 1.5s → click Quote menuitem (ONE evaluate):
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 1000));
-    const repostSvg = document.querySelector('svg[aria-label*="Repost"]');
-    if (!repostSvg) return { error: 'no repost svg' };
-    const btn = repostSvg.closest('div[role="button"]');
-    if (!btn) return { error: 'no repost button' };
-    btn.click();
-    await new Promise(r => setTimeout(r, 1500));
-    const menuItems = Array.from(document.querySelectorAll('[role="menuitem"]'));
-    const quoteItem = menuItems.find(m => m.innerText.trim() === 'Quote');
-    if (!quoteItem) return { repostClicked: true, error: 'no Quote menuitem', items: menuItems.map(m => m.innerText.trim()) };
-    quoteItem.click();
-    await new Promise(r => setTimeout(r, 2000));
-    const dialog = document.querySelector('[role="dialog"]');
-    const textbox = dialog ? dialog.querySelector('[role="textbox"]') : null;
-    return { repostClicked: true, quoteClicked: true, dialogReady: !!textbox };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); const repostSvg = document.querySelector('svg[aria-label*=\"Repost\"]'); if (!repostSvg) return { error: 'no repost svg' }; const btn = repostSvg.closest('div[role=\"button\"]'); if (!btn) return { error: 'no repost button' }; btn.click(); await new Promise(r => setTimeout(r, 1500)); const menuItems = Array.from(document.querySelectorAll('[role=\"menuitem\"]')); const quoteItem = menuItems.find(m => m.innerText.trim() === 'Quote'); if (!quoteItem) return { repostClicked: true, error: 'no Quote menuitem', items: menuItems.map(m => m.innerText.trim()) }; quoteItem.click(); await new Promise(r => setTimeout(r, 2000)); const dialog = document.querySelector('[role=\"dialog\"]'); const textbox = dialog ? dialog.querySelector('[role=\"textbox\"]') : null; return { repostClicked: true, quoteClicked: true, dialogReady: !!textbox }; }"}
+ENDJSON
 ```
 
 If `dialogReady: true` → proceed to Step 2.
@@ -265,38 +147,10 @@ If `error: 'no Quote menuitem'` → retry once (click repost again). If still fa
 
 **ONE evaluate — check icon, click if needed, follow from popup:**
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 1000));
-    // Find the topmost Follow/Following icon (post author's, not commenters')
-    var svgs = Array.from(document.querySelectorAll('svg[aria-label="Follow"], svg[aria-label="Following"]')).filter(s => s.getBoundingClientRect().y > 0);
-    var topSvg = svgs.reduce((best, s) => {
-      var y = s.getBoundingClientRect().y;
-      return (!best || y < best.getBoundingClientRect().y) ? s : best;
-    }, null);
-    if (!topSvg) return { alreadyFollowing: true }; // icon disappears entirely when following
-    if (topSvg.getAttribute('aria-label') === 'Following') return { alreadyFollowing: true };
-
-    var btn = topSvg.closest('div[role="button"]') || topSvg.parentElement;
-    btn.click();
-    await new Promise(r => setTimeout(r, 1500));
-
-    var buttons = Array.from(document.querySelectorAll('div[role="button"]'));
-    var followBtn = buttons.find(b => b.innerText.trim() === 'Follow' && b.getBoundingClientRect().width > 100);
-    if (!followBtn) return { popupOpened: true, error: 'no Follow button in popup' };
-
-    followBtn.click();
-    await new Promise(r => setTimeout(r, 500));
-
-    // Close the popup so it does not interfere with reply/quote dialog
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    await new Promise(r => setTimeout(r, 500));
-    return { followed: true };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var svgs = Array.from(document.querySelectorAll('svg[aria-label=\"Follow\"], svg[aria-label=\"Following\"]')).filter(s => s.getBoundingClientRect().y > 0); var topSvg = svgs.reduce((best, s) => { var y = s.getBoundingClientRect().y; return (!best || y < best.getBoundingClientRect().y) ? s : best; }, null); if (!topSvg) return { alreadyFollowing: true }; if (topSvg.getAttribute('aria-label') === 'Following') return { alreadyFollowing: true }; var btn = topSvg.closest('div[role=\"button\"]') || topSvg.parentElement; btn.click(); await new Promise(r => setTimeout(r, 1500)); var buttons = Array.from(document.querySelectorAll('div[role=\"button\"]')); var followBtn = buttons.find(b => b.innerText.trim() === 'Follow' && b.getBoundingClientRect().width > 100); if (!followBtn) return { popupOpened: true, error: 'no Follow button in popup' }; followBtn.click(); await new Promise(r => setTimeout(r, 500)); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await new Promise(r => setTimeout(r, 500)); return { followed: true }; }"}
+ENDJSON
 ```
 
 If `alreadyFollowing`: skip silently. If `error`: skip follow, proceed with comment (don't block engagement).
@@ -309,23 +163,10 @@ If `alreadyFollowing`: skip silently. If `error`: skip follow, proceed with comm
 
 **ONE evaluate — click Create button in nav:**
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 1000));
-    var createSvg = document.querySelector('svg[aria-label="Create"]');
-    if (!createSvg) return { error: 'no Create button' };
-    var btn = createSvg.closest('div[role="button"]');
-    if (!btn) return { error: 'no parent button' };
-    btn.click();
-    await new Promise(r => setTimeout(r, 2000));
-    var dialog = document.querySelector('[role="dialog"]');
-    var textbox = dialog ? dialog.querySelector('[role="textbox"][contenteditable="true"]') : null;
-    return { dialogReady: !!textbox };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var createSvg = document.querySelector('svg[aria-label=\"Create\"]'); if (!createSvg) return { error: 'no Create button' }; var btn = createSvg.closest('div[role=\"button\"]'); if (!btn) return { error: 'no parent button' }; btn.click(); await new Promise(r => setTimeout(r, 2000)); var dialog = document.querySelector('[role=\"dialog\"]'); var textbox = dialog ? dialog.querySelector('[role=\"textbox\"][contenteditable=\"true\"]') : null; return { dialogReady: !!textbox }; }"}
+ENDJSON
 ```
 
 If `dialogReady: true` → proceed to BROWSER-core.md S 5 (type + submit).

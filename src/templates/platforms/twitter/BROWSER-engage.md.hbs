@@ -1,7 +1,5 @@
 # BROWSER-engage.md - Search, Compose, Quote, Retweet & Trending
 
-🚨 **After EVERY navigate, embed the wait inside the next evaluate** — NEVER use separate `exec sleep`. See HEARTBEAT.md Tool Roles for the pattern.
-
 ## Reply Quality Rules
 
 ### A. Don't Default to "Reframe + Professional Angle" (per-reply check)
@@ -88,184 +86,62 @@ Re-read your text before submitting. Check these 4 things:
 
 ## § 3 — Extract Search Tweets
 
-```javascript
-// Use on search results pages — includes embedded 2s wait after navigate
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    return new Promise(resolve => setTimeout(() => {
-      const tweets = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
-      const parseCount = (label) => {
-        if (!label) return 0;
-        const match = label.match(/^(\\d+)/);
-        return match ? parseInt(match[1]) : 0;
-      };
-      resolve(tweets.slice(0, 10).map(t => {
-        const user = t.querySelector('[data-testid="User-Name"]');
-        const text = t.querySelector('[data-testid="tweetText"]');
-        const link = t.querySelector('a[href*="/status/"]');
-        const likeBtn = t.querySelector('[data-testid="like"]');
-        const replyBtn = t.querySelector('[data-testid="reply"]');
-        const retweetBtn = t.querySelector('[data-testid="retweet"]');
-        const viewSpan = t.querySelector('a[href*="/analytics"] span');
-        return {
-          url: link ? 'https://x.com' + link.getAttribute('href') : '',
-          author: user ? user.innerText.split('\\n')[0] : '',
-          handle: user ? (user.innerText.split('\\n').find(l => l.startsWith('@')) || '') : '',
-          text: text ? text.innerText.slice(0, 200) : '',
-          likes: parseCount(likeBtn?.getAttribute('aria-label')),
-          replies: parseCount(replyBtn?.getAttribute('aria-label')),
-          retweets: parseCount(retweetBtn?.getAttribute('aria-label')),
-          views: viewSpan ? viewSpan.innerText : '0'
-        };
-      }).filter(t => t.url && t.text));
-    }, 2000));
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); const tweets = Array.from(document.querySelectorAll('article[data-testid=\"tweet\"]')); const parseCount = (label) => { if (!label) return 0; const match = label.match(/^(\\d+)/); return match ? parseInt(match[1]) : 0; }; return tweets.slice(0, 10).map(t => { const user = t.querySelector('[data-testid=\"User-Name\"]'); const text = t.querySelector('[data-testid=\"tweetText\"]'); const link = t.querySelector('a[href*=\"/status/\"]'); const likeBtn = t.querySelector('[data-testid=\"like\"]'); const replyBtn = t.querySelector('[data-testid=\"reply\"]'); const retweetBtn = t.querySelector('[data-testid=\"retweet\"]'); const viewSpan = t.querySelector('a[href*=\"/analytics\"] span'); return { url: link ? 'https://x.com' + link.getAttribute('href') : '', author: user ? user.innerText.split(String.fromCharCode(10))[0] : '', handle: user ? (user.innerText.split(String.fromCharCode(10)).find(l => l.startsWith('@')) || '') : '', text: text ? text.innerText.slice(0, 200) : '', likes: parseCount(likeBtn?.getAttribute('aria-label')), replies: parseCount(replyBtn?.getAttribute('aria-label')), retweets: parseCount(retweetBtn?.getAttribute('aria-label')), views: viewSpan ? viewSpan.innerText : '0' }; }).filter(t => t.url && t.text); }"}
+ENDJSON
 ```
 
 ## § 4 — Extract Strategic Tweets
 
-```javascript
-// Use on advanced search: from:X OR from:Y min_faves:100 — includes embedded 2s wait
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    return new Promise(resolve => setTimeout(() => {
-      const tweets = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
-      const parseCount = (label) => {
-        if (!label) return 0;
-        const match = label.match(/^(\\d+)/);
-        return match ? parseInt(match[1]) : 0;
-      };
-      const now = Date.now();
-      resolve(tweets.slice(0, 10).map(t => {
-        const user = t.querySelector('[data-testid="User-Name"]');
-        const text = t.querySelector('[data-testid="tweetText"]');
-        const link = t.querySelector('a[href*="/status/"]');
-        const likeBtn = t.querySelector('[data-testid="like"]') || t.querySelector('[data-testid="unlike"]');
-        const replyBtn = t.querySelector('[data-testid="reply"]');
-        const time = t.querySelector('time')?.getAttribute('datetime');
-        const ageHours = time ? (now - new Date(time).getTime()) / (1000*60*60) : 999;
-        var hasMedia = !!t.querySelector('[data-testid="tweetPhoto"]') || !!t.querySelector('[data-testid="videoPlayer"]') || !!t.querySelector('[data-testid="tweetGif"]');
-        var textLen = text ? text.innerText.length : 0;
-        return {
-          url: link ? 'https://x.com' + link.getAttribute('href') : '',
-          handle: user ? (user.innerText.split('\\n').find(l => l.startsWith('@')) || '') : '',
-          text: text ? text.innerText.slice(0, 200) : '',
-          likes: parseCount(likeBtn?.getAttribute('aria-label')),
-          replies: parseCount(replyBtn?.getAttribute('aria-label')),
-          ageHours: Math.round(ageHours),
-          hasMedia: hasMedia,
-          isMemeLikely: hasMedia && textLen < 80
-        };
-      }).filter(t => t.url && t.likes >= 100 && t.replies < 50 && t.ageHours < 48));
-    }, 2000));
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); const tweets = Array.from(document.querySelectorAll('article[data-testid=\"tweet\"]')); const parseCount = (label) => { if (!label) return 0; const match = label.match(/^(\\d+)/); return match ? parseInt(match[1]) : 0; }; const now = Date.now(); return tweets.slice(0, 10).map(t => { const user = t.querySelector('[data-testid=\"User-Name\"]'); const text = t.querySelector('[data-testid=\"tweetText\"]'); const link = t.querySelector('a[href*=\"/status/\"]'); const likeBtn = t.querySelector('[data-testid=\"like\"]') || t.querySelector('[data-testid=\"unlike\"]'); const replyBtn = t.querySelector('[data-testid=\"reply\"]'); const time = t.querySelector('time')?.getAttribute('datetime'); const ageHours = time ? (now - new Date(time).getTime()) / (1000*60*60) : 999; var hasMedia = !!t.querySelector('[data-testid=\"tweetPhoto\"]') || !!t.querySelector('[data-testid=\"videoPlayer\"]') || !!t.querySelector('[data-testid=\"tweetGif\"]'); var textLen = text ? text.innerText.length : 0; return { url: link ? 'https://x.com' + link.getAttribute('href') : '', handle: user ? (user.innerText.split(String.fromCharCode(10)).find(l => l.startsWith('@')) || '') : '', text: text ? text.innerText.slice(0, 200) : '', likes: parseCount(likeBtn?.getAttribute('aria-label')), replies: parseCount(replyBtn?.getAttribute('aria-label')), ageHours: Math.round(ageHours), hasMedia: hasMedia, isMemeLikely: hasMedia && textLen < 80 }; }).filter(t => t.url && t.likes >= 100 && t.replies < 50 && t.ageHours < 48); }"}
+ENDJSON
 ```
 
 ## § 7 — Compose / Original Tweet
 
-```javascript
-browser.navigate("https://x.com/home", { profile: "{{browser_profile}}" })
-browser.act({ kind: "wait", timeMs: 1000, profile: "{{browser_profile}}" })
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const btn = document.querySelector('a[href="/compose/tweet"]') ||
-                document.querySelector('[data-testid="SideNav_NewTweet_Button"]');
-    if (!btn) return { error: 'compose button not found' };
-    btn.click();
-    return { clicked: true };
-  }`,
-  profile: "{{browser_profile}}"
-})
-// Wait 1s → use DIALOG-SCOPED selectors (BROWSER-core.md § 1 "compose dialog" pattern):
-// snapshot('[role="dialog"] [data-testid="tweetTextarea_0"]') → type
-// snapshot('[role="dialog"] [data-testid="tweetButton"]') → click Post
-// 🚨 NEVER use bare [data-testid="tweetTextarea_0"] — home page has TWO textareas (feed + dialog) → strict mode violation
-// If click returns "Element not found" → evaluate fallback: document.querySelector('[role="dialog"] [data-testid="tweetButton"]').click()
+```bash
+# Step 1: Navigate to home
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://x.com/home"}' 2>&1
+
+# Step 2: Click compose button
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); const btn = document.querySelector('a[href=\"/compose/tweet\"]') || document.querySelector('[data-testid=\"SideNav_NewTweet_Button\"]'); if (!btn) return { error: 'compose button not found' }; btn.click(); return { clicked: true }; }"}
+ENDJSON
+
+# Step 3: Use BROWSER-core.md § 1 compose dialog pattern (clipboard paste + submit)
+# 🚨 MUST use dialog-scoped selectors: [role="dialog"] [data-testid="tweetTextarea_0"]
+# 🚨 NEVER use bare [data-testid="tweetTextarea_0"] — home page has TWO textareas (feed + dialog)
 ```
 
 ## § 8 — Quote Tweet
 
-```javascript
-// On tweet page, click retweet → Quote
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const btn = document.querySelector('[data-testid="retweet"]');
-    if (!btn) return { error: 'retweet button not found' };
-    btn.click();
-    return { clicked: true };
-  }`,
-  profile: "{{browser_profile}}"
-})
-browser.act({ kind: "wait", timeMs: 1000, profile: "{{browser_profile}}" })
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const items = Array.from(document.querySelectorAll('[role="menuitem"]'));
-    const quoteBtn = items.find(i => i.innerText.includes('Quote'));
-    if (!quoteBtn) return { error: 'quote option not found' };
-    quoteBtn.click();
-    return { clicked: true };
-  }`,
-  profile: "{{browser_profile}}"
-})
-// Wait 1s → use DIALOG-SCOPED selectors (BROWSER-core.md § 1 "compose dialog" pattern):
-// snapshot('[role="dialog"] [data-testid="tweetTextarea_0"]') → type quote text
-// snapshot('[role="dialog"] [data-testid="tweetButton"]') → click Post
-// 🚨 Quote opens a dialog — MUST use dialog-scoped selectors (same two-textarea issue as § 7)
+```bash
+# Step 1: On tweet page, click retweet button
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const btn = document.querySelector('[data-testid=\"retweet\"]'); if (!btn) return { error: 'retweet button not found' }; btn.click(); return { clicked: true }; }"}
+ENDJSON
+
+# Step 2: Click "Quote" from menu
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); const items = Array.from(document.querySelectorAll('[role=\"menuitem\"]')); const quoteBtn = items.find(i => i.innerText.includes('Quote')); if (!quoteBtn) return { error: 'quote option not found' }; quoteBtn.click(); return { clicked: true }; }"}
+ENDJSON
+
+# Step 3: Use BROWSER-core.md § 1 compose dialog pattern (clipboard paste + submit)
+# 🚨 Quote opens a dialog — MUST use dialog-scoped selectors
 ```
 
 ## § 9 — Retweet (Batch from Feed)
 
 Retweet multiple tweets from the feed in a SINGLE evaluate. No per-tweet navigation needed.
-Pass `targetUrls` as an array of href paths (e.g. `['/user/status/123', ...]`).
+Replace `${targetUrls}` with a JSON array of href paths (e.g. `["/user/status/123"]`).
 
-```javascript
-// On home feed page — batch retweet with Promise chain
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const targetUrls = ${JSON.stringify(targetUrls)};
-    const tweets = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
-    const results = [];
-
-    function rtOne(idx) {
-      return new Promise(resolve => {
-        if (idx >= targetUrls.length) { resolve(); return; }
-        const url = targetUrls[idx];
-        const target = tweets.find(t => {
-          const link = t.querySelector('a[href*="/status/"]');
-          return link && link.getAttribute('href') === url;
-        });
-        if (!target) { results.push({ url, error: 'not found' }); resolve(rtOne(idx + 1)); return; }
-        const btn = target.querySelector('[data-testid="retweet"]');
-        if (!btn) { results.push({ url, already: !!target.querySelector('[data-testid="unretweet"]') }); resolve(rtOne(idx + 1)); return; }
-        btn.click();
-        setTimeout(() => {
-          const items = Array.from(document.querySelectorAll('[role="menuitem"]'));
-          const repostBtn = items.find(i => i.innerText.includes('Repost'));
-          if (!repostBtn) { results.push({ url, error: 'no repost option' }); resolve(rtOne(idx + 1)); return; }
-          repostBtn.click();
-          setTimeout(() => {
-            const ok = !!target.querySelector('[data-testid="unretweet"]');
-            results.push({ url, retweeted: ok });
-            resolve(rtOne(idx + 1));
-          }, 1500);
-        }, 1000);
-      });
-    }
-
-    return rtOne(0).then(() => ({ results, count: results.filter(r => r.retweeted).length }));
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const targetUrls = ${targetUrls}; const tweets = Array.from(document.querySelectorAll('article[data-testid=\"tweet\"]')); const results = []; for (const url of targetUrls) { const target = tweets.find(t => { const link = t.querySelector('a[href*=\"/status/\"]'); return link && link.getAttribute('href') === url; }); if (!target) { results.push({ url, error: 'not found' }); continue; } const btn = target.querySelector('[data-testid=\"retweet\"]'); if (!btn) { results.push({ url, already: !!target.querySelector('[data-testid=\"unretweet\"]') }); continue; } btn.click(); await new Promise(r => setTimeout(r, 1000)); const items = Array.from(document.querySelectorAll('[role=\"menuitem\"]')); const repostBtn = items.find(i => i.innerText.includes('Repost')); if (!repostBtn) { results.push({ url, error: 'no repost option' }); continue; } repostBtn.click(); await new Promise(r => setTimeout(r, 1500)); results.push({ url, retweeted: !!target.querySelector('[data-testid=\"unretweet\"]') }); } return { results, count: results.filter(r => r.retweeted).length }; }"}
+ENDJSON
 ```
 
 Returns `{ results: [...], count: N }`. Each result has `url` + `retweeted: true/false`.
@@ -273,84 +149,43 @@ Returns `{ results: [...], count: N }`. Each result has `url` + `retweeted: true
 
 ## § 10 — Thread (Hook-then-Reply)
 
-🚨 **NEVER use the multi-textarea thread composer** — snapshot de-dupes same aria-label so you can't type into the second slot. The hook-then-reply approach is the ONLY supported thread method.
+🚨 **NEVER use the multi-textarea thread composer** — it is broken. The hook-then-reply approach is the ONLY supported thread method.
 
 ### Pattern: post hook → navigate to it → reply sequentially
 
-**Step 1 — Post hook tweet via compose dialog (§ 7 pattern):**
-```
-navigate("https://x.com/home")
-evaluate → click compose button
-snapshot('[role="dialog"] [data-testid="tweetTextarea_0"]') → type hook text → snapshot('[role="dialog"] [data-testid="tweetButton"]') → click
-🚨 MUST use dialog-scoped selectors — see BROWSER-core.md § 1
-```
+**Step 1 — Post hook tweet via compose dialog (§ 7 pattern)**
 
 **Step 2 — Get hook tweet URL from profile:**
-```javascript
-// Navigate to profile, extract latest tweet URL
-browser.navigate("https://x.com/{{handle_slug}}", { profile: "{{browser_profile}}" })
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    return new Promise(resolve => setTimeout(() => {
-      const articles = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
-      const first = articles[0];
-      if (!first) return resolve({ error: 'no tweets' });
-      const link = first.querySelector('a[href*="/status/"]');
-      const text = first.querySelector('[data-testid="tweetText"]')?.innerText?.slice(0, 80) || '';
-      resolve({ url: link ? 'https://x.com' + link.getAttribute('href') : '', text });
-    }, 2000));
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://x.com/{{handle_slug}}"}' 2>&1
+
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); const articles = Array.from(document.querySelectorAll('article[data-testid=\"tweet\"]')); const first = articles[0]; if (!first) return { error: 'no tweets' }; const link = first.querySelector('a[href*=\"/status/\"]'); const text = (first.querySelector('[data-testid=\"tweetText\"]') || {}).innerText?.slice(0, 80) || ''; return { url: link ? 'https://x.com' + link.getAttribute('href') : '', text }; }"}
+ENDJSON
 ```
 
 **Step 3 — Reply chain (repeat for each body tweet + CTA):**
-```
-navigate(hookTweetUrl)
-snapshot([data-testid="tweetTextarea_0"]) → ref=eN
-type(eN, tweetText)
-snapshot([data-testid="tweetButtonInline"]) → ref=eM
-click(eM)
-verify: evaluate → check articles contain @{{handle_slug}} reply
-```
+Navigate to hook tweet URL, then use BROWSER-core.md § 1 reply evaluate (clipboard paste + click submit). Verify via evaluate that articles contain @{{handle_slug}} reply.
 
 For tweet 3+: navigate to the PREVIOUS reply URL (not the hook), so the chain stays linear.
 Get each reply URL after posting:
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    return new Promise(resolve => setTimeout(() => {
-      const articles = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
-      const ours = articles.filter(a => {
-        const h = a.querySelector('[data-testid="User-Name"]')?.innerText?.split('\\n').find(l => l.startsWith('@'));
-        return h === '@{{handle_slug}}';
-      });
-      const latest = ours[ours.length - 1];
-      const link = latest?.querySelector('a[href*="/status/"]');
-      resolve({
-        count: ours.length,
-        latestUrl: link ? 'https://x.com' + link.getAttribute('href') : ''
-      });
-    }, 1500));
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); const articles = Array.from(document.querySelectorAll('article[data-testid=\"tweet\"]')); const ours = articles.filter(a => { const h = (a.querySelector('[data-testid=\"User-Name\"]') || {}).innerText?.split(String.fromCharCode(10)).find(l => l.startsWith('@')); return h === '@{{handle_slug}}'; }); const latest = ours[ours.length - 1]; const link = latest?.querySelector('a[href*=\"/status/\"]'); return { count: ours.length, latestUrl: link ? 'https://x.com' + link.getAttribute('href') : '' }; }"}
+ENDJSON
 ```
 
 ### Cost: ~18 steps for 5-tweet thread (~$1.00) vs 68 steps with broken composer (~$9.00).
 
 ## § 11 — Publish Article
 
-**See BROWSER-article.md** for the full article publish flow (editor selectors, rich HTML paste, formatting reference, mention/hashtag strategy, two-click publish).
+**See BROWSER-article.md** for the full article publish flow.
 
 ---
 
 ## § 12 — Check Trending
 
-```javascript
-browser.navigate("https://x.com/explore/tabs/trending", { profile: "{{browser_profile}}" })
-browser.act({ kind: "wait", timeMs: 1000, profile: "{{browser_profile}}" })
-// Extract trending topics, match against product areas per TOOLS.md
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://x.com/explore/tabs/trending"}' 2>&1
+# Extract trending topics in next evaluate, match against product areas per TOOLS.md
 ```

@@ -1,12 +1,7 @@
 # BROWSER-core.md - Dev.to Global Rules & Selectors
 
 **CRITICAL RULES (apply to ALL sections):**
-- Pass `profile: "{{browser_profile}}"` on EVERY browser call
-- NEVER use `args` parameter in evaluate — gateway ignores it. Inline text via template literals.
-- NEVER use `snapshot()` — Dev.to buttons work with `.click()` via evaluate
-- 🚨 **NEVER use `browser.act({ kind: "wait" })` as a separate step** — each step adds 5-8s LLM overhead
-- ✅ **Embed waits at START of next evaluate:** `async () => { await new Promise(r => setTimeout(r, 3000)); ... }`
-- NEVER use `browser.wait({ load: "networkidle" })` — causes 20s timeout
+- Embed waits at START of each evaluate: `async () => { await new Promise(r => setTimeout(r, 3000)); ... }`
 - Already-commented check MUST scope to `#comment-trees-container` (unscoped matches nav profile link!)
 
 ## Selectors Reference
@@ -32,8 +27,8 @@
 ## SS 6: Recovery Rules
 
 - **Browser timeout** -> close tab, reopen URL, retry once. If fails -> `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"URL"}'` (NOT start!), wait 3s, retry. Still fails -> skip browser tasks.
-- **NEVER use `browser.stop`** — kills Chrome process. Use `browser.close`.
+- **Do not kill Chrome** — use the `/close` endpoint instead.
 - **Typing fails** -> use evaluate with `textarea.value = text` + dispatchEvent. Still fails -> skip, retry next heartbeat.
-- **"matched N elements" error** -> selector too broad, use evaluate instead of snapshot.
-- If evaluate returns unexpected -> 1 snapshot to inspect DOM, use discovered selector for rest of heartbeat.
+- **"matched N elements" error** -> selector too broad, use narrower selector.
+- If evaluate returns unexpected -> check URL, re-navigate if wrong page
 - If retry fails -> skip action, log Type="Error", move to next task.

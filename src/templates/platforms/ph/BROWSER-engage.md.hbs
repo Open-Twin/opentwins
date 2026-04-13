@@ -74,29 +74,14 @@ Re-read your text before submitting. Check these 4 things:
 
 ## S3. Upvote on Launch Page
 
-🚨 **CDP click broken** — aria snapshot resolves "Upvote" text and matches comment upvote buttons too (6+ elements). JS `.click()` on the button itself does nothing (React event binding). **Click the inner SVG/span element instead** — this triggers React's bubbling handler.
+🚨 **Click the inner SVG/span element — this triggers React event handler.
 
 **ONE evaluate — check + click + verify:**
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 2000));
-    var btn = document.querySelector('button[data-test="vote-button"].w-full');
-    if (!btn) return { error: 'no main vote button' };
-    if (btn.innerText.trim().includes('Upvoted')) return { alreadyUpvoted: true };
-    btn.scrollIntoView({ block: 'center' });
-    await new Promise(r => setTimeout(r, 500));
-    var inner = btn.querySelector('svg') || btn.querySelector('span') || btn.firstElementChild;
-    if (!inner) return { error: 'no inner element' };
-    inner.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-    await new Promise(r => setTimeout(r, 2000));
-    var upvoted = btn.innerText.trim().includes('Upvoted');
-    return { upvoted: upvoted };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); var btn = document.querySelector('button[data-test=\"vote-button\"].w-full'); if (!btn) return { error: 'no main vote button' }; if (btn.innerText.trim().includes('Upvoted')) return { alreadyUpvoted: true }; btn.scrollIntoView({ block: 'center' }); await new Promise(r => setTimeout(r, 500)); var inner = btn.querySelector('svg') || btn.querySelector('span') || btn.firstElementChild; if (!inner) return { error: 'no inner element' }; inner.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); await new Promise(r => setTimeout(r, 2000)); var upvoted = btn.innerText.trim().includes('Upvoted'); return { upvoted: upvoted }; }"}
+ENDJSON
 ```
 
 Only increment `daily.upvotes.current` if `upvoted: true`.
@@ -105,59 +90,38 @@ Only increment `daily.upvotes.current` if `upvoted: true`.
 
 🚨 **Prefer using S7 Step 3 combined evaluate instead** — it returns `makerUsername` along with comment verification. Only use S4 standalone if you need maker BEFORE commenting.
 
-```javascript
-() => {
-  const links = Array.from(document.querySelectorAll('a'));
-  // Find /@username link whose parent contains "Maker" badge
-  const makerLink = links.find(a => {
-    const href = a.href || '';
-    if (!href.includes('/@')) return false;
-    const parent = a.parentElement;
-    return parent && parent.innerText && parent.innerText.includes('Maker');
-  });
-  const makerUsername = makerLink ? makerLink.href.match(/@([^/?]+)/)?.[1] : null;
-  return { makerUsername };
-}
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const links = Array.from(document.querySelectorAll('a')); const makerLink = links.find(a => { const href = a.href || ''; if (!href.includes('/@')) return false; const parent = a.parentElement; return parent && parent.innerText && parent.innerText.includes('Maker'); }); const makerUsername = makerLink ? makerLink.href.match(/@([^/?]+)/)?.[1] : null; return { makerUsername }; }"}
+ENDJSON
 ```
 
 ## S5. Check Follow Button State
 
-```javascript
-() => {
-  const btns = Array.from(document.querySelectorAll('button'));
-  const followBtn = btns.find(b => b.innerText.trim() === 'Follow');
-  const alreadyFollowing = btns.some(b => b.innerText.trim() === 'Following');
-  return { followBtn: !!followBtn, alreadyFollowing };
-}
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const btns = Array.from(document.querySelectorAll('button')); const followBtn = btns.find(b => b.innerText.trim() === 'Follow'); const alreadyFollowing = btns.some(b => b.innerText.trim() === 'Following'); return { followBtn: !!followBtn, alreadyFollowing }; }"}
+ENDJSON
 ```
 
-Follow button snapshot selector: `"button:has-text('Follow')"`
+"Follow" button: find via evaluate and click
 
 ## S6. Streak Keeper (Homepage Upvote)
 
 Homepage vote buttons work with JS `.click()` (unlike launch pages).
 
 **Click:**
-```javascript
-() => {
-  const btn = document.querySelector('button[data-test="vote-button"]');
-  if (!btn) return { error: 'vote_btn_not_found' };
-  const filledDiv = btn.querySelector('[data-filled]');
-  if (filledDiv && filledDiv.getAttribute('data-filled') === 'true') return { skipped: true, reason: 'already_upvoted' };
-  btn.click();
-  return { clicked: true };
-}
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const btn = document.querySelector('button[data-test=\"vote-button\"]'); if (!btn) return { error: 'vote_btn_not_found' }; const filledDiv = btn.querySelector('[data-filled]'); if (filledDiv && filledDiv.getAttribute('data-filled') === 'true') return { skipped: true, reason: 'already_upvoted' }; btn.click(); return { clicked: true }; }"}
+ENDJSON
 ```
 
 **Verify (1.5s wait embedded — NO separate sleep step):**
-```javascript
-async () => {
-  await new Promise(r => setTimeout(r, 1500));
-  const btn = document.querySelector('button[data-test="vote-button"]');
-  const filledDiv = btn ? btn.querySelector('[data-filled]') : null;
-  const filled = filledDiv ? filledDiv.getAttribute('data-filled') : 'none';
-  return { verified: filled === 'true', text: btn ? btn.innerText.trim() : 'N/A' };
-}
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); const btn = document.querySelector('button[data-test=\"vote-button\"]'); const filledDiv = btn ? btn.querySelector('[data-filled]') : null; const filled = filledDiv ? filledDiv.getAttribute('data-filled') : 'none'; return { verified: filled === 'true', text: btn ? btn.innerText.trim() : 'N/A' }; }"}
+ENDJSON
 ```
 
 ## S7. Comment on a Launch
@@ -167,58 +131,24 @@ async () => {
 ❌ **Do NOT add a separate scroll step** — `document.querySelector('.tiptap.ProseMirror')` finds the editor regardless of viewport scroll. Scroll wastes 1 step per product.
 
 **Step 1 — Set text (1.5s wait embedded — NO separate sleep step):**
-```javascript
-async () => {
-  await new Promise(r => setTimeout(r, 1500));
-  const editor = document.querySelector(".tiptap.ProseMirror");
-  if (!editor) return { error: "editor_not_found" };
-  editor.focus();
-  document.execCommand("selectAll", false, null);
-  document.execCommand("delete", false, null);
-  document.execCommand("insertText", false, "${commentText}");
-  return { set: true, text: editor.textContent.slice(0, 50) };
-}
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); const editor = document.querySelector('.tiptap.ProseMirror'); if (!editor) return { error: 'editor_not_found' }; editor.focus(); document.execCommand('selectAll', false, null); document.execCommand('delete', false, null); document.execCommand('insertText', false, '${commentText}'); return { set: true, text: editor.textContent.slice(0, 50) }; }"}
+ENDJSON
 ```
 
 **Step 2 — Click Comment (1.5s wait embedded — NO separate sleep step):**
-```javascript
-async () => {
-  await new Promise(r => setTimeout(r, 1500));
-  const buttons = Array.from(document.querySelectorAll("button"));
-  const submitBtn = buttons.find(b => b.innerText.trim() === "Comment");
-  if (!submitBtn) return { error: "comment_btn_not_found", available: buttons.map(b => b.innerText.trim()).filter(t => t.length > 0 && t.length < 20).slice(0, 15) };
-  if (submitBtn.disabled) return { error: "comment_btn_disabled" };
-  submitBtn.click();
-  return { clicked: true, buttonText: submitBtn.innerText.trim() };
-}
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); const buttons = Array.from(document.querySelectorAll('button')); const submitBtn = buttons.find(b => b.innerText.trim() === 'Comment'); if (!submitBtn) return { error: 'comment_btn_not_found', available: buttons.map(b => b.innerText.trim()).filter(t => t.length > 0 && t.length < 20).slice(0, 15) }; if (submitBtn.disabled) return { error: 'comment_btn_disabled' }; submitBtn.click(); return { clicked: true, buttonText: submitBtn.innerText.trim() }; }"}
+ENDJSON
 ```
 
 **Step 3 — Verify + Extract maker (3s wait — ONE evaluate, NO separate steps):**
-```javascript
-async () => {
-  await new Promise(r => setTimeout(r, 3000));
-  const editor = document.querySelector(".tiptap.ProseMirror");
-  const editorText = editor ? editor.textContent.trim() : "";
-  const editorEmpty = editorText.length < 5;
-  const url = window.location.href;
-  // Extract maker in SAME evaluate — do NOT waste a separate step
-  // Find /@username link whose parent contains "Maker" badge (not our own profile)
-  const links = Array.from(document.querySelectorAll('a'));
-  const makerLink = links.find(a => {
-    const href = a.href || '';
-    if (!href.includes('/@')) return false;
-    const parent = a.parentElement;
-    return parent && parent.innerText && parent.innerText.includes('Maker');
-  });
-  const m = makerLink ? makerLink.href.match(/@([^/?]+)/) : null;
-  return {
-    submitted: editorEmpty,
-    editorText: editorText.slice(0, 60),
-    url: url,
-    urlChanged: !url.includes("producthunt.com/products/") && !url.includes("producthunt.com/posts/"),
-    makerUsername: m ? m[1] : null
-  };
-}
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); const editor = document.querySelector('.tiptap.ProseMirror'); const editorText = editor ? editor.textContent.trim() : ''; const editorEmpty = editorText.length < 5; const url = window.location.href; const links = Array.from(document.querySelectorAll('a')); const makerLink = links.find(a => { const href = a.href || ''; if (!href.includes('/@')) return false; const parent = a.parentElement; return parent && parent.innerText && parent.innerText.includes('Maker'); }); const m = makerLink ? makerLink.href.match(/@([^/?]+)/) : null; return { submitted: editorEmpty, editorText: editorText.slice(0, 60), url: url, urlChanged: !url.includes('producthunt.com/products/') && !url.includes('producthunt.com/posts/'), makerUsername: m ? m[1] : null }; }"}
+ENDJSON
 ```
 
 - `submitted: false` → retry steps 2-3 once
@@ -231,36 +161,10 @@ async () => {
 Homepage vote buttons work with JS `.click()`.
 
 **Single evaluate — count before, click, wait, count after (ONE step, NO separate sleep):**
-```javascript
-async () => {
-  const btns = document.querySelectorAll('button[data-test="vote-button"]');
-  // Count BEFORE
-  let votedBefore = 0;
-  for (const btn of btns) {
-    const filled = btn.querySelector('[data-filled]');
-    if (filled && filled.getAttribute('data-filled') === 'true') votedBefore++;
-  }
-  // Click unvoted
-  const maxUpvotes = ${Math.min(2, availableUpvotes)};
-  let clicked = 0;
-  for (const btn of btns) {
-    if (clicked >= maxUpvotes) break;
-    const filled = btn.querySelector('[data-filled]');
-    if (filled && filled.getAttribute('data-filled') === 'true') continue;
-    btn.click();
-    clicked++;
-  }
-  // Wait for UI update
-  await new Promise(r => setTimeout(r, 1500));
-  // Count AFTER
-  let votedAfter = 0;
-  for (const btn of btns) {
-    const filled = btn.querySelector('[data-filled]');
-    if (filled && filled.getAttribute('data-filled') === 'true') votedAfter++;
-  }
-  const delta = votedAfter - votedBefore;
-  return { clicked, votedBefore, votedAfter, delta, verified: delta === clicked };
-}
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const btns = document.querySelectorAll('button[data-test=\"vote-button\"]'); let votedBefore = 0; for (const btn of btns) { const filled = btn.querySelector('[data-filled]'); if (filled && filled.getAttribute('data-filled') === 'true') votedBefore++; } const maxUpvotes = ${Math.min(2, availableUpvotes)}; let clicked = 0; for (const btn of btns) { if (clicked >= maxUpvotes) break; const filled = btn.querySelector('[data-filled]'); if (filled && filled.getAttribute('data-filled') === 'true') continue; btn.click(); clicked++; } await new Promise(r => setTimeout(r, 1500)); let votedAfter = 0; for (const btn of btns) { const filled = btn.querySelector('[data-filled]'); if (filled && filled.getAttribute('data-filled') === 'true') votedAfter++; } const delta = votedAfter - votedBefore; return { clicked, votedBefore, votedAfter, delta, verified: delta === clicked }; }"}
+ENDJSON
 ```
 
 Update `daily.upvotes.current` by adding `delta` (NOT `clicked` — delta is the verified count).

@@ -1,10 +1,8 @@
 # BROWSER-core.md - IH Global Rules & Selectors
 
-All calls require `profile: "{{browser_profile}}"`. Never use `args` in evaluate -- inline via template literals.
 
 **Navigate:** `curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"<url>"}'`
 
-**Wait pattern (embedded):** All waits MUST be `await new Promise(r => setTimeout(r, N))` or `new Promise(function(resolve) { setTimeout(function() { ... }, N); })` INSIDE evaluate. NEVER use separate `exec sleep N` — each adds ~6-8s overhead.
 
 ## Selectors
 
@@ -27,8 +25,8 @@ All calls require `profile: "{{browser_profile}}"`. Never use `args` in evaluate
 
 ## Recovery Rules
 
-- **Browser timeout**: close tab, reopen URL. If fails: `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/start`, wait 3s, retry once. Still fails: skip browser tasks. NEVER use `browser.stop()`.
-- **"matched N elements" error**: snapshot selector too broad. Use narrower selector. Not a gateway issue.
-- **Unexpected evaluate() data**: 1 snapshot to inspect DOM, use discovered selector for rest of heartbeat.
-- **Click fails after snapshot**: retry snapshot once with narrower selector. If retry fails: skip, log Type="Error", next task.
+- **Browser timeout**: close tab, reopen URL. If fails: `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/start`, wait 3s, retry once. Still fails: skip browser tasks. Do not kill Chrome.
+- **"matched N elements" error**: selector too broad. Use narrower selector.
+- **Unexpected evaluate() data**: check URL, re-navigate if wrong page
+- **Click fails → retry via evaluate. Still fails → skip, log Error
 - **`comment_box_did_not_appear` after REPLY click**: thread hit IH nesting limit (max 3 levels). Skip reply, mark notification read, log `skipped: 'nesting_limit'`.

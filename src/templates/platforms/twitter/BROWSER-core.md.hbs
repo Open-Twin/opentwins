@@ -1,6 +1,5 @@
 # BROWSER-core.md - Twitter/X Global Rules & Shared Patterns
 
-🚨 `profile: "{{browser_profile}}"` on EVERY browser call.
 
 ## Selectors
 
@@ -21,28 +20,34 @@
 | Follow button | `[data-testid$="-follow"]` (text "Follow"/"Follow Back") |
 | Compose | `a[href="/compose/tweet"]` or `[data-testid="SideNav_NewTweet_Button"]` |
 
-## § 1 — Typing (CDP approach)
+## § 1 — Typing (clipboard paste)
 
-🚨 NEVER use execCommand('insertText') as the FIRST input — button stays disabled. Draft.js needs CDP `type` to initialize the editor state. After CDP `type` initializes it, `execCommand` works for appending subsequent lines.
-🚨 NEVER use textContent/innerHTML/value — causes malformed/duplicated text.
-
-**CDP type with NARROW selectors (primary method):**
-
-🚨 **NEVER include `\n` in type text** — the CLI passes it as literal characters (backslash + n), not newlines.
-
-**For replies (on tweet page) — single paragraph, no formatting:**
+**For replies (on tweet page) — ONE evaluate call: paste + submit:**
+```javascript
+// Call via: exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+// {"fn":"async () => { ... }"}
+// ENDJSON
+async () => {
+  await new Promise(r => setTimeout(r, 1000));
+  var ta = document.querySelector('[data-testid="tweetTextarea_0"]');
+  if (!ta) return { error: 'no textarea' };
+  ta.focus();
+  await new Promise(r => setTimeout(r, 300));
+  var dt = new DataTransfer();
+  dt.setData('text/plain', '${replyText}');
+  ta.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  await new Promise(r => setTimeout(r, 500));
+  var typed = ta.innerText.trim();
+  if (!typed) return { error: 'paste failed' };
+  var btn = document.querySelector('[data-testid="tweetButtonInline"]');
+  if (!btn || btn.disabled) return { error: 'button disabled', text: typed.slice(0, 80) };
+  btn.click();
+  await new Promise(r => setTimeout(r, 3000));
+  return { posted: true, text: typed.slice(0, 80) };
+}
 ```
-1. snapshot('[data-testid="tweetTextarea_0"]') → textbox [ref=eNN]
-2. browser.type(ref, "single paragraph text with no newlines")
-3. snapshot('[data-testid="tweetButtonInline"]') → Reply button [ref=eNN]
-4. browser.click(buttonRef)
-```
 
-**For compose dialog (original tweet, quote tweet) — clipboard paste approach:**
-
-🚨 `execCommand("insertText")` creates visual text BUT Draft.js drops it on submit. CDP `type` + Enter keys also loses body lines. **ONLY clipboard paste reliably persists multiline content in Draft.js.**
-
-🚨 **Emojis get stripped** by Draft.js on serialize — even if they show in editor. Use text-based formatting (→, -, •) instead of emoji bullets.
+**For compose dialog (original tweet, quote tweet):**
 
 **Full flow (ONE evaluate — clear + paste + submit):**
 ```javascript
@@ -61,7 +66,8 @@ async () => {
   dt.setData('text/html', text.replace(/\n/g, '<br>'));
   dt.setData('text/plain', text);
   ta.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
-  await new Promise(r => setTimeout(r, 1000));
+  // Draft.js renders paste async — wait for text to appear
+  await new Promise(r => setTimeout(r, 2000));
   // Submit
   var btn = document.querySelector('[role="dialog"] [data-testid="tweetButton"]');
   if (!btn || btn.disabled) return { error: 'button disabled', text: ta.innerText.slice(0, 100) };
@@ -74,45 +80,17 @@ async () => {
 **Format rules for original tweets:**
 - Hook line first (standalone, punchy)
 - Blank line between sections (`\n\n`)
-- Body lines: text-based bullets (→, -, •) — NOT emojis (Draft.js strips them on submit)
+- Body lines: text-based bullets (→, -, •)
 - @mentions typed as text (auto-linked by Twitter)
 - Hashtags on last line (3 max)
-- ❌ NEVER use emojis as bullet points — Draft.js strips them on serialize
-- ❌ NEVER use `execCommand("insertText")` for body lines — Draft.js drops them on submit
-- ❌ NEVER use bold — fragile with Draft.js
-
-🚨 Home page has a feed textarea AND a dialog textarea. Using `[data-testid="tweetTextarea_0"]` alone → `strict mode violation` (2 elements). ALWAYS scope to dialog.
-🚨 If click returns "Element not found" (stale ref from dialog animation), use evaluate fallback:
-```javascript
-evaluate(() => { document.querySelector('[role="dialog"] [data-testid="tweetButton"]').click(); return { clicked: true }; })
-```
-
-🚨 **NEVER use full-page snapshot** (no selector) — returns 7-10KB. The narrow selectors above return ~31b each (99.7% reduction).
-
 ## § 5 — Like + Read + Dedup (combined — ONE evaluate on post page)
 
-After navigating to a tweet page, this single evaluate likes the tweet, reads its full text, detects media, and checks if we already replied. Saves 1 step per tweet vs separate like + read.
+After navigating to a tweet page, this single evaluate likes the tweet, reads its full text, detects media, and checks if we already replied.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    var articles = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
-    var target = articles[0];
-    if (!target) return { error: 'no article' };
-    var text = (target.querySelector('[data-testid="tweetText"]') || {}).innerText || '';
-    var hasMedia = !!target.querySelector('[data-testid="tweetPhoto"]') || !!target.querySelector('[data-testid="videoPlayer"]');
-    var likeBtn = target.querySelector('[data-testid="like"]');
-    if (likeBtn) likeBtn.click();
-    var alreadyLiked = !!target.querySelector('[data-testid="unlike"]');
-    var alreadyReplied = articles.some(function(a) {
-      var user = a.querySelector('[data-testid="User-Name"]');
-      return user && user.innerText.includes('@{{handle_slug}}');
-    });
-    return { text: text.slice(0, 300), hasMedia: hasMedia, liked: !!likeBtn, alreadyLiked: alreadyLiked, alreadyReplied: alreadyReplied };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); var articles = Array.from(document.querySelectorAll('article[data-testid=\"tweet\"]')); var target = articles[0]; if (!target) return { error: 'no article' }; var text = (target.querySelector('[data-testid=\"tweetText\"]') || {}).innerText || ''; var hasMedia = !!target.querySelector('[data-testid=\"tweetPhoto\"]') || !!target.querySelector('[data-testid=\"videoPlayer\"]'); var likeBtn = target.querySelector('[data-testid=\"like\"]'); if (likeBtn) likeBtn.click(); var alreadyLiked = !!target.querySelector('[data-testid=\"unlike\"]'); var alreadyReplied = articles.some(function(a) { var user = a.querySelector('[data-testid=\"User-Name\"]'); return user && user.innerText.includes('@{{handle_slug}}'); }); return { text: text.slice(0, 300), hasMedia: hasMedia, liked: !!likeBtn, alreadyLiked: alreadyLiked, alreadyReplied: alreadyReplied }; }"}
+ENDJSON
 ```
 
 - `alreadyReplied: true` → track + skip
@@ -120,24 +98,8 @@ browser.act({
 - `alreadyLiked: true` → already liked, no action needed
 
 To like a specific tweet on a feed/search page (without the combined read):
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const tweets = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
-    const target = tweets.find(t => {
-      const link = t.querySelector('a[href*="/status/"]');
-      return link?.getAttribute('href')?.includes('/${tweetId}');
-    });
-    if (!target) return { error: 'tweet not found' };
-    const likeBtn = target.querySelector('[data-testid="like"]');
-    if (!likeBtn) {
-      if (target.querySelector('[data-testid="unlike"]')) return { already_liked: true };
-      return { error: 'like button not found' };
-    }
-    likeBtn.click();
-    return { clicked: true };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const tweets = Array.from(document.querySelectorAll('article[data-testid=\"tweet\"]')); const target = tweets.find(t => { const link = t.querySelector('a[href*=\"/status/\"]'); return link?.getAttribute('href')?.includes('/${tweetId}'); }); if (!target) return { error: 'tweet not found' }; const likeBtn = target.querySelector('[data-testid=\"like\"]'); if (!likeBtn) { if (target.querySelector('[data-testid=\"unlike\"]')) return { already_liked: true }; return { error: 'like button not found' }; } likeBtn.click(); return { clicked: true }; }"}
+ENDJSON
 ```

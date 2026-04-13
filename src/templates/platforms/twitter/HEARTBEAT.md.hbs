@@ -1,27 +1,12 @@
 # HEARTBEAT.md - Twitter/X Agent
 
-**CLI syntax:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}' 2>&1`
-- **evaluate:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d '{"fn":"async () => { ... }"}' 2>&1`
-- **snapshot:** `curl -s -X POST .../snapshot -d '{"selector":"...","compact":true,"interactive":true}'`
-- **type:** `curl -s -X POST .../evaluate -d '{"fn":"..."}'` (use evaluate to type into elements)
-- **click:** `curl -s -X POST .../click -d '{"selector":"..."}'`
-- **open/navigate/close:** `... open "URL" 2>&1`
+The BROWSER-*.md files contain exact curl commands for every action. Copy-paste them, replace variables, run. If a command doesn't exist for what you need, skip the action.
 
-## Tool Roles
-- `evaluate()` → read data, click simple buttons (like/retweet/follow)
-- `snapshot()` → MANDATORY for typing + submitting (CDP type/click)
-- NEVER use execCommand/textContent/innerHTML for typing — React won't register it
-- See BROWSER-core.md § 1 for correct CDP typing pattern
-🚨 **NEVER write your own browser JavaScript.** The BROWSER-*.md files contain exact, tested evaluate functions for every action (extract, click, type, navigate, like). Copy-paste them verbatim. Do NOT improvise selectors, write custom querySelectorAll, or modify the provided JS. If a function does not exist for what you need, skip the action.
-🚨 **APOSTROPHE SAFETY:** Comment text with apostrophes (it's, don't) breaks single-quoted curl `-d '...'` bodies. Use double-quoted `-d "..."` with `\"` for inner quotes, or heredoc `-d @- <<'ENDJSON'`.
-
-NEVER `exec sleep` — embed waits in evaluate: `new Promise(r => setTimeout(() => { r(result); }, 2000))`
 
 **File loading:** BROWSER-core.md always. Other BROWSER-*.md on-demand per task.
 
 Steps: § 0 Morning Schedule Check → § 1 Limits → § 2 Browser → § 3 Notifications → § 5 Schedule → § 7 Log+Slack → § 8 Close → § 9 HEARTBEAT_OK. All mandatory.
 🚨 **ALL steps mandatory every heartbeat.** Browser + notifications MUST run even if no tasks are due.
-🚨 **NEVER use `sessions_spawn` or sub-sessions.** Execute ALL commands directly — no child sessions.
 
 ## § 0. Morning Schedule Check
 
@@ -53,7 +38,7 @@ printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"a
 ## § 2. Browser Startup (retry)
 
 1. `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://x.com/notifications/mentions"}' 2>&1`
-2. If CDP error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
+2. If error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
 
 ## § 3. Notification Check (FIRST)
 
@@ -62,8 +47,7 @@ printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"a
 MANDATORY before scheduled tasks.
 
 ### 3a. Navigate to mentions
-`browser.navigate("https://x.com/notifications/mentions")` → wait 1s.
-🚨 STAY on mentions page — do NOT navigate to individual tweets yet.
+Navigate to `https://x.com/notifications/mentions` via the `/navigate` endpoint.
 
 ### 3b. Extract + filter
 
@@ -87,13 +71,10 @@ Check if mention author has Follow button → click (evaluate). Log: `Type: "Fol
    - If `alreadyReplied` → track and skip
    - If `tooDeep` (ourReplyCount >= 3) → track and skip (deep back-and-forth, no new audience)
 3. Compose reply using tweet text context (SOUL.md)
-4. **Narrow snapshot** `[data-testid="tweetTextarea_0"]` → type reply via CDP (BROWSER-core.md § 1)
-5. **Narrow snapshot** `[data-testid="tweetButtonInline"]` → click Reply button
-6. 🚨 **MANDATORY: Wait 1s → verify** (BROWSER-notifications.md § 6). NEVER skip verification — if reply silently fails, you'd track a phantom reply.
-7. 🚨 Track: `printf '%s\n' '${tweetUrl}' >> memory/replied_tweets.txt`
-8. Log to memory via `cat >> memory/YYYY-MM-DD.md`
-
-🚨 **NEVER use full-page snapshot** — use narrow selectors (31b vs 7-10KB). See BROWSER-core.md § 1.
+4. Post reply using BROWSER-core.md § 1 (clipboard paste + submit in one evaluate)
+5. 🚨 **MANDATORY: Verify** (BROWSER-notifications.md § 6). If reply silently fails, you'd track a phantom reply.
+6. 🚨 Track: `printf '%s\n' '${tweetUrl}' >> memory/replied_tweets.txt`
+7. Log to memory via `cat >> memory/YYYY-MM-DD.md`
 
 Language: ALWAYS English (Ukrainian only if mention is Ukrainian). Apply SOUL.md time-of-day voice.
 Finish ALL mentions before schedule.
@@ -125,9 +106,9 @@ Promo pre-check: `current >= limit` → mark done.
    grep -q "^{tweet_id}$" memory/commented_posts.txt && echo "SKIP" || echo "OK"
    ```
    If "SKIP" → pick next tweet (already replied, cheaper than browser navigation)
-6. MANDATORY: Like target tweet via evaluate BEFORE replying (BROWSER-core.md § 5) — NO snapshot for liking
+6. MANDATORY: Like target tweet via evaluate BEFORE replying (BROWSER-core.md § 5) 
 7. 🚨 **MANDATORY: Apply Reply Quality Rules** (BROWSER-engage.md §A/B/C/E/F) — check if defaulting to reframe+professional angle, enforce 30-word cap (20 for 200+ likes tweets), ban "X is the new Y", run anti-AI check, no company mentions
-8. 🚨 **Navigate to tweet page FIRST** → write reply (SOUL.md) → post via CDP (BROWSER-core.md § 1)
+8. 🚨 **Navigate to tweet page FIRST** → write reply (SOUL.md) → post reply (BROWSER-core.md § 1)
    🚨 NEVER reply from search results — clicking reply button on search redirects to `/compose/post` (generic compose, loses reply context). Always navigate to individual tweet URL first.
 9. **After successful reply:** `exec echo "{tweet_id}" >> memory/commented_posts.txt`
 10. 🚨 **MANDATORY: Follow tweet author** — BROWSER-notifications.md § 11 (from tweet page, no navigation). Skip silently if already following.
@@ -157,7 +138,7 @@ Promo pre-check: `current >= limit` → mark done.
 7. **Like + read context + dedup** — BROWSER-core.md § 5 (ONE evaluate: like + read text + media check + dedup). If `alreadyReplied` → track + skip. If `hasMedia && text < 80 chars` → skip (meme).
 8. 🚨 **MANDATORY: Apply Reply Quality Rules** (BROWSER-engage.md §A/B/C/F) — check if defaulting to reframe+professional angle, enforce 35-word cap (20 for 200+ likes), ban "X is the new Y", run anti-AI check, no company mentions
 9. Write genuinely valuable reply — NO product mention, NO links (SOUL.md § Strategic)
-10. Post via CDP (BROWSER-core.md § 1)
+10. Post reply (BROWSER-core.md § 1)
 11. **After successful reply:** `exec echo "{tweet_id}" >> memory/commented_posts.txt`
 12. 🚨 **MANDATORY: Follow tweet author** — BROWSER-notifications.md § 11 (from tweet page, no navigation). Skip silently if already following.
 13. Update: `strategic_replies.current += 1`
@@ -193,7 +174,7 @@ Before executing any `original_tweet` or `article` task:
 1. Check `weekly.original_tweets.current < weekly.original_tweets.limit`
 2. Plan thread: hook tweet (curiosity + numbers + promise value) + 3 body tweets + CTA tweet. Max 280 chars each.
 3. Add 2-3 hashtags to hook tweet ONLY (read from `queries.json → hashtags` array)
-4. 🚨 **Use BROWSER-engage.md § 10 (hook-then-reply pattern).** NEVER use the multi-textarea thread composer — it is broken (snapshot de-dupes same aria-label, second textarea unreachable).
+4. 🚨 **Use BROWSER-engage.md § 10 (hook-then-reply pattern).** NEVER use the multi-textarea thread composer — the multi-textarea approach is broken.
 5. Post hook via compose dialog (§ 7), get URL from profile, then reply sequentially for each body/CTA tweet.
 6. Update: `weekly.original_tweets.current += 1`
 7. Log: `Type: "Thread", Hook: status/ID, Tweets: N`. Done.
@@ -204,12 +185,12 @@ Before executing any `original_tweet` or `article` task:
 3. Write article: 500-800 words, opinionated, story-driven, personal experience. Use SOUL.md voice (peak focus tone). Structure: hook intro, 3-4 sections with subheadings, practical takeaway, CTA ending.
 4. **Build rich HTML** — use `<h2>` for section headings, `<p>` for paragraphs, `<strong>` for bold key terms, `<em>` for italic, `<ul><li>` for lists, `<blockquote>` for quotes. See BROWSER-engage.md § 11 for supported tags.
 5. **Add mentions and hashtags for visibility:**
-   - **@mentions:** Wrap in `<a href="https://x.com/{handle}">@handle</a>`. Mention 2-3 relevant accounts per article - people/companies referenced in the content (e.g. `@OpenAI`, `@GergelyOrosz`, `@lenaboroda`). Mentioned users get notified → drives engagement.
+   - **@mentions:** Wrap in `<a href="https://x.com/{handle}">@handle</a>`. Mention 2-3 relevant accounts per article - people/companies referenced in the content.{{#if behavior.target_accounts}} Prioritize configured target accounts: {{#each behavior.target_accounts}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}.{{/if}} Mentioned users get notified → drives engagement.
    - **#hashtags:** Write as plain text (`#AIAgents`), the editor auto-links them. Add 3-5 relevant hashtags in a closing paragraph. Use hashtag pools from SOUL.md — mix 1-2 niche + 1-2 broad.
    - **External links:** `<a href="https://...">link text</a>` for sources referenced in the article. Adds credibility.
    - 🚨 **Do NOT over-mention.** Only mention accounts genuinely referenced in the article. Do NOT tag random big accounts for visibility - that is spam.
 6. Self-review (SOUL.md § Self-Review) - article format allows more depth but keep it punchy, not corporate
-7. **Read BROWSER-article.md first.** Use its full flow: navigate → create new → title via CDP → body via HTML paste → Publish → confirm dialog
+7. **Read BROWSER-article.md first.** Use its full flow: navigate → create new → title → body paste → Publish → confirm
    🚨 **Always create a NEW article draft** — do NOT reuse/edit existing drafts (paste breaks on non-fresh editors)
 8. Verify: URL changes to `/status/{id}`, extract article URL (`/article/{id}`)
 9. Update: `weekly.articles.current += 1`
@@ -248,7 +229,7 @@ Read PLAYBOOK.md → "Memory Update". Done.
 ## § 8. Close Browser (MANDATORY)
 
 `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/close 2>&1`
-If fails → retry once. NEVER browser.stop() or pkill.
+If fails → retry once. Do not kill Chrome or pkill.
 
 ## § 9. HEARTBEAT_OK
 

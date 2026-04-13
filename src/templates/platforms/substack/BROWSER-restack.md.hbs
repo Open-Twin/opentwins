@@ -2,40 +2,16 @@
 
 ## SS 10. Restack with a Note
 
-🚨 **Radix UI dropdown:** Substack uses Radix UI for the Restack menu. `.click()` and `MouseEvent('click')` do NOT open it. MUST use `PointerEvent` sequence (`pointerdown` → `pointerup` → `click`) — this is how Radix triggers state changes.
+🚨 **Radix UI dropdown:** Substack uses Radix UI for the Restack menu. MUST use `PointerEvent` sequence (`pointerdown` → `pointerup` → `click`).
 
-🚨 **Find button by `aria-label="Restack"`**, NOT by `innerText`. The button text is the restack count number (e.g. "7"), not "Restack".
+🚨 **Finding the restack button:** The button has no aria-label. Find it as the 3rd button in the article's action bar (after Like and Comments). Use the LAST Like button group on the page — pages with embedded video/podcast have two action bars.
 
 ### Step 1 — Click Restack button and select "Restack with a note"
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 1000));
-    var btns = Array.from(document.querySelectorAll('button[aria-label="Restack"]'));
-    var targetBtn = btns[${noteIndex}];
-    if (!targetBtn) return { error: 'restack button not found at index ' + ${noteIndex} };
-    // Radix UI requires pointer events to open dropdown
-    var rect = targetBtn.getBoundingClientRect();
-    var cx = rect.x + rect.width / 2, cy = rect.y + rect.height / 2;
-    targetBtn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: cx, clientY: cy }));
-    await new Promise(r => setTimeout(r, 50));
-    targetBtn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: cx, clientY: cy }));
-    targetBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: cx, clientY: cy }));
-    await new Promise(r => setTimeout(r, 1500));
-    // Menu opens in Radix portal
-    var menuItems = Array.from(document.querySelectorAll('[role="menuitem"]'));
-    var quoteItem = menuItems.find(m => m.innerText.trim() === 'Restack with a note');
-    if (!quoteItem) return { error: 'menu not opened', state: targetBtn.getAttribute('data-state'), items: menuItems.map(m => m.innerText.trim()) };
-    quoteItem.click();
-    await new Promise(r => setTimeout(r, 2000));
-    var dialog = document.querySelector('[role="dialog"]');
-    var editor = dialog ? dialog.querySelector('[contenteditable="true"]') : null;
-    return { opened: !!editor };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var likeBtns = Array.from(document.querySelectorAll('button')).filter(function(b) { return (b.getAttribute('aria-label') || '').startsWith('Like ('); }); if (likeBtns.length === 0) return { error: 'no like buttons found' }; var articleLike = likeBtns[likeBtns.length - 1]; var container = articleLike.parentElement.parentElement; var allBtns = Array.from(container.querySelectorAll('button')); var restackBtn = allBtns[2]; if (!restackBtn) return { error: 'no restack button at idx 2' }; var rect = restackBtn.getBoundingClientRect(); var cx = rect.x + rect.width / 2, cy = rect.y + rect.height / 2; restackBtn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: cx, clientY: cy })); await new Promise(r => setTimeout(r, 50)); restackBtn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: cx, clientY: cy })); restackBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: cx, clientY: cy })); await new Promise(r => setTimeout(r, 1500)); var menuItems = Array.from(document.querySelectorAll('[role=\"menuitem\"]')); var quoteItem = menuItems.find(function(m) { return m.innerText.trim() === 'Restack with a note'; }); if (!quoteItem) return { error: 'menu not opened', items: menuItems.map(function(m) { return m.innerText.trim(); }) }; quoteItem.click(); await new Promise(r => setTimeout(r, 2000)); var editor = document.querySelector('div[contenteditable=\"true\"]'); return { opened: !!editor }; }"}
+ENDJSON
 ```
 
 ### Step 2 — Type quote note and post

@@ -1,30 +1,14 @@
 # BROWSER-core.md - Substack Global Rules, Shared Patterns & Selectors
 
-**Profile: `{{browser_profile}}`** — pass on EVERY browser call.
 
 ---
 
 ## SS 2. Read Post Content
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const h1 = document.querySelector('h1.post-title') || Array.from(document.querySelectorAll('h1')).find(h => h.className.includes('post-title') || h.className.includes('title')) || document.querySelector('h1:nth-of-type(2)') || document.querySelector('h1');
-    const article = document.querySelector('.body.markup') || document.querySelector('article') || document.querySelector('.post-content');
-    const content = article ? article.innerText : document.body.innerText;
-    const lines = content.split('\\\\n').filter(l => l.trim());
-    const contentStart = lines.findIndex(l => l.length > 80);
-    const body = contentStart >= 0 ? lines.slice(contentStart).join('\\\\n') : content;
-    const author = Array.from(document.querySelectorAll('a[href*="/@"]')).find(a => a.innerText.trim().length > 0);
-    return {
-      title: h1 ? h1.innerText : '',
-      author: author ? author.innerText.trim() : '',
-      content: body.slice(0, 1200)
-    };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var h1 = document.querySelector('h1.post-title') || Array.from(document.querySelectorAll('h1')).find(h => h.className.includes('post-title') || h.className.includes('title')) || document.querySelector('h1:nth-of-type(2)') || document.querySelector('h1'); var article = document.querySelector('.body.markup') || document.querySelector('article') || document.querySelector('.post-content'); var content = article ? article.innerText : document.body.innerText; var lines = content.split(String.fromCharCode(10)).filter(l => l.trim()); var contentStart = lines.findIndex(l => l.length > 80); var body = contentStart >= 0 ? lines.slice(contentStart).join('\\n') : content; var author = Array.from(document.querySelectorAll('a[href*=\"/@\"]')).find(a => a.innerText.trim().length > 0); return { title: h1 ? h1.innerText : '', author: author ? author.innerText.trim() : '', content: body.slice(0, 1200) }; }"}
+ENDJSON
 ```
 
 ---
@@ -35,61 +19,25 @@ browser.act({
 🚨 Navigate to `{post_url}/comments` FIRST — do NOT click "Comments" button (destroys evaluate context).
 
 **Step 0 — Navigate to comments page:**
-```
+```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"{post_url}/comments"}' 2>&1
 ```
 Wait 3s (embed in next evaluate).
 
 **Step 1 — Type + submit (ONE evaluate, textarea already visible):**
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-
-    // Find textarea (already visible on /comments page)
-    var ta = document.querySelector('textarea[name="body"]');
-    if (!ta) return { error: 'no comment textarea found' };
-
-    var text = ${JSON.stringify(commentText)};
-
-    ta.focus();
-    ta.value = text;
-    ta.dispatchEvent(new Event('input', { bubbles: true }));
-    ta.dispatchEvent(new Event('change', { bubbles: true }));
-
-    await new Promise(r => setTimeout(r, 1000));
-
-    // Find "Post" submit button
-    var btns = Array.from(document.querySelectorAll('button'));
-    var submitBtn = btns.find(b => b.innerText.trim() === 'Post' && !b.disabled);
-    if (!submitBtn) {
-      await new Promise(r => setTimeout(r, 2000));
-      btns = Array.from(document.querySelectorAll('button'));
-      submitBtn = btns.find(b => b.innerText.trim() === 'Post' && !b.disabled);
-    }
-    if (!submitBtn) return { typed: true, len: ta.value.length, error: 'no Post button' };
-    submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    return { typed: true, submitted: true, len: ta.value.length };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var ta = document.querySelector('textarea[name=\"body\"]'); if (!ta) return { error: 'no comment textarea found' }; var text = COMMENT_TEXT_PLACEHOLDER; ta.focus(); ta.value = text; ta.dispatchEvent(new Event('input', { bubbles: true })); ta.dispatchEvent(new Event('change', { bubbles: true })); await new Promise(r => setTimeout(r, 1000)); var btns = Array.from(document.querySelectorAll('button')); var submitBtn = btns.find(b => b.innerText.trim() === 'Post' && !b.disabled); if (!submitBtn) { await new Promise(r => setTimeout(r, 2000)); btns = Array.from(document.querySelectorAll('button')); submitBtn = btns.find(b => b.innerText.trim() === 'Post' && !b.disabled); } if (!submitBtn) return { typed: true, len: ta.value.length, error: 'no Post button' }; submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); return { typed: true, submitted: true, len: ta.value.length }; }"}
+ENDJSON
 ```
 
 **Step 2 — Verify comment posted:**
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    var snippet = ${JSON.stringify(commentText.slice(0, 40))};
-    var verified = document.body.innerText.includes(snippet);
-    return { verified: verified };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var snippet = COMMENT_SNIPPET_PLACEHOLDER; var verified = document.body.innerText.includes(snippet); return { verified: verified }; }"}
+ENDJSON
 ```
 
 ---
@@ -100,71 +48,20 @@ Note replies use `div[contenteditable="true"]` (NOT textarea). Click "Leave a re
 
 **Step 1 — Open reply editor, type + submit:**
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 1000));
-    // Click "Leave a reply..." to open editor
-    var btns = Array.from(document.querySelectorAll('button'));
-    var replyBtn = btns.find(b => /leave a reply/i.test(b.innerText));
-    if (replyBtn) {
-      replyBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-      await new Promise(r => setTimeout(r, 2000));
-    }
-
-    var tb = document.querySelector('div[contenteditable="true"]');
-    if (!tb) return { error: 'no reply editor found' };
-
-    var text = ${JSON.stringify(replyText)};
-
-    tb.focus();
-    tb.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 300));
-
-    // Clear
-    document.execCommand('selectAll');
-    document.execCommand('delete');
-    await new Promise(r => setTimeout(r, 300));
-
-    // Paste
-    var dt = new DataTransfer();
-    dt.setData('text/plain', text);
-    tb.dispatchEvent(new ClipboardEvent('paste', {
-      clipboardData: dt, bubbles: true, cancelable: true
-    }));
-
-    tb.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText' }));
-    tb.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
-
-    await new Promise(r => setTimeout(r, 1000));
-
-    // Find "Post" button
-    btns = Array.from(document.querySelectorAll('button'));
-    var submitBtn = btns.find(b => b.innerText.trim() === 'Post' && !b.disabled);
-    if (!submitBtn) return { typed: true, len: tb.innerText.length, error: 'no Post button' };
-    submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    return { typed: true, submitted: true, len: tb.innerText.length };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var btns = Array.from(document.querySelectorAll('button')); var replyBtn = btns.find(b => /leave a reply/i.test(b.innerText)); if (replyBtn) { replyBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 2000)); } var tb = document.querySelector('div[contenteditable=\"true\"]'); if (!tb) return { error: 'no reply editor found' }; var text = REPLY_TEXT_PLACEHOLDER; tb.focus(); tb.dispatchEvent(new MouseEvent('click', { bubbles: true })); await new Promise(r => setTimeout(r, 300)); document.execCommand('selectAll'); document.execCommand('delete'); await new Promise(r => setTimeout(r, 300)); var dt = new DataTransfer(); dt.setData('text/plain', text); tb.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); tb.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText' })); tb.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' })); await new Promise(r => setTimeout(r, 1000)); btns = Array.from(document.querySelectorAll('button')); var submitBtn = btns.find(b => b.innerText.trim() === 'Post' && !b.disabled); if (!submitBtn) return { typed: true, len: tb.innerText.length, error: 'no Post button' }; submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); return { typed: true, submitted: true, len: tb.innerText.length }; }"}
+ENDJSON
 ```
 
 **Step 2 — Verify (ONE evaluate, no retry loop):**
 
 🚨 If Step 1 returned `submitted: true`, this is a quick confirmation — NOT a multi-step search. Do NOT reload or loop.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    var snippet = ${JSON.stringify(replyText.slice(0, 30))};
-    var found = document.body.innerText.includes(snippet);
-    return { verified: found };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var snippet = REPLY_SNIPPET_PLACEHOLDER; var found = document.body.innerText.includes(snippet); return { verified: found }; }"}
+ENDJSON
 ```
 
 If `verified: false` but Step 1 was `submitted: true` → **treat as success anyway** (replies often collapsed on note pages). Move on.
@@ -178,7 +75,7 @@ Note pages show threaded comments. Each has its own `Comment` button (`aria-labe
 **Use for:** notification replies where someone replied to OUR comment. Use SS 3C, not SS 3 or SS 3B.
 
 **Step 0 — Navigate to the notification URL:**
-```
+```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"{notification_url}"}' 2>&1
 ```
 
@@ -186,102 +83,28 @@ exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navig
 
 The page has multiple `Comment` buttons. Each belongs to a different note/comment. To find the right one, walk from each button to its parent content and match the replier's author name.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    var targetAuthor = ${JSON.stringify(replierName)};
-    var commentBtns = Array.from(document.querySelectorAll('button[aria-label="Comment"]'));
-    var found = null;
-    for (var btn of commentBtns) {
-      var actionBar = btn.parentElement;
-      var noteContainer = actionBar ? actionBar.parentElement : null;
-      if (!noteContainer) continue;
-      var siblings = Array.from(noteContainer.children);
-      var barIdx = siblings.indexOf(actionBar);
-      var prevText = '';
-      for (var j = Math.max(0, barIdx - 3); j < barIdx; j++) {
-        prevText += siblings[j].innerText + ' ';
-      }
-      if (prevText.toLowerCase().includes(targetAuthor.toLowerCase())) {
-        found = btn;
-        break;
-      }
-    }
-    if (!found) return { error: 'Comment button for ' + targetAuthor + ' not found' };
-    found.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    await new Promise(r => setTimeout(r, 2000));
-    var tb = document.querySelector('div[contenteditable="true"]');
-    return { clicked: true, editorOpen: !!tb };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var targetAuthor = REPLIER_NAME_PLACEHOLDER; var commentBtns = Array.from(document.querySelectorAll('button[aria-label=\"Comment\"]')); var found = null; for (var btn of commentBtns) { var actionBar = btn.parentElement; var noteContainer = actionBar ? actionBar.parentElement : null; if (!noteContainer) continue; var siblings = Array.from(noteContainer.children); var barIdx = siblings.indexOf(actionBar); var prevText = ''; for (var j = Math.max(0, barIdx - 3); j < barIdx; j++) { prevText += siblings[j].innerText + ' '; } if (prevText.toLowerCase().includes(targetAuthor.toLowerCase())) { found = btn; break; } } if (!found) return { error: 'Comment button for ' + targetAuthor + ' not found' }; found.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 2000)); var tb = document.querySelector('div[contenteditable=\"true\"]'); return { clicked: true, editorOpen: !!tb }; }"}
+ENDJSON
 ```
 
 **Step 2 — Type + submit (contenteditable editor is now open):**
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 1000));
-    var tb = document.querySelector('div[contenteditable="true"]');
-    if (!tb) return { error: 'no reply editor found' };
-
-    var text = ${JSON.stringify(replyText)};
-
-    tb.focus();
-    tb.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 300));
-
-    document.execCommand('selectAll');
-    document.execCommand('delete');
-    await new Promise(r => setTimeout(r, 300));
-
-    var dt = new DataTransfer();
-    dt.setData('text/plain', text);
-    tb.dispatchEvent(new ClipboardEvent('paste', {
-      clipboardData: dt, bubbles: true, cancelable: true
-    }));
-
-    tb.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText' }));
-    tb.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
-
-    await new Promise(r => setTimeout(r, 1500));
-
-    var btns = Array.from(document.querySelectorAll('button'));
-    var submitBtn = btns.find(b => b.innerText.trim() === 'Post' && !b.disabled);
-    if (!submitBtn) {
-      await new Promise(r => setTimeout(r, 2000));
-      btns = Array.from(document.querySelectorAll('button'));
-      submitBtn = btns.find(b => b.innerText.trim() === 'Post' && !b.disabled);
-    }
-    if (!submitBtn) return { typed: true, len: tb.innerText.length, error: 'no Post button enabled' };
-
-    submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    await new Promise(r => setTimeout(r, 2000));
-    return { typed: true, submitted: true, len: tb.innerText.length };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var tb = document.querySelector('div[contenteditable=\"true\"]'); if (!tb) return { error: 'no reply editor found' }; var text = REPLY_TEXT_PLACEHOLDER; tb.focus(); tb.dispatchEvent(new MouseEvent('click', { bubbles: true })); await new Promise(r => setTimeout(r, 300)); document.execCommand('selectAll'); document.execCommand('delete'); await new Promise(r => setTimeout(r, 300)); var dt = new DataTransfer(); dt.setData('text/plain', text); tb.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); tb.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText' })); tb.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' })); await new Promise(r => setTimeout(r, 1500)); var btns = Array.from(document.querySelectorAll('button')); var submitBtn = btns.find(b => b.innerText.trim() === 'Post' && !b.disabled); if (!submitBtn) { await new Promise(r => setTimeout(r, 2000)); btns = Array.from(document.querySelectorAll('button')); submitBtn = btns.find(b => b.innerText.trim() === 'Post' && !b.disabled); } if (!submitBtn) return { typed: true, len: tb.innerText.length, error: 'no Post button enabled' }; submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 2000)); return { typed: true, submitted: true, len: tb.innerText.length }; }"}
+ENDJSON
 ```
 
 **Step 3 — Verify (ONE evaluate, no retry loop):**
 
 🚨 If Step 2 returned `submitted: true`, this is a quick confirmation. Do NOT reload, do NOT loop.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    var snippet = ${JSON.stringify(replyText.slice(0, 30))};
-    var found = document.body.innerText.includes(snippet);
-    return { verified: found };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var snippet = REPLY_SNIPPET_PLACEHOLDER; var found = document.body.innerText.includes(snippet); return { verified: found }; }"}
+ENDJSON
 ```
 
 If `verified: false` but Step 2 was `submitted: true` → **treat as success** (threaded replies often collapsed/paginated). Move on to tracking.

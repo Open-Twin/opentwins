@@ -1,15 +1,14 @@
 # BROWSER-core.md - Bluesky Global Rules & Shared Patterns
 
-**Profile:** `{{browser_profile}}` on EVERY browser call.
-**CLI syntax:** `curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}'`
-**Navigate:** `curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://bsky.app/..."}'`
-**Open:** `curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://bsky.app/..."}'`
 
-**Snapshot rules:** Always include `selector`, `compact: true`, `interactive: true`, `depth: 3`.
+**Navigate:**
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://bsky.app/..."}' 2>&1
+```
 
-**Tool roles:**
-- `evaluate()` -> extract data, check states, type text via execCommand (lightweight, prefer)
-- `snapshot()` -> get clickable refs (only needed when evaluate can't find elements)
+**Selectors:** Use evaluate to find and interact with all elements.
+
+**Tool:** `evaluate` for all interaction — extract data, check states, type text, click buttons.
 
 **Selectors:**
 - Post containers: `div[role="link"]` — each post is wrapped in one, use as boundary
@@ -25,9 +24,7 @@
 - Follow button: `button` with text "Follow" / "Following"
 - Tabs (search): `div[role="tab"]` or `button[role="tab"]` — "Top", "Latest", "People", "Feeds"
 
-**Wait pattern:** **NEVER use `browser.act({ kind: "wait" })` as a separate step** — each step adds 5-8s LLM overhead.
-- **Embed waits at START of next evaluate:** `async () => { await new Promise(r => setTimeout(r, 3000)); ... }`
-- **NEVER use `exec sleep N`** for page waits — each exec adds 4-8s API overhead on top of the sleep.
+**Wait pattern:** Embed waits at START of next evaluate: `async () => { await new Promise(r => setTimeout(r, 3000)); ... }`
 
 **Bluesky DOM notes:**
 - Bluesky uses React with accessible markup — `button`, `role="link"`, `aria-label` attributes are reliable
@@ -50,26 +47,10 @@ The script below tries "Publish reply" first, falls back to "Publish post" — w
 
 **ONE evaluate** — wait 1.5s + type + wait 0.5s + click submit:
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 1500));
-    const dialog = document.querySelector('[role="dialog"]');
-    if (!dialog) return { error: 'no_dialog' };
-    const textbox = dialog.querySelector('[role="textbox"][contenteditable="true"]');
-    if (!textbox) return { error: 'no_textbox' };
-    textbox.focus();
-    document.execCommand('insertText', false, '${commentText.replace(/'/g, "\\'")}');
-    await new Promise(r => setTimeout(r, 500));
-    const submitBtn = dialog.querySelector('button[aria-label="Publish reply"]')
-                   || dialog.querySelector('button[aria-label="Publish post"]');
-    if (!submitBtn) return { typed: true, error: 'no_submit_button' };
-    submitBtn.click();
-    return { typed: true, submitted: true };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); const dialog = document.querySelector('[role=\"dialog\"]'); if (!dialog) return { error: 'no_dialog' }; const textbox = dialog.querySelector('[role=\"textbox\"][contenteditable=\"true\"]'); if (!textbox) return { error: 'no_textbox' }; textbox.focus(); document.execCommand('insertText', false, '${commentText}'); await new Promise(r => setTimeout(r, 500)); const submitBtn = dialog.querySelector('button[aria-label=\"Publish reply\"]') || dialog.querySelector('button[aria-label=\"Publish post\"]'); if (!submitBtn) return { typed: true, error: 'no_submit_button' }; submitBtn.click(); return { typed: true, submitted: true }; }"}
+ENDJSON
 ```
 
 **Replies-disabled posts:** If "Compose reply" button is missing on a post page (author restricted replies), skip to next candidate. Do NOT error — just log and move on.

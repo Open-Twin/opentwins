@@ -105,7 +105,7 @@ End-of-day / on-demand. DO NOT load on routine heartbeats. Read sections as need
   "action": "strategic_reply",
   "config": {
     "niche": "ai_dev",
-    "target_accounts": ["@levelsio", "@swyx", "@GergelyOrosz"],
+    "target_accounts": [{{#each behavior.target_accounts}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}],
     "min_likes": 100,
     "max_replies": 1
   }

@@ -1,20 +1,19 @@
-# BROWSER-core.md - Reddit Agent Global Rules & Selectors
+# BROWSER-core.md - Reddit Agent Selectors & Browser Commands
 
-All evaluate/snapshot calls MUST include `profile: "{{browser_profile}}"`.
+## Browser Endpoints
 
-## Global Rules
-
-- **evaluate()** = read data, extract content, set text, check states (lightweight)
-- **snapshot()** = get clickable refs. Requires `compact: true, interactive: true, depth: 6`. Narrow selector always.
-- **NEVER use `refs: "aria"`** in snapshot — causes errors.
-- **NEVER use `args` param in evaluate** — gateway ignores it. Inline values via template literals `${var}`.
-- **NEVER use `element.click()` on React buttons** — does NOT trigger React events. Text stays in draft.
-  - Use: `btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))`
-  - Shadow DOM buttons (upvote arrows) DO work with `.click()`.
-- **Wait pattern (embedded):** All waits MUST be `await new Promise(r => setTimeout(r, N))` INSIDE async evaluate functions. NEVER use separate `browser.act({ kind: "wait" })` calls — each separate call adds ~5s overhead.
-  - NEVER use `browser.navigate()` without targetUrl. NEVER use `browser.wait()`.
-- Always use `www.reddit.com` (never old.reddit.com).
-- Use EXACTLY the code below — do NOT create custom variations with args/parameters.
+```bash
+# Open (first page only):
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"URL"}' 2>&1
+# Navigate (all subsequent pages):
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"URL"}' 2>&1
+# Evaluate (run JavaScript):
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { ... }"}
+ENDJSON
+# Close:
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/close -H 'Content-Type: application/json' 2>&1
+```
 
 ## Verified Selectors
 
@@ -33,7 +32,7 @@ All evaluate/snapshot calls MUST include `profile: "{{browser_profile}}"`.
   - Use index `[1]` (second element)
 - Lexical editor: `div[data-lexical-editor="true"]` (after expansion)
 - Submit (top-level): `button[type="submit"]` with text "Comment" inside `comment-composer-host:not([reply-mode])`
-- Typing: `document.execCommand('insertText', false, text)` — NEVER snapshot refs for Lexical
+- Typing: `document.execCommand('insertText', false, text)` after focusin activation
 
 ### Notifications
 - Item: `notification-item` (NOT `shreddit-notification`)
@@ -53,8 +52,6 @@ All evaluate/snapshot calls MUST include `profile: "{{browser_profile}}"`.
 
 ## Recovery Rules
 
-- **Browser timeout** -> close tab, reopen URL. If fails -> `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/start`, wait 3s, retry once. Still fails -> skip browser tasks. NEVER use `browser.stop()`.
-- **"matched N elements" / strict mode** -> snapshot selector too broad, use narrower selector.
-- **evaluate() unexpected data** -> 1 snapshot to inspect DOM, use discovered selector.
-- **Click fails after snapshot** -> retry with narrower selector. Retry also fails -> skip, log Error.
+- **Browser timeout** -> close tab, reopen URL. If fails -> `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/start -H 'Content-Type: application/json'`, wait 3s, retry once. Still fails -> skip browser tasks.
+- **evaluate() unexpected data** -> check URL with `async () => { return window.location.href; }`, re-navigate if wrong page.
 - **Same task fails 3x** -> mark "done" with note "Blocked by browser issues".

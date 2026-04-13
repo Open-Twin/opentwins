@@ -68,79 +68,10 @@ Returns posts with engagement counts parsed from aria-labels. `postId` extracted
 - Skips posts with < 30 chars of real text (link spam / emoji only)
 - Skips posts older than 4h with 0 likes (nobody cared)
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    // Click Latest tab
-    const tabs = Array.from(document.querySelectorAll('div[role="tab"], button[role="tab"]'));
-    const latestTab = tabs.find(t => t.innerText.trim() === 'Latest');
-    if (latestTab) latestTab.click();
-    await new Promise(r => setTimeout(r, 3000));
-
-    const posts = [];
-    const containers = Array.from(document.querySelectorAll('div[role="link"]'));
-    const seen = new Set();
-    const noiseKw = ['hiring', 'job seekers', 'apply now', 'dm me for', 'check my link', 'onlyfans', 'follow back'];
-
-    for (const container of containers) {
-      if (posts.length >= 10) break;
-      const link = container.querySelector('a[href*="/post/"]');
-      if (!link) continue;
-      if (seen.has(link.href)) continue;
-      seen.add(link.href);
-
-      const urlMatch = link.href.match(/\\/profile\\/([^/]+)\\/post\\/([^/?]+)/);
-      if (!urlMatch) continue;
-      const author = urlMatch[1];
-      const postId = urlMatch[2];
-
-      const fullText = container.innerText;
-
-      // Parse counts from aria-labels
-      const replyBtn = container.querySelector('button[aria-label*="repl"], button[aria-label*="Repl"]');
-      const likeBtn = container.querySelector('button[aria-label*="like"], button[aria-label*="Like"]');
-      const replyLabel = replyBtn ? replyBtn.getAttribute('aria-label') : '';
-      const likeLabel = likeBtn ? likeBtn.getAttribute('aria-label') : '';
-      const replies = parseInt((replyLabel.match(/(\\d+)\\s*repl/i) || [])[1]) || 0;
-      const likes = parseInt((likeLabel.match(/(\\d+)\\s*like/i) || [])[1]) || 0;
-
-      // Parse timestamp
-      const tsMatch = fullText.match(/·\\s*(\\d+[smhdw])/);
-      const timeStr = tsMatch ? tsMatch[1] : '';
-      let ageHours = 0;
-      const tsParsed = timeStr.match(/^(\\d+)([smhdw])$/);
-      if (tsParsed) {
-        const n = parseInt(tsParsed[1]), u = tsParsed[2];
-        if (u === 's') ageHours = n / 3600;
-        else if (u === 'm') ageHours = n / 60;
-        else if (u === 'h') ageHours = n;
-        else if (u === 'd') ageHours = n * 24;
-        else if (u === 'w') ageHours = n * 168;
-      }
-
-      // Extract post text (after timestamp marker)
-      const afterTs = fullText.replace(/^.*?·\\s*\\d+[smhdw]\\s*/, '');
-      const text = afterTs.replace(/\\d+$/, '').trim().slice(0, 300);
-
-      // Noise filter
-      const textLower = text.toLowerCase();
-      if (noiseKw.some(kw => textLower.includes(kw))) continue;
-      if (text.replace(/\\s/g, '').length < 30) continue;
-      if (ageHours > 4 && likes === 0) continue;
-      // Skip replies (they show "Replied to" — navigating to them has no Compose button)
-      if (fullText.includes('Replied to')) continue;
-
-      // Media detection — can't see images, meme posts get wrong-tone replies
-      var hasMedia = container.querySelectorAll('img[src*="cdn.bsky.app/img/feed_"]').length > 0;
-      var isMemeLikely = hasMedia && text.length < 80;
-
-      posts.push({ author, postId, url: link.href, text: text.slice(0, 60), likes, replies, ageHours, timeStr, hasMedia, isMemeLikely });
-    }
-    return posts;
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const tabs = Array.from(document.querySelectorAll('div[role=\"tab\"], button[role=\"tab\"]')); const latestTab = tabs.find(t => t.innerText.trim() === 'Latest'); if (latestTab) latestTab.click(); await new Promise(r => setTimeout(r, 3000)); const posts = []; const containers = Array.from(document.querySelectorAll('div[role=\"link\"]')); const seen = new Set(); const noiseKw = ['hiring', 'job seekers', 'apply now', 'dm me for', 'check my link', 'onlyfans', 'follow back']; for (const container of containers) { if (posts.length >= 10) break; const link = container.querySelector('a[href*=\"/post/\"]'); if (!link) continue; if (seen.has(link.href)) continue; seen.add(link.href); const urlMatch = link.href.match(/\\/profile\\/([^/]+)\\/post\\/([^/?]+)/); if (!urlMatch) continue; const author = urlMatch[1]; const postId = urlMatch[2]; const fullText = container.innerText; const replyBtn = container.querySelector('button[aria-label*=\"repl\"], button[aria-label*=\"Repl\"]'); const likeBtn = container.querySelector('button[aria-label*=\"like\"], button[aria-label*=\"Like\"]'); const replyLabel = replyBtn ? replyBtn.getAttribute('aria-label') : ''; const likeLabel = likeBtn ? likeBtn.getAttribute('aria-label') : ''; const replies = parseInt((replyLabel.match(/(\\d+)\\s*repl/i) || [])[1]) || 0; const likes = parseInt((likeLabel.match(/(\\d+)\\s*like/i) || [])[1]) || 0; const tsMatch = fullText.match(/·\\s*(\\d+[smhdw])/); const timeStr = tsMatch ? tsMatch[1] : ''; let ageHours = 0; const tsParsed = timeStr.match(/^(\\d+)([smhdw])$/); if (tsParsed) { const n = parseInt(tsParsed[1]), u = tsParsed[2]; if (u === 's') ageHours = n / 3600; else if (u === 'm') ageHours = n / 60; else if (u === 'h') ageHours = n; else if (u === 'd') ageHours = n * 24; else if (u === 'w') ageHours = n * 168; } const afterTs = fullText.replace(/^.*?·\\s*\\d+[smhdw]\\s*/, ''); const text = afterTs.replace(/\\d+$/, '').trim().slice(0, 300); const textLower = text.toLowerCase(); if (noiseKw.some(kw => textLower.includes(kw))) continue; if (text.replace(/\\s/g, '').length < 30) continue; if (ageHours > 4 && likes === 0) continue; if (fullText.includes('Replied to')) continue; var hasMedia = container.querySelectorAll('img[src*=\"cdn.bsky.app/img/feed_\"]').length > 0; var isMemeLikely = hasMedia && text.length < 80; posts.push({ author, postId, url: link.href, text: text.slice(0, 60), likes, replies, ageHours, timeStr, hasMedia, isMemeLikely }); } return posts; }"}
+ENDJSON
 ```
 
 ---
@@ -151,27 +82,10 @@ After navigating to post. Combines 3s wait + DOM duplicate check + post text rea
 
 **Duplicate check:** Look for our profile link inside thread **reply** containers (role="link"), skipping the first one (the OP post itself). When we're the OP, our profile appears in the first container — that's not a duplicate comment.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    const mainContent = document.querySelector('main') || document.body;
-    const threadContainers = Array.from(mainContent.querySelectorAll('div[role="link"]'));
-    // Skip the first container (the OP post) - only check replies below it
-    const replyContainers = threadContainers.slice(1);
-    const inReplyLinks = replyContainers.flatMap(c => Array.from(c.querySelectorAll('a[href*="/profile/{{handle}}"]')));
-    const alreadyCommented = inReplyLinks.length > 0;
-    // Depth check: count posts above compose button (parent chain)
-    var composeBtn = document.querySelector('button[aria-label="Compose reply"]');
-    var composeY = composeBtn ? composeBtn.getBoundingClientRect().y : 9999;
-    var parentChainLen = threadContainers.filter(c => c.getBoundingClientRect().y < composeY).length;
-    var tooDeep = parentChainLen >= 4;
-    const postText = mainContent.innerText.slice(0, 500);
-    return { alreadyCommented, tooDeep, parentChainLen, text: postText };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); const mainContent = document.querySelector('main') || document.body; const threadContainers = Array.from(mainContent.querySelectorAll('div[role=\"link\"]')); const replyContainers = threadContainers.slice(1); const inReplyLinks = replyContainers.flatMap(c => Array.from(c.querySelectorAll('a[href*=\"/profile/{{handle}}\"]'))); const alreadyCommented = inReplyLinks.length > 0; var composeBtn = document.querySelector('button[aria-label=\"Compose reply\"]'); var composeY = composeBtn ? composeBtn.getBoundingClientRect().y : 9999; var parentChainLen = threadContainers.filter(c => c.getBoundingClientRect().y < composeY).length; var tooDeep = parentChainLen >= 4; const postText = mainContent.innerText.slice(0, 500); return { alreadyCommented, tooDeep, parentChainLen, text: postText }; }"}
+ENDJSON
 ```
 
 If `alreadyCommented: true` → backfill to `memory/commented_posts.txt`, skip to next candidate.
@@ -181,17 +95,10 @@ If `tooDeep: true` (parentChainLen >= 4) → skip (deep thread, no visibility).
 
 Use when commenting on posts. Clicks "Compose reply" which opens the reply dialog.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const composeBtn = document.querySelector('button[aria-label="Compose reply"]');
-    if (!composeBtn) return { error: 'no_compose_button' };
-    composeBtn.click();
-    return { clicked: true };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const composeBtn = document.querySelector('button[aria-label=\"Compose reply\"]'); if (!composeBtn) return { error: 'no_compose_button' }; composeBtn.click(); return { clicked: true }; }"}
+ENDJSON
 ```
 
 After clicking, the 1.5s wait is embedded in S 5 (Reply/Comment Flow).
@@ -201,32 +108,17 @@ After clicking, the 1.5s wait is embedded in S 5 (Reply/Comment Flow).
 ## S 6. Click Quote
 
 **Step 1:** Click repost button:
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const repostBtn = document.querySelector('button[aria-label="Repost or quote post"]');
-    if (!repostBtn) return { clicked: false, error: 'no_repost_btn' };
-    repostBtn.click();
-    return { clicked: true };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { const repostBtn = document.querySelector('button[aria-label=\"Repost or quote post\"]'); if (!repostBtn) return { clicked: false, error: 'no_repost_btn' }; repostBtn.click(); return { clicked: true }; }"}
+ENDJSON
 ```
 
 **Step 2:** Click "Quote post" menu item (with 1s embedded wait):
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 1000));
-    const menuItems = Array.from(document.querySelectorAll('div[role="menuitem"]'));
-    const quoteItem = menuItems.find(m => m.innerText.trim() === 'Quote post');
-    if (quoteItem) { quoteItem.click(); return { clicked: true }; }
-    return { clicked: false };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); const menuItems = Array.from(document.querySelectorAll('div[role=\"menuitem\"]')); const quoteItem = menuItems.find(m => m.innerText.trim() === 'Quote post'); if (quoteItem) { quoteItem.click(); return { clicked: true }; } return { clicked: false }; }"}
+ENDJSON
 ```
 
 **Step 3:** Use BROWSER-core.md S 5 but with `button[aria-label="Publish post"]` as submit button (NOT "Publish reply").
@@ -237,22 +129,10 @@ browser.act({
 
 🚨 **MANDATORY after every comment and quote.** Every engagement = follow. No limit. No profile navigation. Follow button on post page → click → changes to "Following".
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 500));
-    var btns = Array.from(document.querySelectorAll('button'));
-    var followBtn = btns.find(b => b.innerText.trim() === 'Follow');
-    if (!followBtn) {
-      var followingBtn = btns.find(b => b.innerText.trim() === 'Following');
-      return { alreadyFollowing: !!followingBtn };
-    }
-    followBtn.click();
-    return { followed: true };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 500)); var btns = Array.from(document.querySelectorAll('button')); var followBtn = btns.find(function(b) { return b.innerText.trim() === 'Follow' && b.offsetParent !== null; }); if (!followBtn) return { alreadyFollowing: true }; followBtn.click(); return { followed: true }; }"}
+ENDJSON
 ```
 
 If `alreadyFollowing`: skip silently. If error: skip follow, proceed with comment.

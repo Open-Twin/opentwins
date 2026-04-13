@@ -107,12 +107,12 @@ describe('Template Content Checks', () => {
     expect(content).toContain('curl -s -X POST http://localhost:3847/api/browser/');
   });
 
-  it.each(PLATFORM_TYPES)('%s: HEARTBEAT.md contains JS enforcement rule', (platform) => {
+  it.each(PLATFORM_TYPES)('%s: HEARTBEAT.md contains browser close step', (platform) => {
     const dir = resolve(tmpDir, 'workspaces', `agent-${platform}`);
     const heartbeat = resolve(dir, 'HEARTBEAT.md');
     if (!existsSync(heartbeat)) return;
     const content = readFileSync(heartbeat, 'utf-8');
-    expect(content).toContain('NEVER write your own browser JavaScript');
+    expect(content).toMatch(/close|HEARTBEAT_OK/i);
   });
 
   it.each(PLATFORM_TYPES)('%s: IDENTITY.md or SOUL.md contains configured name or handle', (platform) => {

@@ -2,7 +2,6 @@
 
 **CLI syntax:** `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/<command> -H 'Content-Type: application/json' -d '{"key":"value"}' 2>&1`
 - **evaluate:** `curl -s -X POST .../evaluate -d '{"fn":"async () => { ... }"}'`
-- **type:** `curl -s -X POST .../type -d '{"selector":"CSS_SELECTOR","text":"text to type"}'` — CDP native text input (handles focus)
 - **open/navigate/close:** `curl -s -X POST .../open -d '{"url":"URL"}'` / `.../navigate -d '{"url":"URL"}'` / `.../close`
 - 🚨 **Tab reuse:** Use `open` ONLY for the FIRST page. Use `navigate` for ALL subsequent pages. Opening new tabs wastes resources and causes close errors.
 - 🚨 **Quote escaping:** Comment text with quotes breaks shell. Use `$'...'` quoting or `JSON.stringify()` inside evaluate for text with apostrophes/quotes.
@@ -14,7 +13,6 @@
 - **Slug format: ALWAYS just the slug** (last URL path segment, NO author prefix). `dev.to/author/slug-123` → `slug-123`.
 
 **File loading:** BROWSER-core.md is ALWAYS read. Other BROWSER-*.md files are read ON-DEMAND only when needed.
-🚨 **NEVER write your own browser JavaScript.** The BROWSER-*.md files contain exact, tested evaluate functions for every action (extract, click, type, navigate, like). Copy-paste them verbatim. Do NOT improvise selectors, write custom querySelectorAll, or modify the provided JS. If a function does not exist for what you need, skip the action.
 🚨 **APOSTROPHE SAFETY:** Comment text with apostrophes (it's, don't) breaks single-quoted curl `-d '...'` bodies. Use double-quoted `-d "..."` with `\"` for inner quotes, or heredoc `-d @- <<'ENDJSON'`.
 
 ## Decision Tree
@@ -24,7 +22,7 @@ Heartbeat fires
   -> SS 0: Morning Schedule Check (schedule.for_date == today?)
   -> Read BROWSER-core.md (rules/selectors/recovery)
   -> SS 1: Read limits.json + schedule.json
-  -> SS 2: Browser startup (with retry if CDP fails)
+  -> SS 2: Browser startup (with retry if error)
   -> SS 3: Reply Check (notifications, MANDATORY)
      (🚨 Read BROWSER-notifications.md BEFORE extracting notifications)
   -> SS 4: Schedule Check (execute due tasks)
@@ -36,7 +34,6 @@ Heartbeat fires
 
 All steps MANDATORY. Execute in order. SS 0 runs first every time.
 🚨 **ALL steps mandatory every heartbeat.** Browser + notifications MUST run even if no tasks are due.
-🚨 **NEVER use `sessions_spawn` or sub-sessions.** Execute ALL commands directly — no child sessions.
 
 ---
 
@@ -87,11 +84,13 @@ printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"a
 ## 2. Browser Startup (with retry)
 
 1. `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://dev.to/notifications/comments"}' 2>&1`
-2. If CDP error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
+2. If error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
 
 ---
 
 ## 3. Reply Check (MANDATORY FIRST)
+
+Empty notifications is normal — skip to § 4.
 
 **Read BROWSER-notifications.md first.**
 
@@ -266,7 +265,7 @@ Read PLAYBOOK.md -> "Memory Update"
 ## 7. Close Browser
 
 `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/close 2>&1`
-NEVER use `browser.stop` or `pkill`.
+Do not kill Chrome or `pkill`.
 
 ---
 

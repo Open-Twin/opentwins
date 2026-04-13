@@ -7,9 +7,8 @@
 
 ## Key Constraints
 
-- 🚨 **Title:** `textarea[name="Article Title"]` — use CDP `type` via snapshot
+- 🚨 **Title:** `textarea[name="Article Title"]` — use clipboard paste via evaluate
 - 🚨 **Body:** `div[data-testid="composer"][contenteditable="true"]` — use ClipboardEvent paste with `text/html`
-- 🚨 **CDP type does NOT work for body** — ref collides with title textarea
 - 🚨 **`execCommand('insertText')` does NOT persist** — Draft.js only saves the last block
 - 🚨 **Paste ONLY works on a fresh editor after typing the title.** Do NOT `selectAll`+`delete` before pasting — breaks multi-block creation. Always create a NEW article draft.
 - 🚨 **Publish is two clicks:** editor "Publish" → confirm dialog "Publish" (`aria-label="Publish"`)
@@ -34,33 +33,23 @@
 
 ## Step 1 — Navigate to Articles and create new draft
 
-```javascript
-browser.navigate("https://x.com/compose/articles", { profile: "{{browser_profile}}" })
-// Wait 3s, then click Write/create button
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    return new Promise(resolve => setTimeout(() => {
-      const createBtn = document.querySelector('button[aria-label="create"]');
-      if (createBtn) { createBtn.click(); return resolve({ clicked: 'create' }); }
-      const writeBtn = document.querySelector('[data-testid="empty_state_button_text"]')
-                    || Array.from(document.querySelectorAll('a, button')).find(b => b.innerText.trim() === 'Write');
-      if (writeBtn) { writeBtn.click(); return resolve({ clicked: 'write' }); }
-      resolve({ error: 'no Write/create button' });
-    }, 3000));
-  }`,
-  profile: "{{browser_profile}}"
-})
-// Wait 3s for editor to load — URL changes to /compose/articles/edit/{id}
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://x.com/compose/articles"}' 2>&1
+
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); const createBtn = document.querySelector('button[aria-label=\"create\"]'); if (createBtn) { createBtn.click(); return { clicked: 'create' }; } const writeBtn = document.querySelector('[data-testid=\"empty_state_button_text\"]') || Array.from(document.querySelectorAll('a, button')).find(b => b.innerText.trim() === 'Write'); if (writeBtn) { writeBtn.click(); return { clicked: 'write' }; } return { error: 'no Write/create button' }; }"}
+ENDJSON
 ```
+Wait 3s for editor to load — URL changes to /compose/articles/edit/{id}
 
 ---
 
-## Step 2 — Type title (CDP type via snapshot)
+## Step 2 — Type title (clipboard paste via evaluate)
 
-```
-snapshot('textarea[name="Article Title"]') → textbox [ref=eN]
-browser.type(eN, "Article Title Here")
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var title = document.querySelector('textarea[name=\"Article Title\"]'); if (!title) return { error: 'no title field' }; title.focus(); await new Promise(r => setTimeout(r, 300)); var dt = new DataTransfer(); dt.setData('text/plain', '${articleTitle}'); title.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 500)); return { typed: title.value || title.innerText }; }"}
+ENDJSON
 ```
 
 🚨 Title MUST be typed before body paste — this initializes the Draft.js editor for multi-block paste.
@@ -71,32 +60,10 @@ browser.type(eN, "Article Title Here")
 
 Build HTML string with formatting, mentions, hashtags. Then paste:
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    var editor = document.querySelector('[data-testid="composer"]');
-    if (!editor) return { error: 'no editor' };
-    editor.focus();
-    editor.click();
-    await new Promise(function(r) { setTimeout(r, 500); });
-
-    var html = ${JSON.stringify(articleHtml)};
-    var plain = ${JSON.stringify(articlePlainText)};
-
-    var dt = new DataTransfer();
-    dt.setData('text/plain', plain);
-    dt.setData('text/html', html);
-    var pasteEvent = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true });
-    editor.dispatchEvent(pasteEvent);
-
-    await new Promise(function(r) { setTimeout(r, 3000); });
-    var result = editor.innerText;
-    var blockCount = editor.querySelectorAll('[data-block]').length;
-    return { pasted: true, wordCount: result.split(/\\s+/).length, blocks: blockCount };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var editor = document.querySelector('[data-testid=\"composer\"]'); if (!editor) return { error: 'no editor' }; editor.focus(); editor.click(); await new Promise(r => setTimeout(r, 500)); var html = ${articleHtml}; var plain = ${articlePlainText}; var dt = new DataTransfer(); dt.setData('text/plain', plain); dt.setData('text/html', html); editor.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 3000)); var result = editor.innerText; var blockCount = editor.querySelectorAll('[data-block]').length; return { pasted: true, wordCount: result.split(/\\s+/).length, blocks: blockCount }; }"}
+ENDJSON
 ```
 
 Wait 5s after paste for auto-save before publishing.
@@ -106,40 +73,22 @@ Wait 5s after paste for auto-save before publishing.
 ## Step 4 — Publish (two-click flow)
 
 **Click 1 — Open publish dialog:**
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    var btns = Array.from(document.querySelectorAll('button'));
-    var publishBtn = btns.find(function(b) { return b.innerText.trim() === 'Publish'; });
-    if (!publishBtn) return { error: 'no publish button' };
-    publishBtn.click();
-    return { clicked: true };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var btns = Array.from(document.querySelectorAll('button')); var publishBtn = btns.find(b => b.innerText.trim() === 'Publish'); if (!publishBtn) return { error: 'no publish button' }; publishBtn.click(); return { clicked: true }; }"}
+ENDJSON
 ```
 
 Wait 2s. Dialog shows: audience (default "Everyone"), reply settings, timeline preview.
 
 **Click 2 — Confirm publish:**
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(function(r) { setTimeout(r, 2000); });
-    var btns = Array.from(document.querySelectorAll('button'));
-    var publishBtn = btns.find(function(b) { return b.innerText.trim() === 'Publish' && b.getAttribute('aria-label') === 'Publish'; });
-    if (!publishBtn) return { error: 'no dialog publish button' };
-    publishBtn.click();
-    await new Promise(function(r) { setTimeout(r, 5000); });
-    return { published: true, url: window.location.href };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); var btns = Array.from(document.querySelectorAll('button')); var publishBtn = btns.find(b => b.innerText.trim() === 'Publish' && b.getAttribute('aria-label') === 'Publish'); if (!publishBtn) return { error: 'no dialog publish button' }; publishBtn.click(); await new Promise(r => setTimeout(r, 5000)); return { published: true, url: window.location.href }; }"}
+ENDJSON
 ```
 
-After publish: page redirects to `https://x.com/{handle}/status/{id}`. Success message: "Your Article has been published". Article URL: `https://x.com/{handle}/article/{id}`.
+After publish: page redirects to `https://x.com/{handle}/status/{id}`. Article URL: `https://x.com/{handle}/article/{id}`.
 
 ---
 

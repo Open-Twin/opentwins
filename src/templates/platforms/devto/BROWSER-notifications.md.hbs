@@ -4,27 +4,14 @@
 
 Open `https://dev.to/notifications/comments` first.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    const notifications = Array.from(document.querySelectorAll('div.crayons-card.notification'));
-    const unreplied = notifications.filter(n => !n.innerHTML.includes('>Replied<'));
-    return {
-      total: notifications.length,
-      count: unreplied.length,
-      items: unreplied.slice(0, 5).map(notif => {
-        const allLinks = Array.from(notif.querySelectorAll('a'));
-        const commentLink = allLinks.find(a => a.href.includes('/comment/') && !a.href.includes('/{{handle}}/comment/'));
-        return {
-          username: notif.innerText.split('\\n')[0].split(' ')[0],
-          commentUrl: commentLink ? commentLink.href : ''
-        };
-      }).filter(n => n.commentUrl)
-    };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://dev.to/notifications/comments"}' 2>&1
+```
+
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); const notifications = Array.from(document.querySelectorAll('div.crayons-card.notification')); const unreplied = notifications.filter(n => !n.innerHTML.includes('>Replied<')); return { total: notifications.length, count: unreplied.length, items: unreplied.slice(0, 5).map(notif => { const allLinks = Array.from(notif.querySelectorAll('a')); const commentLink = allLinks.find(a => a.href.includes('/comment/') && !a.href.includes('/{{handle}}/comment/')); return { username: notif.innerText.split(String.fromCharCode(10))[0].split(' ')[0], commentUrl: commentLink ? commentLink.href : '' }; }).filter(n => n.commentUrl) }; }"}
+ENDJSON
 ```
 
 🚨 **IMPORTANT:** Only `commentUrl` and `username` are returned. `articleUrl` is NOT needed — the comment page has all context.
@@ -33,79 +20,35 @@ browser.act({
 
 ## SS 2: Reply to Comment (4 steps total)
 
-🚨 **ALL waits MUST be embedded in evaluate using `await new Promise(r => setTimeout(r, N))`** — NEVER use separate `browser.act({ kind: "wait" })` steps.
-
 ### Step 1: Navigate to commentUrl
 
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"COMMENT_URL"}' 2>&1
+```
+
 ### Step 2: Context check + click Reply (ONE async evaluate with 3s embedded wait):
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    const alreadyReplied = document.querySelectorAll('#comment-trees-container a[href*="/{{handle}}"]').length > 0;
-    if (alreadyReplied) return { alreadyReplied: true };
-    // Skip deep threads (no visibility)
-    var targetComment = document.querySelector('.comment__body');
-    if (targetComment) {
-      var depth = 0;
-      var el = targetComment.closest('[data-comment-id]');
-      if (el) { el = el.parentElement; while (el) { if (el.hasAttribute('data-comment-id')) depth++; el = el.parentElement; } }
-      if (depth >= 3) return { skipped: true, reason: 'too_deep', depth: depth };
-    }
-    const repliesForLink = Array.from(document.querySelectorAll('a')).find(a => a.innerText.startsWith('Replies for:'));
-    const comment = document.querySelector('.comment__body');
-    const replyBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.trim() === 'Reply');
-    if (replyBtn) replyBtn.click();
-    return {
-      alreadyReplied: false,
-      parentContext: repliesForLink ? repliesForLink.innerText.slice(0, 200) : null,
-      replyText: comment ? comment.innerText.slice(0, 300) : null,
-      replyClicked: !!replyBtn
-    };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); const alreadyReplied = document.querySelectorAll('#comment-trees-container a[href*=\"/{{handle}}\"]').length > 0; if (alreadyReplied) return { alreadyReplied: true }; var targetComment = document.querySelector('.comment__body'); if (targetComment) { var depth = 0; var el = targetComment.closest('[data-comment-id]'); if (el) { el = el.parentElement; while (el) { if (el.hasAttribute('data-comment-id')) depth++; el = el.parentElement; } } if (depth >= 3) return { skipped: true, reason: 'too_deep', depth: depth }; } const repliesForLink = Array.from(document.querySelectorAll('a')).find(a => a.innerText.startsWith('Replies for:')); const comment = document.querySelector('.comment__body'); const replyBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.trim() === 'Reply'); if (replyBtn) replyBtn.click(); return { alreadyReplied: false, parentContext: repliesForLink ? repliesForLink.innerText.slice(0, 200) : null, replyText: comment ? comment.innerText.slice(0, 300) : null, replyClicked: !!replyBtn }; }"}
+ENDJSON
 ```
 
 If `alreadyReplied: true` -> skip. If `replyClicked: false` -> skip.
 
 ### Step 3: Type reply (1.5s embedded wait):
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 1500));
-    const textarea = document.querySelector('textarea[placeholder="Reply..."]');
-    if (!textarea) return {error: 'no textarea'};
-    textarea.click(); textarea.focus();
-    textarea.value = '${replyText.replace(/'/g, "\\'")}';
-    textarea.dispatchEvent(new Event('input', {bubbles: true}));
-    textarea.dispatchEvent(new Event('change', {bubbles: true}));
-    return {typed: true, length: textarea.value.length};
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); const textarea = document.querySelector('textarea[placeholder=\"Reply...\"]'); if (!textarea) return {error: 'no textarea'}; textarea.click(); textarea.focus(); textarea.value = REPLY_TEXT_HERE; textarea.dispatchEvent(new Event('input', {bubbles: true})); textarea.dispatchEvent(new Event('change', {bubbles: true})); return {typed: true, length: textarea.value.length}; }"}
+ENDJSON
 ```
 
 ### Step 4: Submit + verify (0.5s + 3s embedded waits):
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 500));
-    const submitBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.trim() === 'Submit');
-    if (!submitBtn) return {error: 'no submit button'};
-    submitBtn.click();
-    await new Promise(r => setTimeout(r, 3000));
-    return { verified: document.body.innerText.includes('${replyText.slice(0, 50).replace(/'/g, "\\'")}') };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 500)); const submitBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.trim() === 'Submit'); if (!submitBtn) return {error: 'no submit button'}; submitBtn.click(); await new Promise(r => setTimeout(r, 3000)); return { verified: document.querySelectorAll('#comment-trees-container a[href*=\"/{{handle}}\"]').length > 0 }; }"}
+ENDJSON
 ```
 
 If `verified: false` -> retry step 4 once. Still false -> don't log, retry next heartbeat.
 
 🚨 **NEVER navigate to the full article just to read context.** The comment URL page has all context.
-❌ **NEVER use separate `browser.act({ kind: "wait" })` steps** — embed in evaluate.
-❌ **NEVER dump innerText in paginated slices**.

@@ -66,54 +66,20 @@ Re-read your text before submitting. Check these 4 things:
 
 ## S 2. Extract Feed Posts
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    return new Promise(function(resolve) {
-      setTimeout(function() {
-        var b = document.querySelector('#onetrust-accept-btn-handler');
-        if (b) b.click();
-        var posts = Array.from(document.querySelectorAll('.story.homepage-post'));
-        resolve({
-          count: posts.length,
-          items: posts.slice(0, 10).map(function(post) {
-            var link = post.querySelector('a[href*="/post/"]') || post.querySelector('a[href*="/product/"]');
-            var lines = post.innerText.split('\\n').filter(function(l) { return l.trim(); });
-            var numbers = lines.filter(function(l) { return /^\d+$/.test(l.trim()); });
-            var lastNumbers = numbers.slice(-2);
-            return {
-              url: link ? link.href : '',
-              title: post.querySelector('.story__title') ? post.querySelector('.story__title').innerText.slice(0, 80) : '',
-              upvotes: lastNumbers[0] ? parseInt(lastNumbers[0]) : 0,
-              comments: lastNumbers[1] ? parseInt(lastNumbers[1]) : 0
-            };
-          }).filter(function(p) { return p.url; })
-        });
-      }, 3000);
-    });
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var b = document.querySelector('#onetrust-accept-btn-handler'); if (b) b.click(); var posts = Array.from(document.querySelectorAll('.story.homepage-post')); return { count: posts.length, items: posts.slice(0, 10).map(function(post) { var link = post.querySelector('a[href*=\"/post/\"]') || post.querySelector('a[href*=\"/product/\"]'); var lines = post.innerText.split(String.fromCharCode(10)).filter(function(l) { return l.trim(); }); var numbers = lines.filter(function(l) { return /^\\d+$/.test(l.trim()); }); var lastNumbers = numbers.slice(-2); return { url: link ? link.href : '', title: post.querySelector('.story__title') ? post.querySelector('.story__title').innerText.slice(0, 80) : '', upvotes: lastNumbers[0] ? parseInt(lastNumbers[0]) : 0, comments: lastNumbers[1] ? parseInt(lastNumbers[1]) : 0 }; }).filter(function(p) { return p.url; }) }; }"}
+ENDJSON
 ```
 
 ## S 3. Extract Post Content (after navigating to post page)
 
 Returns the post title and body text. Run this BEFORE upvoting or typing a comment. Use the returned `title` and `body` to inform your comment — your comment MUST directly address this specific post's topic.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    var titleEl = document.querySelector('h1') || document.querySelector('.story__title');
-    var title = titleEl ? titleEl.innerText.trim() : '';
-    var bodyEl = document.querySelector('.content') || document.querySelector('article') || document.querySelector('.post-body');
-    var body = bodyEl ? bodyEl.innerText.trim().slice(0, 500) : '';
-    return { title, body };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var titleEl = document.querySelector('h1') || document.querySelector('.story__title'); var title = titleEl ? titleEl.innerText.trim() : ''; var bodyEl = document.querySelector('.content') || document.querySelector('article') || document.querySelector('.post-body'); var body = bodyEl ? bodyEl.innerText.trim().slice(0, 500) : ''; if (!body) { var text = document.body.innerText; var lines = text.split(String.fromCharCode(10)).filter(function(l) { return l.trim().length > 50; }); body = lines.slice(0, 5).join('\\n').slice(0, 500); } return { title: title, body: body }; }"}
+ENDJSON
 ```
 
 ---
@@ -133,67 +99,26 @@ if (ta) { ta.focus(); ta.value = commentText; ta.dispatchEvent(new Event('input'
 - ❌ **NEVER** add `.click()` on submit in the same evaluate as `execCommand('insertText')`
 - ✅ Step 1 = insert text ONLY. Step 2 = wait + submit. Step 3 = wait + verify.
 
-```javascript
-// Step 1 of 3: Insert text ONLY (no submit attempt!)
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    var commentText = '${commentText.replace(/'/g, "\\'")}';
-    var commentBox = document.querySelector('.comment-box');
-    if (!commentBox) return { error: 'comment_box_not_found' };
-    var editor = commentBox.querySelector('.tiptap.ProseMirror');
-    if (!editor) return { error: 'editor_not_found' };
-    editor.focus();
-    document.execCommand('selectAll', false, null);
-    document.execCommand('delete', false, null);
-    document.execCommand('insertText', false, commentText);
-    editor.dispatchEvent(new InputEvent('input', { data: commentText, inputType: 'insertText', bubbles: true }));
-    return { inserted: true, textLen: editor.innerText.length };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+# Step 1 of 3: Insert text ONLY (no submit attempt!)
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var commentText = '${commentText.replace(/'/g, \"\\\\'\")}'; var commentBox = document.querySelector('.comment-box'); if (!commentBox) return { error: 'comment_box_not_found' }; var editor = commentBox.querySelector('.tiptap.ProseMirror'); if (!editor) return { error: 'editor_not_found' }; editor.focus(); document.execCommand('selectAll', false, null); document.execCommand('delete', false, null); document.execCommand('insertText', false, commentText); editor.dispatchEvent(new InputEvent('input', { data: commentText, inputType: 'insertText', bubbles: true })); return { inserted: true, textLen: editor.innerText.length }; }"}
+ENDJSON
 ```
 
-```javascript
-// Step 2 of 3: Wait 500ms for TipTap state propagation, then submit
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    return new Promise(function(resolve) {
-      setTimeout(function() {
-        var commentBox = document.querySelector('.comment-box');
-        if (!commentBox) return resolve({ error: 'comment_box_not_found' });
-        var submitBtn = commentBox.querySelector('.comment-box__save-button');
-        if (!submitBtn) return resolve({ error: 'submit_button_not_found' });
-        if (submitBtn.disabled) return resolve({ error: 'submit_still_disabled' });
-        submitBtn.click();
-        resolve({ success: true });
-      }, 500);
-    });
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+# Step 2 of 3: Wait 500ms for TipTap state propagation, then submit
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 500)); var commentBox = document.querySelector('.comment-box'); if (!commentBox) return { error: 'comment_box_not_found' }; var submitBtn = commentBox.querySelector('.comment-box__save-button'); if (!submitBtn) return { error: 'submit_button_not_found' }; if (submitBtn.disabled) return { error: 'submit_still_disabled' }; submitBtn.click(); return { success: true }; }"}
+ENDJSON
 ```
 
-```javascript
-// Step 3 of 3: Wait 3s, verify OUR comment posted
-// 🚨 Use "{{handle}}" (username shown on page), NOT "{{name}}" (full name — NOT rendered)
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    return new Promise(function(resolve) {
-      setTimeout(function() {
-        var comments = document.querySelectorAll('.comment');
-        var ourCount = 0;
-        comments.forEach(function(c) {
-          if (c.innerText.indexOf('{{handle}}') >= 0) ourCount++;
-        });
-        resolve({ verified: ourCount > 0, commentCount: comments.length, ourComments: ourCount });
-      }, 3000);
-    });
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+# Step 3 of 3: Wait 3s, verify OUR comment posted
+# 🚨 Use "{{handle}}" (username shown on page), NOT "{{name}}" (full name — NOT rendered)
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var comments = document.querySelectorAll('.comment'); var ourCount = 0; comments.forEach(function(c) { if (c.innerText.indexOf('{{handle}}') >= 0) ourCount++; }); return { verified: ourCount > 0, commentCount: comments.length, ourComments: ourCount }; }"}
+ENDJSON
 ```
 
 🚨 **Retry rules (STRICT — do NOT deviate):**
@@ -205,22 +130,9 @@ browser.act({
 
 ## S 6. Upvote Post (single evaluate — click + wait + verify)
 
-```javascript
-// 1 evaluate: upvote + 1s wait + verify (NOT 3 separate steps)
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    var postUpvote = document.querySelector('.post-liker');
-    if (!postUpvote) return { error: 'upvote_button_not_found' };
-    if (postUpvote.classList.contains('post-liker--liked')) return { skipped: true, reason: 'already_upvoted' };
-    postUpvote.click();
-    return new Promise(function(resolve) {
-      setTimeout(function() {
-        var verified = document.querySelector('.post-liker--liked') !== null;
-        resolve({ success: true, verified: verified });
-      }, 1000);
-    });
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+# 1 evaluate: upvote + 1s wait + verify (NOT 3 separate steps)
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var postUpvote = document.querySelector('.post-liker'); if (!postUpvote) return { error: 'upvote_button_not_found' }; if (postUpvote.classList.contains('post-liker--liked')) return { skipped: true, reason: 'already_upvoted' }; postUpvote.click(); await new Promise(r => setTimeout(r, 1000)); var verified = document.querySelector('.post-liker--liked') !== null; return { success: true, verified: verified }; }"}
+ENDJSON
 ```

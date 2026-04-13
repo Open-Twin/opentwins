@@ -6,7 +6,7 @@
 
 Navigate directly to `{{handle}}.substack.com/publish/post` — creates a new draft immediately.
 
-```
+```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://{{handle}}.substack.com/publish/post"}' 2>&1
 ```
 
@@ -17,32 +17,10 @@ exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navig
 
 Title and subtitle use `<textarea>`, NOT contenteditable.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 2000));
-    var titleTA = document.querySelector('textarea[placeholder="Title"]');
-    var subtitleTA = document.querySelector('textarea[placeholder*="subtitle"]');
-
-    if (titleTA) {
-      titleTA.focus();
-      titleTA.value = ${JSON.stringify(title)};
-      titleTA.dispatchEvent(new Event('input', { bubbles: true }));
-      titleTA.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-
-    if (subtitleTA) {
-      subtitleTA.focus();
-      subtitleTA.value = ${JSON.stringify(subtitle)};
-      subtitleTA.dispatchEvent(new Event('input', { bubbles: true }));
-      subtitleTA.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-
-    return { titleSet: !!titleTA, subtitleSet: !!subtitleTA };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); var titleTA = document.querySelector('textarea[placeholder=\"Title\"]'); var subtitleTA = document.querySelector('textarea[placeholder*=\"subtitle\"]'); if (titleTA) { titleTA.focus(); titleTA.value = TITLE_PLACEHOLDER; titleTA.dispatchEvent(new Event('input', { bubbles: true })); titleTA.dispatchEvent(new Event('change', { bubbles: true })); } if (subtitleTA) { subtitleTA.focus(); subtitleTA.value = SUBTITLE_PLACEHOLDER; subtitleTA.dispatchEvent(new Event('input', { bubbles: true })); subtitleTA.dispatchEvent(new Event('change', { bubbles: true })); } return { titleSet: !!titleTA, subtitleSet: !!subtitleTA }; }"}
+ENDJSON
 ```
 
 ### Step 3 — Write body content
@@ -63,140 +41,52 @@ browser.act({
 🚨 **@mentions via HTML paste do NOT work** — the `substack-mention` span bleeds content. Reference writers via `<a href="https://substack.com/@handle">Name</a>` links instead.
 🚨 **Hashtags are NOT supported** in the newsletter editor (Notes only).
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 1000));
-    var editor = document.querySelectorAll('div[contenteditable="true"]')[0];
-    if (!editor) return { error: 'no editor' };
-
-    // Clear existing content
-    editor.focus();
-    document.execCommand('selectAll');
-    await new Promise(r => setTimeout(r, 300));
-    document.execCommand('delete');
-    await new Promise(r => setTimeout(r, 500));
-
-    var html = ${JSON.stringify(bodyHtml)};
-
-    // Paste as HTML for rich formatting
-    var dt = new DataTransfer();
-    dt.setData('text/html', html);
-    dt.setData('text/plain', 'fallback');
-    editor.dispatchEvent(new ClipboardEvent('paste', {
-      clipboardData: dt, bubbles: true, cancelable: true
-    }));
-
-    await new Promise(r => setTimeout(r, 1500));
-
-    // Fallback if paste didn't work
-    if (editor.innerText.length < 100) {
-      document.execCommand('insertText', false, html);
-    }
-
-    return { typed: true, len: editor.innerText.length };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var editor = document.querySelectorAll('div[contenteditable=\"true\"]')[0]; if (!editor) return { error: 'no editor' }; editor.focus(); document.execCommand('selectAll'); await new Promise(r => setTimeout(r, 300)); document.execCommand('delete'); await new Promise(r => setTimeout(r, 500)); var html = BODY_HTML_PLACEHOLDER; var dt = new DataTransfer(); dt.setData('text/html', html); dt.setData('text/plain', 'fallback'); editor.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 1500)); if (editor.innerText.length < 100) { document.execCommand('insertText', false, html); } return { typed: true, len: editor.innerText.length }; }"}
+ENDJSON
 ```
 
 ### Step 4 — Wait for auto-save
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    var btns = Array.from(document.querySelectorAll('button'));
-    var saved = btns.find(b => /saved/i.test(b.innerText.trim()));
-    return { saved: saved ? saved.innerText.trim() : 'not found' };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var btns = Array.from(document.querySelectorAll('button')); var saved = btns.find(b => /saved/i.test(b.innerText.trim())); return { saved: saved ? saved.innerText.trim() : 'not found' }; }"}
+ENDJSON
 ```
 
-### Step 5 — Open publish settings and configure
+### Step 5 — Open publish settings, configure audience, add tag
 
-Click "Continue" button to open publish panel.
+Click "Continue" to open publish panel. Set audience + comments to "everyone". Add at least 1 tag (required for publish).
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 500));
-    var btns = Array.from(document.querySelectorAll('button'));
-    var continueBtn = btns.find(b => b.innerText.trim() === 'Continue');
-    if (!continueBtn) return { error: 'no Continue button' };
-    continueBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    await new Promise(r => setTimeout(r, 2000));
-
-    // Set Audience to Everyone (first radio group, name=audience)
-    var radios = Array.from(document.querySelectorAll('input[type="radio"]'));
-    var audienceEveryone = radios.find(r => r.name === 'audience' && r.value === 'everyone');
-    if (audienceEveryone && !audienceEveryone.checked) {
-      audienceEveryone.click();
-      audienceEveryone.dispatchEvent(new Event('change', { bubbles: true }));
-      await new Promise(r => setTimeout(r, 1000));
-    }
-
-    // Re-query radios (DOM may update after audience change)
-    radios = Array.from(document.querySelectorAll('input[type="radio"]'));
-
-    // Set Comments to Everyone (second radio group, name=commentLevel)
-    var commentEveryone = radios.find(r => r.name === 'commentLevel' && r.value === 'everyone');
-    if (commentEveryone && !commentEveryone.checked) {
-      commentEveryone.click();
-      commentEveryone.dispatchEvent(new Event('change', { bubbles: true }));
-      await new Promise(r => setTimeout(r, 1000));
-    }
-
-    radios = Array.from(document.querySelectorAll('input[type="radio"]'));
-    var state = radios.map(r => ({ name: r.name, value: r.value, checked: r.checked }));
-    return { settingsOpen: true, radios: state };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 500)); var btns = Array.from(document.querySelectorAll('button')); var continueBtn = btns.find(function(b) { return b.innerText.trim() === 'Continue'; }); if (!continueBtn) return { error: 'no Continue button' }; continueBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 2000)); var radios = Array.from(document.querySelectorAll('input[type=\"radio\"]')); var audienceEveryone = radios.find(function(r) { return r.name === 'audience' && r.value === 'everyone'; }); if (audienceEveryone && !audienceEveryone.checked) { audienceEveryone.click(); await new Promise(r => setTimeout(r, 500)); } var commentEveryone = radios.find(function(r) { return r.name === 'commentLevel' && r.value === 'everyone'; }); if (commentEveryone && !commentEveryone.checked) { commentEveryone.click(); await new Promise(r => setTimeout(r, 500)); } var tagInput = document.querySelector('input[placeholder=\"Select or create tags\"]'); if (tagInput) { tagInput.focus(); tagInput.value = TAG_PLACEHOLDER; tagInput.dispatchEvent(new Event('input', { bubbles: true })); await new Promise(r => setTimeout(r, 1500)); var options = Array.from(document.querySelectorAll('[role=\"option\"]')); var createOpt = options.find(function(o) { return o.innerText.includes('Create'); }); if (createOpt) { createOpt.click(); await new Promise(r => setTimeout(r, 500)); } } return { settingsOpen: true }; }"}
+ENDJSON
 ```
 
-🚨 **Both radio groups default to "only_paid" (verified 2026-03-28).** MUST set BOTH to "everyone":
-- First group (`name="audience"`): `value="everyone"` vs `value="only_paid"`
-- Second group (`name="commentLevel"`): `value="everyone"` vs `value="only_paid"` vs `value="none"`
+Replace `TAG_PLACEHOLDER` with a topic tag (e.g. "fitness", "productivity"). At least 1 tag is required for publish.
 
 ### Step 6 — Publish
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 500));
-    var btns = Array.from(document.querySelectorAll('button'));
-    var publishBtn = btns.find(b => b.innerText.trim() === 'Send to everyone now');
-    if (!publishBtn) return { error: 'no publish button' };
-    publishBtn.click();
-    return { clicked: true };
-  }`,
-  profile: "{{browser_profile}}"
-})
+Substack shows up to 2 confirmation dialogs after clicking Publish. Handle all in sequence.
+
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 500)); var btns = Array.from(document.querySelectorAll('button')); var publishBtn = btns.find(function(b) { var t = b.innerText.trim(); return t === 'Send to everyone now' || t === 'Publish now'; }); if (!publishBtn) return { error: 'no publish button' }; publishBtn.click(); await new Promise(r => setTimeout(r, 2000)); btns = Array.from(document.querySelectorAll('button')); var subscribeDialog = btns.find(function(b) { return b.innerText.trim() === 'Publish without buttons'; }); if (subscribeDialog) { subscribeDialog.click(); await new Promise(r => setTimeout(r, 2000)); btns = Array.from(document.querySelectorAll('button')); } var sendEmail = btns.find(function(b) { return b.innerText.trim() === 'Also send via email'; }); if (sendEmail) { sendEmail.click(); return { published: true, method: 'email' }; } var webOnly = btns.find(function(b) { return b.innerText.trim() === 'Publish on web only'; }); if (webOnly) { webOnly.click(); return { published: true, method: 'web_only' }; } return { published: true, method: 'direct' }; }"}
+ENDJSON
 ```
 
-🚨 **After clicking "Send to everyone now"**, the page navigates to share-center. This will cause `Execution context was destroyed` error — this is NORMAL and means publish succeeded.
+After publish, page navigates to share-center. `Execution context was destroyed` or `Inspected target navigated` is NORMAL.
 
 ### Step 7 — Verify published
 
 Wait 3s for navigation, then check:
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 3000));
-    var isLive = document.body.innerText.includes('Your post is live');
-    var url = window.location.href;
-    return { published: isLive, url: url };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var isLive = document.body.innerText.includes('Your post is live'); var url = window.location.href; return { published: isLive || url.includes('share-center'), url: url }; }"}
+ENDJSON
 ```
 
 Success indicators:
@@ -217,7 +107,10 @@ Success indicators:
 | Continue | button text "Continue" | Opens publish settings panel |
 | Audience radio | `input[type="radio"][value="everyone"]` (first) | First radio group |
 | Comments radio | `input[type="radio"][value="everyone"]` (second) | Second radio group - MUST be Everyone |
-| Publish | button text "Send to everyone now" | Navigates to share-center on success |
+| Tag input | `input[placeholder="Select or create tags"]` | Type tag name, click "Create" option |
+| Publish | button text "Send to everyone now" or "Publish now" | Free pubs show "Publish now" |
+| Subscribe dialog | button text "Publish without buttons" | May appear after Publish click |
+| Email dialog | button text "Also send via email" | May appear after subscribe dialog |
 | Dashboard | `{{handle}}.substack.com/publish/home` | Lists posts, drafts |
 | Create post | button text "Create post" (on dashboard) | Opens new editor |
 | New post nav | button text "New post" | Opens Notes composer, NOT article editor |

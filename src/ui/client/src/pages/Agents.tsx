@@ -70,12 +70,12 @@ const PLATFORM_LABELS: Record<string, string> = {
 const PLATFORM_URL_PREFIX: Record<string, string> = {
   reddit: 'https://reddit.com/user/', twitter: 'https://x.com/', linkedin: 'https://www.linkedin.com/in/',
   bluesky: 'https://bsky.app/profile/', threads: 'https://www.threads.net/@', medium: 'https://medium.com/@',
-  substack: 'https://', devto: 'https://dev.to/', ph: 'https://www.producthunt.com/@', ih: 'https://www.indiehackers.com/',
+  substack: 'https://substack.com/@', devto: 'https://dev.to/', ph: 'https://www.producthunt.com/@', ih: 'https://www.indiehackers.com/',
 };
 const PLATFORM_HANDLE_HINT: Record<string, string> = {
   reddit: 'username (without u/)', twitter: 'handle (without @)', linkedin: 'vanity URL slug',
   bluesky: 'user.bsky.social', threads: 'handle (without @)', medium: 'username (without @)',
-  substack: 'yourname.substack.com', devto: 'username', ph: 'username', ih: 'username',
+  substack: 'username (without @)', devto: 'username', ph: 'username', ih: 'username',
 };
 const DEFAULT_LIMITS: Record<string, { daily: Record<string, { limit: number }>; weekly?: Record<string, { limit: number }> }> = {
   reddit: { daily: { comments: { limit: 10 }, upvotes: { limit: 20 } }, weekly: { posts: { limit: 2 } } },
@@ -88,6 +88,21 @@ const DEFAULT_LIMITS: Record<string, { daily: Record<string, { limit: number }>;
   devto: { daily: { comments: { limit: 6 }, reactions: { limit: 15 } }, weekly: { articles: { limit: 2 } } },
   ph: { daily: { comments: { limit: 8 }, upvotes: { limit: 12 } } },
   ih: { daily: { comments: { limit: 4 } }, weekly: { posts: { limit: 2 } } },
+};
+const API_KEY_SETUP_STEPS: Record<string, string[]> = {
+  ph: [
+    'Go to producthunt.com/v2/oauth/applications',
+    'Click "Add an application"',
+    'Name: anything (e.g. "OpenTwins")',
+    'Redirect URI: https://localhost',
+    'Copy the API Key and API Secret from the created app',
+  ],
+  devto: [
+    'Go to dev.to/settings/extensions',
+    'Scroll to "DEV Community API Keys"',
+    'Enter a description (e.g. "OpenTwins") and click "Generate API Key"',
+    'Copy the generated key',
+  ],
 };
 
 const STATE_CONFIG: Record<AgentState, { label: string; color: string; bg: string; dot: string }> = {
@@ -144,9 +159,13 @@ export function Agents() {
 
   const handleAddPlatform = async () => {
     if (!newPlatform || !newHandle || !config) return;
+    let finalHandle = newHandle.trim();
+    if (newPlatform === 'bluesky' && !finalHandle.includes('.')) {
+      finalHandle = finalHandle + '.bsky.social';
+    }
     const entry = {
-      platform: newPlatform, handle: newHandle,
-      profile_url: `${PLATFORM_URL_PREFIX[newPlatform] || ''}${newHandle}`,
+      platform: newPlatform, handle: finalHandle,
+      profile_url: `${PLATFORM_URL_PREFIX[newPlatform] || ''}${finalHandle}`,
       enabled: true, limits: DEFAULT_LIMITS[newPlatform] || { daily: {} },
     };
     const result = await saveConfig({ platforms: [...config.platforms, entry] }) as { ok?: boolean; regenerated?: number } | null;
@@ -215,7 +234,7 @@ export function Agents() {
               <span className="mono text-[14px] uppercase tracking-wider w-20 shrink-0" style={{ color: 'var(--c-text-muted)' }}>Handle</span>
               <div className="flex-1">
                 <input value={newHandle} onChange={(e) => setNewHandle(e.target.value)} placeholder={PLATFORM_HANDLE_HINT[newPlatform] || 'username'} className="mono text-sm w-full bg-transparent outline-none px-2 py-1.5 rounded transition-colors" style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }} onFocus={(e) => e.currentTarget.style.borderColor = 'var(--c-teal-dim)'} onBlur={(e) => e.currentTarget.style.borderColor = 'var(--c-border-dim)'} />
-                {newHandle && <div className="mono text-[14px] mt-1.5" style={{ color: 'var(--c-text-muted)' }}>{PLATFORM_URL_PREFIX[newPlatform]}{newHandle}</div>}
+                {newHandle && <div className="mono text-[14px] mt-1.5" style={{ color: 'var(--c-text-muted)' }}>{PLATFORM_URL_PREFIX[newPlatform]}{newPlatform === 'bluesky' && !newHandle.includes('.') ? newHandle + '.bsky.social' : newHandle}</div>}
               </div>
             </div>
             {newPlatform && DEFAULT_LIMITS[newPlatform] && (
@@ -598,6 +617,16 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
                 </div>
               );
             })}
+            {editApiKeys && API_KEY_SETUP_STEPS[platform] && (
+              <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--c-border-dim)' }}>
+                <div className="mono text-[12px] mb-2" style={{ color: 'var(--c-text-muted)' }}>How to get keys:</div>
+                <ol className="mono text-[12px] space-y-1 pl-4" style={{ color: 'var(--c-text-muted)', listStyleType: 'decimal' }}>
+                  {API_KEY_SETUP_STEPS[platform].map((step, i) => (
+                    <li key={i}>{step}</li>
+                  ))}
+                </ol>
+              </div>
+            )}
           </div>
         </div>
       )}

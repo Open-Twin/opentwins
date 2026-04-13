@@ -2,40 +2,10 @@
 
 ## S 1. Extract Notifications
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    return new Promise(function(resolve) {
-      setTimeout(function() {
-        var b = document.querySelector('#onetrust-accept-btn-handler');
-        if (b) b.click();
-        var months = {JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12'};
-        var items = Array.from(document.querySelectorAll('.user-notification'));
-        var result = items.slice(0, 10).map(function(item) {
-          var link = item.querySelector('a[href*="/post/"]') || item.querySelector('a[href*="/product/"]');
-          var text = item.innerText;
-          var isReply = text.toLowerCase().includes('replied to your comment') ||
-                        text.toLowerCase().includes('replied to your post');
-          var url = link ? link.href : null;
-          var commentId = url ? (url.match(/commentId=([^&]+)/) || [])[1] || '' : '';
-          var dateMatch = text.match(/([A-Z]{3})\\s+(\\d{1,2})\\s+(\\d{4})/);
-          var dateKey = dateMatch ? dateMatch[3] + '-' + (months[dateMatch[1]] || '00') + '-' + dateMatch[2].padStart(2, '0') : '';
-          return {
-            url: url,
-            commentId: commentId,
-            dateKey: dateKey,
-            trackingKey: commentId + '_' + dateKey,
-            preview: text.substring(0, 200),
-            isReplyToUs: isReply
-          };
-        }).filter(function(n) { return n.isReplyToUs && n.url; });
-        resolve({ total: items.length, replies: result.length, items: result });
-      }, 3000);
-    });
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var b = document.querySelector('#onetrust-accept-btn-handler'); if (b) b.click(); var months = {JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12'}; var items = Array.from(document.querySelectorAll('.user-notification')); var result = items.slice(0, 10).map(function(item) { var link = item.querySelector('a[href*=\"/post/\"]') || item.querySelector('a[href*=\"/product/\"]'); var text = item.innerText; var isReply = text.toLowerCase().includes('replied to your comment') || text.toLowerCase().includes('replied to your post'); var url = link ? link.href : null; var commentId = url ? (url.match(/commentId=([^&]+)/) || [])[1] || '' : ''; var dateMatch = text.match(/([A-Z]{3})\\s+(\\d{1,2})\\s+(\\d{4})/); var dateKey = dateMatch ? dateMatch[3] + '-' + (months[dateMatch[1]] || '00') + '-' + dateMatch[2].padStart(2, '0') : ''; return { url: url, commentId: commentId, dateKey: dateKey, trackingKey: commentId + '_' + dateKey, preview: text.substring(0, 200), isReplyToUs: isReply }; }).filter(function(n) { return n.isReplyToUs && n.url; }); return { total: items.length, replies: result.length, items: result }; }"}
+ENDJSON
 ```
 
 ⚠️ Use `trackingKey` (not raw URL) for grep pre-check against `replied_notifications.txt`.
@@ -44,112 +14,28 @@ browser.act({
 
 Clicks reply on a specific author's comment. Checks for duplicate first.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    var targetAuthor = '${targetAuthor.replace(/'/g, "\\'")}';
-    // 🚨 Scoped duplicate check: only look for our reply in CHILD comments of the selected comment
-    // ❌ NEVER use document.body.innerText.includes('{{handle}}') — finds our TOP-LEVEL comment, not a reply
-    var selected = document.querySelector('.comment--selected');
-    if (selected) {
-      var selectedLi = selected.closest('li');
-      if (selectedLi) {
-        var allComments = selectedLi.querySelectorAll('.comment');
-        var ourReply = Array.from(allComments).some(function(c) {
-          return c !== selected && c.innerText.includes('{{handle}}');
-        });
-        if (ourReply) return { skipped: true, reason: 'already_replied' };
-      }
-    }
-    var footers = Array.from(document.querySelectorAll('.comment__footer'));
-    var targetFooter = footers.find(function(f) { return f.innerText.includes(targetAuthor); });
-    if (!targetFooter) return { error: 'target_comment_not_found' };
-    var replyButton = targetFooter.querySelector('.footer__action--reply');
-    if (!replyButton) return { error: 'reply_button_not_found' };
-    replyButton.click();
-    return { success: true, clicked: 'reply_button' };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var targetAuthor = '${targetAuthor.replace(/'/g, \"\\\\'\")}'; var selected = document.querySelector('.comment--selected'); if (selected) { var selectedLi = selected.closest('li'); if (selectedLi) { var allComments = selectedLi.querySelectorAll('.comment'); var ourReply = Array.from(allComments).some(function(c) { return c !== selected && c.innerText.includes('{{handle}}'); }); if (ourReply) return { skipped: true, reason: 'already_replied' }; } } var footers = Array.from(document.querySelectorAll('.comment__footer')); var targetFooter = footers.find(function(f) { return f.innerText.includes(targetAuthor); }); if (!targetFooter) return { error: 'target_comment_not_found' }; var replyButton = targetFooter.querySelector('.footer__action--reply'); if (!replyButton) return { error: 'reply_button_not_found' }; replyButton.click(); return { success: true, clicked: 'reply_button' }; }"}
+ENDJSON
 ```
 
 ## S 4. Type + Submit Reply (2 evaluates: type then submit+verify)
 
-Call 1.5s after clicking reply (use Promise-based wait, NOT `exec sleep`). IH uses plain `textarea` (not TipTap). TipTap fallback kept for edge cases.
+Call 1.5s after clicking reply (embedded via Promise-based wait). IH uses plain `textarea` (not TipTap). TipTap fallback kept for edge cases.
 
 - 🚨 NEVER combine text insertion + submit click in one evaluate (button stays disabled until next tick)
 
-```javascript
-// Evaluate 1: Wait 1.5s for reply box + type text ONLY
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    return new Promise(function(resolve) {
-      setTimeout(function() {
-        var replyText = '${replyText.replace(/'/g, "\\'")}';
-        var commentBox = document.querySelector('.comment-box--focused');
-        if (!commentBox) return resolve({ error: 'comment_box_did_not_appear' });
-        var textarea = commentBox.querySelector('textarea');
-        var editor = commentBox.querySelector('.tiptap.ProseMirror');
-        if (textarea) {
-          textarea.focus();
-          textarea.value = replyText;
-          textarea.dispatchEvent(new Event('input', { bubbles: true }));
-          textarea.dispatchEvent(new Event('change', { bubbles: true }));
-          resolve({ inserted: true, textLen: textarea.value.length, type: 'textarea' });
-        } else if (editor) {
-          editor.focus();
-          document.execCommand('selectAll', false, null);
-          document.execCommand('delete', false, null);
-          document.execCommand('insertText', false, replyText);
-          editor.dispatchEvent(new InputEvent('input', { data: replyText, inputType: 'insertText', bubbles: true }));
-          resolve({ inserted: true, textLen: editor.innerText.length, type: 'tiptap' });
-        } else {
-          resolve({ error: 'no_editor_found' });
-        }
-      }, 1500);
-    });
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+# Evaluate 1: Wait 1.5s for reply box + type text ONLY
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); var replyText = '${replyText.replace(/'/g, \"\\\\'\")}'; var commentBox = document.querySelector('.comment-box--focused'); if (!commentBox) return { error: 'comment_box_did_not_appear' }; var textarea = commentBox.querySelector('textarea'); var editor = commentBox.querySelector('.tiptap.ProseMirror'); if (textarea) { textarea.focus(); textarea.value = replyText; textarea.dispatchEvent(new Event('input', { bubbles: true })); textarea.dispatchEvent(new Event('change', { bubbles: true })); return { inserted: true, textLen: textarea.value.length, type: 'textarea' }; } else if (editor) { editor.focus(); document.execCommand('selectAll', false, null); document.execCommand('delete', false, null); document.execCommand('insertText', false, replyText); editor.dispatchEvent(new InputEvent('input', { data: replyText, inputType: 'insertText', bubbles: true })); return { inserted: true, textLen: editor.innerText.length, type: 'tiptap' }; } else { return { error: 'no_editor_found' }; } }"}
+ENDJSON
 ```
 
-```javascript
-// Evaluate 2: Wait 500ms, submit, wait 4s, verify (scoped then fallback)
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    var beforeCount = document.querySelectorAll('.comment').length;
-    return new Promise(function(resolve) {
-      setTimeout(function() {
-        var commentBox = document.querySelector('.comment-box--focused') || document.querySelector('.comment-box');
-        if (!commentBox) return resolve({ error: 'comment_box_not_found' });
-        var submitBtn = commentBox.querySelector('.comment-box__save-button');
-        if (!submitBtn) return resolve({ error: 'submit_button_not_found' });
-        if (submitBtn.disabled) return resolve({ error: 'submit_still_disabled' });
-        submitBtn.click();
-        setTimeout(function() {
-          // Primary: scoped verify via .comment--selected
-          var selected = document.querySelector('.comment--selected');
-          var verified = false;
-          if (selected) {
-            var selectedLi = selected.closest('li');
-            if (selectedLi) {
-              var allComments = selectedLi.querySelectorAll('.comment');
-              verified = Array.from(allComments).some(function(c) {
-                return c !== selected && c.innerText.includes('{{handle}}');
-              });
-            }
-          }
-          // Fallback: comment count increased (DOM re-render may drop .comment--selected)
-          var afterCount = document.querySelectorAll('.comment').length;
-          if (!verified && afterCount > beforeCount) verified = true;
-          resolve({ success: true, verified: verified });
-        }, 4000);
-      }, 500);
-    });
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+# Evaluate 2: Wait 500ms, submit, wait 4s, verify (scoped then fallback)
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var beforeCount = document.querySelectorAll('.comment').length; await new Promise(r => setTimeout(r, 500)); var commentBox = document.querySelector('.comment-box--focused') || document.querySelector('.comment-box'); if (!commentBox) return { error: 'comment_box_not_found' }; var submitBtn = commentBox.querySelector('.comment-box__save-button'); if (!submitBtn) return { error: 'submit_button_not_found' }; if (submitBtn.disabled) return { error: 'submit_still_disabled' }; submitBtn.click(); await new Promise(r => setTimeout(r, 4000)); var selected = document.querySelector('.comment--selected'); var verified = false; if (selected) { var selectedLi = selected.closest('li'); if (selectedLi) { var allComments = selectedLi.querySelectorAll('.comment'); verified = Array.from(allComments).some(function(c) { return c !== selected && c.innerText.includes('{{handle}}'); }); } } var afterCount = document.querySelectorAll('.comment').length; if (!verified && afterCount > beforeCount) verified = true; return { success: true, verified: verified }; }"}
+ENDJSON
 ```

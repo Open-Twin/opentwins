@@ -1,7 +1,5 @@
 # BROWSER-post.md - IH Post Creation Patterns
 
-All calls require `profile: "{{browser_profile}}"`. Never use `args` in evaluate — inline via template literals.
-
 ## Selectors
 
 | Element | Selector | Notes |
@@ -14,88 +12,38 @@ All calls require `profile: "{{browser_profile}}"`. Never use `args` in evaluate
 | Save draft button | `.post-page__save-draft` | Always enabled |
 | Preview toggle | `.post-page__preview-toggle` | |
 
-## ❌ Anti-Patterns
-
-- **NEVER use snapshot + click refs on nav links** — clicking "Starting Up" etc. navigates AWAY from /new-post
-- **NEVER look for a category selector** — IH only has group selector (and account may not have groups)
-- **NEVER confuse cookie consent with post categories** — `.category-switch-handler` and `.category-filter-handler` are OneTrust cookie consent checkboxes, NOT IH post categories
-- **NEVER enumerate all buttons** with `querySelectorAll('button')` — the submit selector is `.post-page__submit-button`, use it directly
-- **NEVER explore DOM** with `innerHTML.slice()` — all selectors are documented above
-- **NO TipTap/ProseMirror editor on post page** — body is a plain `<textarea>`, not contenteditable
-- Group selector shows "You haven't joined any groups" — skip it, post to general feed
+## Notes
+- Body is a plain `<textarea>` — use `.value` + input event
+- Skip group selector — post to general feed
 
 ## S 7. Create and Submit Post
 
-```javascript
-// Step 1: Set title (Ember textarea — use .value + input event)
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    var titleArea = document.querySelector('textarea.post-page__title-field');
-    if (!titleArea) return { error: 'title_field_not_found' };
-    titleArea.focus();
-    titleArea.value = '${postTitle}';
-    titleArea.dispatchEvent(new Event('input', { bubbles: true }));
-    titleArea.dispatchEvent(new Event('change', { bubbles: true }));
-    return { success: true, titleLen: titleArea.value.length };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+# Step 1: Set title (Ember textarea — use .value + input event)
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var titleArea = document.querySelector('textarea.post-page__title-field'); if (!titleArea) return { error: 'title_field_not_found' }; titleArea.focus(); titleArea.value = '${postTitle}'; titleArea.dispatchEvent(new Event('input', { bubbles: true })); titleArea.dispatchEvent(new Event('change', { bubbles: true })); return { success: true, titleLen: titleArea.value.length }; }"}
+ENDJSON
 ```
 
-```javascript
-// Step 2: Set body (Ember textarea — use .value + input event)
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    var bodyArea = document.querySelector('textarea.edit-post__body-field');
-    if (!bodyArea) return { error: 'body_field_not_found' };
-    bodyArea.focus();
-    bodyArea.value = '${postBody}';
-    bodyArea.dispatchEvent(new Event('input', { bubbles: true }));
-    bodyArea.dispatchEvent(new Event('change', { bubbles: true }));
-    return { success: true, bodyLen: bodyArea.value.length };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+# Step 2: Set body (Ember textarea — use .value + input event)
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var bodyArea = document.querySelector('textarea.edit-post__body-field'); if (!bodyArea) return { error: 'body_field_not_found' }; bodyArea.focus(); bodyArea.value = '${postBody}'; bodyArea.dispatchEvent(new Event('input', { bubbles: true })); bodyArea.dispatchEvent(new Event('change', { bubbles: true })); return { success: true, bodyLen: bodyArea.value.length }; }"}
+ENDJSON
 ```
 
-```javascript
-// Step 3: Wait 500ms for Ember state, then check + click submit
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    return new Promise(function(resolve) {
-      setTimeout(function() {
-        var submitBtn = document.querySelector('.post-page__submit-button');
-        if (!submitBtn) return resolve({ error: 'submit_button_not_found' });
-        if (submitBtn.disabled) return resolve({ error: 'submit_disabled', hint: 'title or body may be empty' });
-        submitBtn.click();
-        resolve({ success: true });
-      }, 500);
-    });
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+# Step 3: Wait 500ms for Ember state, then check + click submit
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 500)); var submitBtn = document.querySelector('.post-page__submit-button'); if (!submitBtn) return { error: 'submit_button_not_found' }; if (submitBtn.disabled) return { error: 'submit_disabled', hint: 'title or body may be empty' }; submitBtn.click(); return { success: true }; }"}
+ENDJSON
 ```
 
-```javascript
-// Step 4: Wait 4s, verify URL changed from /new-post to /post/slug
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    return new Promise(function(resolve) {
-      setTimeout(function() {
-        resolve({
-          url: location.href,
-          isPublished: !location.href.includes('/new-post'),
-          title: document.title
-        });
-      }, 4000);
-    });
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+# Step 4: Wait 4s, verify URL changed from /new-post to /post/slug
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 4000)); return { url: location.href, isPublished: !location.href.includes('/new-post'), title: document.title }; }"}
+ENDJSON
 ```
 
 If `isPublished: false` after step 4: retry submit once. If still fails, return HEARTBEAT_BLOCKED.
@@ -104,14 +52,8 @@ If `isPublished: false` after step 4: retry submit once. If still fails, return 
 
 Run once at browser startup, before any post interaction:
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    var acceptBtn = document.querySelector('#onetrust-accept-btn-handler');
-    if (acceptBtn) { acceptBtn.click(); return { dismissed: true }; }
-    return { noBanner: true };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var acceptBtn = document.querySelector('#onetrust-accept-btn-handler'); if (acceptBtn) { acceptBtn.click(); return { dismissed: true }; } return { noBanner: true }; }"}
+ENDJSON
 ```

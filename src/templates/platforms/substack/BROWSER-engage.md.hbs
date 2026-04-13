@@ -77,32 +77,10 @@ Navigate to post, wait 2s.
 
 Like buttons: `aria-label="Like (N)"` on posts, text "Like" on notes. "Unlike" = already liked.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 2000));
-    var btns = Array.from(document.querySelectorAll('button'));
-    // Primary: aria-label starts with "Like"
-    var likeBtn = btns.find(b => {
-      var label = (b.getAttribute('aria-label') || '').toLowerCase();
-      return label.startsWith('like');
-    });
-    // Fallback: button text exactly "Like" (notes feed)
-    if (!likeBtn) {
-      likeBtn = btns.find(b => b.innerText.trim() === 'Like');
-    }
-    if (!likeBtn) return { error: 'like button not found' };
-    // Check if already liked (label changes to "Unlike")
-    var label = (likeBtn.getAttribute('aria-label') || '').toLowerCase();
-    if (label.startsWith('unlike')) return { alreadyLiked: true };
-    likeBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    await new Promise(r => setTimeout(r, 1000));
-    var newLabel = likeBtn.getAttribute('aria-label') || '';
-    return { liked: true, newLabel: newLabel };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); var btns = Array.from(document.querySelectorAll('button')); var likeBtn = btns.find(b => { var label = (b.getAttribute('aria-label') || '').toLowerCase(); return label.startsWith('like'); }); if (!likeBtn) { likeBtn = btns.find(b => b.innerText.trim() === 'Like'); } if (!likeBtn) return { error: 'like button not found' }; var label = (likeBtn.getAttribute('aria-label') || '').toLowerCase(); if (label.startsWith('unlike')) return { alreadyLiked: true }; likeBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 1000)); var newLabel = likeBtn.getAttribute('aria-label') || ''; return { liked: true, newLabel: newLabel }; }"}
+ENDJSON
 ```
 
 ---
@@ -113,72 +91,10 @@ Navigate to Substack search or explore page, wait 3s:
 
 Extraction uses link-based approach: `a[href*="/p/"]` → walk up to container. No `article` or class-based selectors (Pencraft framework).
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    function isRecent(timeStr) {
-      if (!timeStr) return false;
-      if (/\\d{4}/.test(timeStr) && !/2026/.test(timeStr)) return false;
-      if (/\\d+\\s*(d|h|min|sec|hr)/.test(timeStr)) {
-        var days = timeStr.match(/(\\d+)\\s*d/);
-        if (days && parseInt(days[1]) > 14) return false;
-        return true;
-      }
-      var m = timeStr.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+(\\d+)/);
-      if (m) {
-        var months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
-        var d = new Date(new Date().getFullYear(), months[m[1]], parseInt(m[2]));
-        return (Date.now() - d.getTime()) / 86400000 <= 14;
-      }
-      return true; // If can't parse, include it
-    }
-    // Link-based extraction: find post links, walk up to container for metadata
-    var postLinks = Array.from(document.querySelectorAll('a[href*="/p/"]'));
-    var seen = new Set();
-    var results = [];
-    for (var link of postLinks) {
-      var url = link.href.split('?')[0];
-      if (seen.has(url)) continue;
-      seen.add(url);
-      // Walk up to find the containing card (up to 8 levels)
-      var container = link;
-      for (var i = 0; i < 8; i++) {
-        if (container.parentElement) container = container.parentElement;
-        // Stop at a div that contains the full card (has author link + date text)
-        if (container.querySelector && container.querySelector('a[href*="/@"]')) break;
-      }
-      var text = container.innerText || '';
-      var lines = text.split('\\n').filter(l => l.trim());
-      // Title: link text if substantial, otherwise first long line
-      // Link text may contain "Publication\nTitle" - take last line as title
-      var rawTitle = link.innerText.trim();
-      var titleLines = rawTitle.split('\\n').filter(l => l.trim());
-      var title = titleLines.length > 1 ? titleLines[titleLines.length - 1] : rawTitle;
-      if (title.length < 10) title = lines.find(l => l.length > 15 && l.length < 200) || lines[0] || '';
-      // Author: first non-empty a[href*="/@"] within container
-      var authorEl = container.querySelector ? Array.from(container.querySelectorAll('a[href*="/@"]')).find(a => a.innerText.trim().length > 0) : null;
-      var author = authorEl ? authorEl.innerText.trim() : '';
-      // Date: look for relative time or month-day patterns
-      var timeLine = lines.find(l => /\\d+\\s*(d|h|min|hr)\\s*(ago)?/.test(l) || /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d/.test(l)) || '';
-      // Likes: number before "like" text or standalone numbers near like icons
-      var likeCount = (text.match(/(\\d+)\\s*like/i) || [])[1] || '0';
-      // Also check for standalone numbers (Substack shows counts as plain numbers)
-      if (likeCount === '0') {
-        var nums = text.match(/^(\\d+)$/m);
-        if (nums) likeCount = nums[1];
-      }
-      var isCustomDomain = !url.includes('.substack.com/p/');
-      results.push({
-        url, title: title.slice(0, 80), author: author.slice(0, 30), date: timeLine,
-        likes: parseInt(likeCount) || 0, isCustomDomain: isCustomDomain
-      });
-      if (results.length >= 10) break;
-    }
-    return results.filter(a => a.url && isRecent(a.date) && !a.isCustomDomain);
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { function isRecent(timeStr) { if (!timeStr) return false; if (/\\d{4}/.test(timeStr) && !/2026/.test(timeStr)) return false; if (/\\d+\\s*(d|h|min|sec|hr)/.test(timeStr)) { var days = timeStr.match(/(\\d+)\\s*d/); if (days && parseInt(days[1]) > 14) return false; return true; } var m = timeStr.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+(\\d+)/); if (m) { var months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11}; var d = new Date(new Date().getFullYear(), months[m[1]], parseInt(m[2])); return (Date.now() - d.getTime()) / 86400000 <= 14; } return true; } var postLinks = Array.from(document.querySelectorAll('a[href*=\"/p/\"]')); var seen = new Set(); var results = []; for (var link of postLinks) { var url = link.href.split('?')[0]; if (seen.has(url)) continue; seen.add(url); var container = link; for (var i = 0; i < 8; i++) { if (container.parentElement) container = container.parentElement; if (container.querySelector && container.querySelector('a[href*=\"/@\"]')) break; } var text = container.innerText || ''; var lines = text.split(String.fromCharCode(10)).filter(l => l.trim()); var rawTitle = link.innerText.trim(); var titleLines = rawTitle.split(String.fromCharCode(10)).filter(l => l.trim()); var title = titleLines.length > 1 ? titleLines[titleLines.length - 1] : rawTitle; if (title.length < 10) title = lines.find(l => l.length > 15 && l.length < 200) || lines[0] || ''; var authorEl = container.querySelector ? Array.from(container.querySelectorAll('a[href*=\"/@\"]')).find(a => a.innerText.trim().length > 0) : null; var author = authorEl ? authorEl.innerText.trim() : ''; var timeLine = lines.find(l => /\\d+\\s*(d|h|min|hr)\\s*(ago)?/.test(l) || /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d/.test(l)) || ''; var likeCount = (text.match(/(\\d+)\\s*like/i) || [])[1] || '0'; if (likeCount === '0') { var nums = text.match(/^(\\d+)$/m); if (nums) likeCount = nums[1]; } var isCustomDomain = !url.includes('.substack.com/p/'); results.push({ url, title: title.slice(0, 80), author: author.slice(0, 30), date: timeLine, likes: parseInt(likeCount) || 0, isCustomDomain: isCustomDomain }); if (results.length >= 10) break; } return results.filter(a => a.url && isRecent(a.date) && !a.isCustomDomain); }"}
+ENDJSON
 ```
 
 After extraction: grep pre-check against `commented_posts.txt` before navigating.
@@ -191,48 +107,26 @@ Subscribe after commenting. Click triggers redirect to pledge page — subscript
 
 **Step 1 — Click topmost Subscribe button on the post page:**
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 1000));
-    var btns = Array.from(document.querySelectorAll('button'));
-    // Check if already subscribed
-    if (btns.some(b => /subscribed|following/i.test(b.innerText.trim()))) return { alreadySubscribed: true };
-    var subBtns = btns.filter(b => b.innerText.trim() === 'Subscribe');
-    if (subBtns.length === 0) return { error: 'no subscribe button' };
-    // Click the topmost one (author's publication, not sidebar suggestions)
-    var topBtn = subBtns.reduce((best, b) =>
-      b.getBoundingClientRect().y < best.getBoundingClientRect().y ? b : best
-    );
-    topBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    return { clicked: true };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var btns = Array.from(document.querySelectorAll('button')); if (btns.some(b => /subscribed|following/i.test(b.innerText.trim()))) return { alreadySubscribed: true }; var subBtns = btns.filter(b => b.innerText.trim() === 'Subscribe'); if (subBtns.length === 0) return { error: 'no subscribe button' }; var topBtn = subBtns.reduce((best, b) => b.getBoundingClientRect().y < best.getBoundingClientRect().y ? b : best); topBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); return { clicked: true }; }"}
+ENDJSON
 ```
 
 **Step 2 — Navigate back to post (skip interstitials):**
 
 The subscribe completes immediately on click. The redirect goes to a pledge page with 4 optional screens. Skip all of them by navigating back:
 
-```
+```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"{post_url}"}' 2>&1
 ```
 
 Wait 2s, then verify no Subscribe button remains:
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 2000));
-    var btns = Array.from(document.querySelectorAll('button'));
-    var hasSubscribe = btns.some(b => b.innerText.trim() === 'Subscribe');
-    return { subscribed: !hasSubscribe };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); var btns = Array.from(document.querySelectorAll('button')); var hasSubscribe = btns.some(b => b.innerText.trim() === 'Subscribe'); return { subscribed: !hasSubscribe }; }"}
+ENDJSON
 ```
 
 ---
@@ -241,58 +135,18 @@ browser.act({
 
 Navigate to `https://substack.com/notes`, wait 3s:
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `() => {
-    var notes = document.querySelectorAll('[class*="note"], article');
-    return Array.from(notes).slice(0, 10).map(note => {
-      var text = note.innerText;
-      var author = (note.querySelector('a[href*="/@"]') || {}).innerText || '';
-      var link = note.querySelector('a[href*="/note/"], a[href*="/p/"]');
-      var url = link ? link.href.split('?')[0] : '';
-      return {
-        url, author: author.slice(0, 30),
-        preview: text.slice(0, 200)
-      };
-    }).filter(n => n.url || n.preview.length > 20);
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var notes = document.querySelectorAll('[class*=\"note\"], article'); return Array.from(notes).slice(0, 10).map(note => { var text = note.innerText; var author = (note.querySelector('a[href*=\"/@\"]') || {}).innerText || ''; var link = note.querySelector('a[href*=\"/note/\"], a[href*=\"/p/\"]'); var url = link ? link.href.split('?')[0] : ''; return { url, author: author.slice(0, 30), preview: text.slice(0, 200) }; }).filter(n => n.url || n.preview.length > 20); }"}
+ENDJSON
 ```
 
 ## SS 8. Batch Like Notes (from feed page)
 
 🚨 Notes feed Like buttons do NOT change `aria-label` to "Unlike" after clicking. Verify by checking count increase.
 
-```javascript
-browser.act({
-  kind: "evaluate",
-  fn: `async () => {
-    await new Promise(r => setTimeout(r, 1000));
-    var btns = Array.from(document.querySelectorAll('button'));
-    var likeBtns = btns.filter(b => {
-      var label = (b.getAttribute('aria-label') || '').toLowerCase();
-      return label === 'like' && b.getBoundingClientRect().width > 0;
-    });
-    var liked = [];
-    var max = ${maxLikes};
-    for (var i = 0; i < likeBtns.length && liked.length < max; i++) {
-      var b = likeBtns[i];
-      var prevCount = parseInt(b.innerText.trim()) || 0;
-      b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-      await new Promise(r => setTimeout(r, 500));
-      var newCount = parseInt(b.innerText.trim()) || 0;
-      if (newCount > prevCount) {
-        liked.push({ idx: i, prev: prevCount, now: newCount });
-      } else {
-        // Count didn't increase or decreased — was already liked, click again to undo the unlike
-        b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-        await new Promise(r => setTimeout(r, 300));
-      }
-    }
-    return { liked: liked };
-  }`,
-  profile: "{{browser_profile}}"
-})
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1000)); var btns = Array.from(document.querySelectorAll('button')); var likeBtns = btns.filter(b => { var label = (b.getAttribute('aria-label') || '').toLowerCase(); return label === 'like' && b.getBoundingClientRect().width > 0; }); var liked = []; var max = MAX_LIKES_PLACEHOLDER; for (var i = 0; i < likeBtns.length && liked.length < max; i++) { var b = likeBtns[i]; var prevCount = parseInt(b.innerText.trim()) || 0; b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 500)); var newCount = parseInt(b.innerText.trim()) || 0; if (newCount > prevCount) { liked.push({ idx: i, prev: prevCount, now: newCount }); } else { b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 300)); } } return { liked: liked }; }"}
+ENDJSON
 ```
