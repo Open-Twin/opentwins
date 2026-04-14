@@ -61,7 +61,7 @@ All steps MANDATORY. Execute in order. SS 0 runs first every time.
 
 ## 1. Read Limits
 
-Read `limits.json`. Reset if last_reset != today (daily -> current=0, last_reset=today). Weekly: if Monday AND last_reset before today -> current=0.
+Read `limits.json`. Reset if last_reset != today (daily -> current=0, last_reset=today, filter `history` to today's entries only). Weekly: if Monday AND last_reset before today -> current=0, filter `history` to this week's entries only (date >= week_start).
 
 MANDATORY: If any reset applied, WRITE limits.json immediately before proceeding.
 

@@ -18,7 +18,7 @@ If schedule.json missing OR `for_date != today`:
 
 ## § 1. Read Limits
 
-Reset daily if `last_reset != today` → `current = 0`. Reset weekly if Monday AND `last_reset` before today.
+Reset daily if `last_reset != today` → `current = 0`, filter `history` to today's entries only (keep `date == today`). Reset weekly if Monday AND `last_reset` before today → filter `history` to this week's entries only (keep `date >= week_start`).
 INSIGHTS.md: read only for schedule gen / original content, NOT routine heartbeats.
 
 ## § 1b. Read Today Summary

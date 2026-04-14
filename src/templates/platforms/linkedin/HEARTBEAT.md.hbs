@@ -31,8 +31,8 @@ If `schedule.json` (FLAT FILE at root, not subdirectory!) missing OR `metadata.f
 ## 1. Read Limits
 
 Read `limits.json`, apply resets:
-- Daily: `last_reset != today` -> reset to 0
-- Weekly: Monday AND `last_reset` before today -> reset to 0
+- Daily: `last_reset != today` -> reset `current` to 0 AND filter `history` to today's entries only (keep `date == today`)
+- Weekly: Monday AND `last_reset` before today -> reset `current` to 0 AND filter `history` to this week's entries only (keep `date >= week_start`)
 - Calculate: `available = limit - current`
 
 ## 1b. Read Today Summary
