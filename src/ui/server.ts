@@ -37,7 +37,36 @@ function getRunningPlatforms(platforms: string[]): Set<string> {
 
 export async function startDashboard(port: number): Promise<void> {
   const app = express();
-  app.use(express.json());
+
+  // Capture raw body so we can attempt lenient re-parse on /api/browser/* failures.
+  // Agents writing JS regexes (\d, \s, \w, \.) inside the JSON `fn` payload often
+  // skip double-escaping the backslash, which crashes strict JSON.parse but is
+  // trivially recoverable: double any backslash not followed by a valid JSON
+  // escape character, then re-parse.
+  app.use(express.json({
+    verify: (req, _res, buf) => {
+      (req as express.Request & { rawBody?: string }).rawBody = buf.toString('utf8');
+    },
+  }));
+  app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const isParseError = err && typeof err === 'object' && (err as { type?: string }).type === 'entity.parse.failed';
+    if (!isParseError) return next(err);
+    if (!req.path.startsWith('/api/browser/')) return next(err);
+    const raw = (req as express.Request & { rawBody?: string }).rawBody;
+    if (!raw) return next(err);
+    // Double any \X where X isn't a valid JSON escape char ("\/bfnrtu).
+    const repaired = raw.replace(/\\([^"\\/bfnrtu])/g, '\\\\$1');
+    try {
+      req.body = JSON.parse(repaired);
+      return next();
+    } catch (parseErr) {
+      res.status(400).json({
+        error: 'json_parse_failed',
+        detail: parseErr instanceof Error ? parseErr.message : String(parseErr),
+        hint: 'Regex backslashes (\\d, \\s, \\w, \\.) need double-escaping inside JSON string values — write \\\\d so JSON decodes to \\d for the JS engine.',
+      });
+    }
+  });
 
   // API routes — read agent sessions directly from Claude session JSONLs
   app.get('/api/activity', (req, res) => {
