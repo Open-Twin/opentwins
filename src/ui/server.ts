@@ -2,7 +2,7 @@ import express from 'express';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync, readFileSync } from 'node:fs';
-import { getLockFile, getLastHeartbeatFile } from '../util/paths.js';
+import { getLockFile, getLastHeartbeatFile, getPipelineStatePath } from '../util/paths.js';
 import { getDb } from '../db/index.js';
 import { loadConfig, configExists } from '../config/loader.js';
 import { isDaemonRunning, startDaemon, stopDaemon } from '../scheduler/daemon.js';
@@ -133,6 +133,20 @@ export async function startDashboard(port: number): Promise<void> {
       return { platform: p.platform, nextRun: nextRun.toISOString(), intervalMin };
     });
 
+    // Read pipeline stage state (written by pipeline-runner)
+    let pipelineStages: Record<string, { status: string; startedAt?: string; completedAt?: string; durationMs?: number; error?: string }> = {};
+    let pipelineRunStartedAt: string | null = null;
+    let pipelineRunCompletedAt: string | null = null;
+    try {
+      const statePath = getPipelineStatePath();
+      if (existsSync(statePath)) {
+        const parsed = JSON.parse(readFileSync(statePath, 'utf-8'));
+        pipelineStages = parsed.stages || {};
+        pipelineRunStartedAt = parsed.runStartedAt || null;
+        pipelineRunCompletedAt = parsed.runCompletedAt || null;
+      }
+    } catch { /* ignore corrupted state */ }
+
     res.json({
       daemon: running,
       timezone: config.timezone,
@@ -140,6 +154,9 @@ export async function startDashboard(port: number): Promise<void> {
       pipelineEnabled: config.pipeline_enabled,
       pipelineStartHour: config.pipeline_start_hour,
       nextPipelineRun: config.pipeline_enabled ? nextPipeline.toISOString() : null,
+      pipelineStages,
+      pipelineRunStartedAt,
+      pipelineRunCompletedAt,
       platforms: config.platforms.map((p) => ({
         platform: p.platform,
         enabled: p.enabled,

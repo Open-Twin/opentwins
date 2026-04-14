@@ -29,6 +29,10 @@ export function getPipelineWorkspaceDir(): string {
   return resolve(getWorkspacesDir(), 'pipeline');
 }
 
+export function getPipelineStatePath(): string {
+  return resolve(getOpenTwinsHome(), 'locks', 'pipeline-state.json');
+}
+
 export function getBrowserProfilesDir(): string {
   return resolve(getOpenTwinsHome(), 'browser-profiles');
 }

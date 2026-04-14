@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useApi, today } from '../hooks/useApi.ts';
 import { useAgentsEnabled, HealthBanner } from '../contexts/HealthContext.tsx';
 
+interface PipelineStageState {
+  status: 'idle' | 'running' | 'completed' | 'failed';
+  startedAt?: string;
+  completedAt?: string;
+  durationMs?: number;
+  error?: string;
+}
+
 interface StatusData {
   daemon: boolean;
   timezone: string;
@@ -10,6 +18,9 @@ interface StatusData {
   pipelineEnabled: boolean;
   pipelineStartHour: number;
   nextPipelineRun: string | null;
+  pipelineStages?: Record<string, PipelineStageState>;
+  pipelineRunStartedAt?: string | null;
+  pipelineRunCompletedAt?: string | null;
   platforms: Array<{ platform: string; enabled: boolean; auto_run: boolean; handle: string }>;
   platformSchedules: Array<{ platform: string; nextRun: string }>;
   recentRuns: Array<{
@@ -349,18 +360,28 @@ export function Dashboard() {
       {/* ── Content Pipeline (collapsed, compact timeline) ─────── */}
       {status?.pipelineEnabled && (
         <div className="panel noise animate-fade-up stagger-4">
-          <div className="panel-header flex items-center justify-between">
+          <div className="panel-header flex items-center justify-between gap-4">
             <span>// Content Pipeline</span>
-            {status?.daemon && status?.nextPipelineRun && (
-              <span className="mono text-[13px] normal-case tracking-normal" style={{ color: 'var(--c-text-muted)' }}>
-                next at {new Date(status.nextPipelineRun).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
-              </span>
-            )}
+            <div className="flex items-center gap-2 mono text-[13px] normal-case tracking-normal">
+              {status?.pipelineRunCompletedAt && (
+                <span style={{ color: 'var(--c-text-muted)' }}>
+                  last <span style={{ color: 'var(--c-text-dim)' }}>{new Date(status.pipelineRunCompletedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                </span>
+              )}
+              {status?.pipelineRunCompletedAt && status?.daemon && status?.nextPipelineRun && (
+                <span style={{ color: 'var(--c-border)' }}>·</span>
+              )}
+              {status?.daemon && status?.nextPipelineRun && (
+                <span style={{ color: 'var(--c-text-muted)' }}>
+                  next <span style={{ color: 'var(--c-teal)' }}>{new Date(status.nextPipelineRun).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                </span>
+              )}
+            </div>
           </div>
           <div className="p-5">
             <div className="flex items-center gap-2 flex-wrap">
               {PIPELINE_STAGES.flatMap((stage, i) => {
-                const run = lastRun[stage.id] || lastRun['pipeline'];
+                const run = status?.pipelineStages?.[stage.id];
                 const groupChange = i > 0 && PIPELINE_STAGES[i - 1].group !== stage.group;
                 const nodes = [];
 
