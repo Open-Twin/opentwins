@@ -242,16 +242,12 @@ export function Quality() {
                       data={styleData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={95}
+                      innerRadius={55}
+                      outerRadius={85}
                       paddingAngle={3}
                       dataKey="value"
                       stroke="none"
-                      label={({ name, percent, x, y }) => (
-                        <text x={x} y={y} fill="#e2e8f0" fontSize={12} fontFamily="JetBrains Mono, monospace" textAnchor="middle" dominantBaseline="central">
-                          {`${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                        </text>
-                      )}
+                      label={renderPieLabel}
                       labelLine={false}
                     >
                       {styleData.map((_, i) => (
@@ -327,6 +323,43 @@ export function Quality() {
 }
 
 // ── Helpers ─────────────────────────────────────────────────
+
+// Pie label positioned outside the donut with a short connector.
+function renderPieLabel(props: {
+  cx: number; cy: number; midAngle: number; outerRadius: number;
+  name: string; percent?: number;
+}) {
+  const { cx, cy, midAngle, outerRadius, name, percent = 0 } = props;
+  const RAD = Math.PI / 180;
+  const sin = Math.sin(-RAD * midAngle);
+  const cos = Math.cos(-RAD * midAngle);
+  const connectorStart = { x: cx + outerRadius * cos, y: cy + outerRadius * sin };
+  const connectorEnd   = { x: cx + (outerRadius + 12) * cos, y: cy + (outerRadius + 12) * sin };
+  const labelX = cx + (outerRadius + 16) * cos;
+  const labelY = cy + (outerRadius + 16) * sin;
+  const anchor: 'start' | 'end' = cos >= 0 ? 'start' : 'end';
+  return (
+    <g>
+      <polyline
+        points={`${connectorStart.x},${connectorStart.y} ${connectorEnd.x},${connectorEnd.y} ${labelX},${labelY}`}
+        stroke="#475569"
+        strokeWidth={1}
+        fill="none"
+      />
+      <text
+        x={labelX + (anchor === 'start' ? 4 : -4)}
+        y={labelY}
+        fill="#e2e8f0"
+        fontSize={11}
+        fontFamily="JetBrains Mono, monospace"
+        textAnchor={anchor}
+        dominantBaseline="central"
+      >
+        {`${name} ${Math.round(percent * 100)}%`}
+      </text>
+    </g>
+  );
+}
 
 type KpiState = 'good' | 'caution' | 'warn' | 'idle';
 
