@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026.4.15] - 2026-04-14
+
+### Added
+- "Handling Clarifying Questions on Your Own Comments" guidance across all 10 platform SOULs
+- Per-conversation caps: Medium 3 replies/author/day, PH 3 comments/thread/day
+- LinkedIn: article days (Tue/Fri) skip `publish_post` to avoid feed flooding
+- 24h timeframe with hourly buckets in Usage and Quality tabs
+- Pipeline stage state and run timing surfaced in dashboard
+- IndexNow key hosted for Bing/Yandex fast indexing
+- Website SEO + share polish: favicons, Twitter cards, RSS, manifest, 404, breadcrumbs
+
+### Changed
+- `start` is now a unified scheduler + dashboard launcher; `start -d` runs both as detached daemon
+- Re-running `start` while a daemon is up restarts cleanly (stops the old one first)
+- Idle 5-minute cron cycles are silent — only real heartbeats and errors print to stdout
+- README quick-start drops browser CLI commands (setup is in the dashboard); `browser health` and `browser list` kept as debug helpers
+- Default per-platform limits lowered to safer starting values
+
+### Fixed
+- Editing an agent's interval/auto-run in the dashboard no longer drops the UI session (in-place scheduler reload)
+- Trailing `undefined` removed from worker logs
+- Quality 24h hour labels no longer double-apply timezone
+- Pie chart labels moved outside donut with connector lines
+- `today_summary.json` updates require Read before Write (avoids `printf` non-ASCII crashes under non-UTF-8 locales)
+- `devto-api.sh` and `ph-api.sh` referenced by full path everywhere; bare names didn't resolve without scripts/ on PATH
+- `limits.json` history trimmed at daily/weekly reset (linkedin/devto/twitter) — was growing unbounded and tripping Read tool's 10k-token cap
+- IH post-body selectors handle both `/post/{slug}` (Ember) and `/product/?post=` (Firestore) renderers
+- Medium RSS fetch scoped with grep at curl time — raw feed was overflowing harness output cap
+- Decorative `exec` prefix stripped from utility commands — was breaking `&&` / `||` chains
+
+### Removed
+- Standalone `opentwins ui` command (dashboard now bundled into `start`)
+
 ## [2026.4.12] - 2026-04-11
 
 ### Added
