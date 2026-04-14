@@ -192,7 +192,7 @@ Safety net: `Thursday+ AND weekly.posts.current==0` -> publish_now()
 - Append `memory/{today}.md`: `Type="Heartbeat" | timestamp | summary`
 - 🚨 **Comment entries MUST include:** `Style: {insight|short|personal|pushback}` + `text="full text posted"` (not topic summary, min 120 chars). Enables quality audits.
 - 🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
-  - 🚨 Use the **Write** tool to update this file — `printf > file` crashes on non-ASCII (smart quotes, em-dash) in `last_snippet`.
+  - 🚨 Use the **Read** then **Write** tool to update this file — `printf > file` crashes on non-ASCII (smart quotes, em-dash) in `last_snippet`.
 - 🚨 **MANDATORY Slack report** — output this EXACT format as your final text message (gateway routes to Slack automatically):
   ```
   IH Heartbeat Complete ✅

@@ -262,7 +262,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
    - Post/Article/Poll/Newsletter/Repost: weekly counter += 1
 
 3. 🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
-   - 🚨 Use the **Write** tool to update this file — `printf > file` crashes on non-ASCII (smart quotes, em-dash) in `last_snippet`.
+   - 🚨 Use the **Read** then **Write** tool to update this file — `printf > file` crashes on non-ASCII (smart quotes, em-dash) in `last_snippet`.
 
 4. 🚨 **MANDATORY Slack report** (every heartbeat, even if nothing done).
    Output as text (gateway routes to Slack automatically). Do NOT use `message` tool with `target` parameter — it will error.

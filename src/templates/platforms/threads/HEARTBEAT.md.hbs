@@ -197,7 +197,7 @@ Compose dialog is identical to reply/quote dialog. Same `[role="dialog"]`, same 
 - Do NOT read+write limits.json per comment -- batch in memory, write once
 
 🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
-- 🚨 Use the **Write** tool to update this file — `printf > file` crashes on non-ASCII (smart quotes, em-dash) in `last_snippet`.
+- 🚨 Use the **Read** then **Write** tool to update this file — `printf > file` crashes on non-ASCII (smart quotes, em-dash) in `last_snippet`.
 
 **🚨 MANDATORY Slack report** — output as text (gateway routes automatically):
 ```
