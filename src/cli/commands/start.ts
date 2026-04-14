@@ -5,7 +5,7 @@ import { program } from '../program.js';
 import { handleAction } from '../error-handler.js';
 import { loadConfig } from '../../config/loader.js';
 import { createScheduler } from '../../scheduler/index.js';
-import { startDaemon, isDaemonRunning } from '../../scheduler/daemon.js';
+import { startDaemon, stopDaemon, isDaemonRunning } from '../../scheduler/daemon.js';
 import { resetLimitsIfNeeded } from '../../scheduler/limits-reset.js';
 import { getPidFile } from '../../util/paths.js';
 import * as log from '../../util/logger.js';
@@ -23,15 +23,20 @@ program
   .action(handleAction(async (opts: StartOptions) => {
     const config = loadConfig();
 
+    // Treat repeat `start` as restart: stop any existing daemon first.
+    // Skip when we're the spawned child (OPENTWINS_DAEMON=1) — the pidfile
+    // points at our own PID in that case.
+    if (process.env.OPENTWINS_DAEMON !== '1' && await isDaemonRunning()) {
+      log.info('Existing OpenTwins daemon detected — stopping it first...');
+      await stopDaemon();
+      // Brief wait for the port to actually release before we try to bind it.
+      await new Promise((r) => setTimeout(r, 500));
+    }
+
     // Reset limits on startup
     resetLimitsIfNeeded();
 
     if (opts.daemon) {
-      const alreadyRunning = await isDaemonRunning();
-      if (alreadyRunning) {
-        log.warn('OpenTwins daemon is already running. Use `opentwins stop` to stop it first.');
-        return;
-      }
       const extraArgs: string[] = [];
       if (opts.port !== '3847') extraArgs.push('--port', opts.port);
       const pid = await startDaemon(extraArgs);
