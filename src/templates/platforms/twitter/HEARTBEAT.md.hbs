@@ -217,6 +217,7 @@ Read PLAYBOOK.md → "Memory Update". Done.
 - Reply: "{full text of what was posted}"
 ```
 2. 🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
+   - 🚨 Use the **Write** tool to update this file — `printf > file` crashes on non-ASCII (smart quotes, em-dash) in `last_snippet`.
 
 3. 🚨 Slack Report — output as LAST text message before HEARTBEAT_OK (gateway routes to Slack automatically). Do NOT use `message` tool with `target` parameter — it will error.
 ```
