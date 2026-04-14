@@ -94,10 +94,21 @@ export function createScheduler(config: OpenTwinsConfig): Bree {
     });
   });
 
+  // Custom logger: Bree calls `logger.info(msg, metadata)` where metadata is
+  // often `undefined` (when `outputWorkerMetadata` isn't enabled), which
+  // default-console prints as a trailing "undefined". Drop the 2nd arg when
+  // it's nullish to keep the output clean.
+  const cleanLogger = {
+    info: (msg: unknown, meta?: unknown) => meta == null ? console.log(msg) : console.log(msg, meta),
+    warn: (msg: unknown, meta?: unknown) => meta == null ? console.warn(msg) : console.warn(msg, meta),
+    error: (msg: unknown, meta?: unknown) => meta == null ? console.error(msg) : console.error(msg, meta),
+  };
+
   return new Bree({
     jobs,
     root: false,
     defaultExtension: 'js',
+    logger: cleanLogger,
     errorHandler: (error: unknown, workerMetadata: { name: string }) => {
       const msg = error instanceof Error ? error.message : String(error);
       console.error(`[${workerMetadata.name}] Error:`, msg);
