@@ -74,6 +74,9 @@ opentwins status            Show agent states and schedule
 opentwins run reddit        Run one agent manually
 opentwins run pipeline      Run the content pipeline
 
+opentwins browser health    Check all browser sessions
+opentwins browser list      List configured profiles
+
 opentwins config show       View current configuration
 opentwins logs reddit       View today's activity log
 opentwins audit reddit      View today's quality metrics
