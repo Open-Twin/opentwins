@@ -33,7 +33,7 @@ Reply handling: HEARTBEAT.md | Self-review: SOUL.md § "What Got Us Caught on HN
 
 ## Dev.to API
 
-**Use API before browser.** Script: `{{opentwins_home}}/scripts/devto-api.sh`
+**Use API before browser.** Script: `{{opentwins_home}}/agent-devto/scripts/devto-api.sh`
 
 **Commands:** `my-articles`, `publish <file.md>`, `update <id> <file.md>`, `search <tag>`, `fresh [rising|fresh]`, `comments <id>`, `check-replies`, `me`
 
@@ -54,7 +54,7 @@ Check memory for "Article Published" in last 14 days. If none, write one.
 
 **Tags:** #vibecoding, #ai, #webdev, #productivity, #buildinpublic, #indiehacker, #flutter, #beginners (max 4). Cross-post from Medium with canonical_url.
 
-**Publishing:** `devto-api.sh publish <file.md> --series "Series Name"`
+**Publishing:** `{{opentwins_home}}/agent-devto/scripts/devto-api.sh publish <file.md> --series "Series Name"`
 
 ---
 
@@ -73,8 +73,8 @@ Before commenting:
 ## Tag Trending Analysis
 
 Before commenting session:
-1. `devto-api.sh fresh rising`
-2. `devto-api.sh search <tag> 1` for 2-3 tags
+1. `{{opentwins_home}}/agent-devto/scripts/devto-api.sh fresh rising`
+2. `{{opentwins_home}}/agent-devto/scripts/devto-api.sh search <tag> 1` for 2-3 tags
 3. 3+ fresh high-engagement articles → comment there
 4. 0-1 fresh → skip, try different tag
 5. Check `rising` first (growing, not crowded)

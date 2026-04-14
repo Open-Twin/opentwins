@@ -79,7 +79,7 @@ The tool runs entirely on the user's machine. No cloud service is involved. Cred
 
 ## Web dashboard
 
-Served at localhost:3847 via `opentwins ui` or `opentwins start --ui`.
+Served at localhost:3847 when OpenTwins is running (`opentwins start` or `opentwins start -d`).
 
 ### Tabs
 
@@ -141,12 +141,11 @@ Served at localhost:3847 via `opentwins ui` or `opentwins start --ui`.
 opentwins init              - launch web setup wizard (default)
 opentwins init --cli        - interactive CLI setup (headless fallback)
 opentwins init --force      - overwrite existing config
-opentwins start             - start agent scheduler
-opentwins start --ui        - start scheduler + web dashboard
-opentwins stop              - stop daemon
+opentwins start             - start scheduler + dashboard (foreground)
+opentwins start -d          - same, detached as background daemon
+opentwins stop              - stop daemon (scheduler + dashboard)
 opentwins run <platform>    - run single agent manually
 opentwins run pipeline      - run content pipeline
-opentwins ui                - start dashboard only
 opentwins browser setup <p> - create browser profile + login
 opentwins browser login <p> - re-login to existing profile
 opentwins browser health    - check all browser sessions

@@ -20,7 +20,7 @@ async function waitForPidFile(timeoutMs: number): Promise<number | null> {
   return null;
 }
 
-export async function startDaemon(): Promise<number> {
+export async function startDaemon(extraArgs: string[] = []): Promise<number> {
   // Ensure PID file directory exists
   const pidFile = getPidFile();
   const pidDir = dirname(pidFile);
@@ -34,7 +34,7 @@ export async function startDaemon(): Promise<number> {
 
   // Spawn detached process. The child writes its own PID to the file so we
   // capture the actual Node PID, not the shim/shell wrapper.
-  const child = spawn('opentwins', ['start'], {
+  const child = spawn('opentwins', ['start', ...extraArgs], {
     detached: true,
     stdio: 'ignore',
     env: { ...process.env, OPENTWINS_DAEMON: '1' },

@@ -132,7 +132,7 @@ Filter `schedule.json`: `status="pending"` AND `time <= now`
    - Run BROWSER-core.md S 5 (ONE evaluate: 1.5s wait + type + 0.5s wait + submit)
    - 🚨 **MANDATORY: Follow AFTER comment** — Run BROWSER-engage.md S 7 (from post page, no navigation needed). Every engagement = follow.
    - Language: ALWAYS English (Ukrainian only if post is Ukrainian, per SOUL.md)
-7. **After each successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
+7. **After each successful comment:** `echo "{post_id}" >> memory/commented_posts.txt`
 8. Log: Type = "Comment", increment `comments_done` in memory
 9. Completion: `comments_done >= config.max_comments` -> mark "done". If `comments_done < max_comments` AND candidates remain unprocessed → keep "pending". If ALL candidates exhausted (all queries searched, all results either commented or filtered) → mark "done" with actual count.
 
@@ -197,6 +197,7 @@ Compose dialog is identical to reply/quote dialog. Same `[role="dialog"]`, same 
 - Do NOT read+write limits.json per comment -- batch in memory, write once
 
 🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
+- 🚨 Use the **Read** then **Write** tool to update this file — `printf > file` crashes on non-ASCII (smart quotes, em-dash) in `last_snippet`.
 
 **🚨 MANDATORY Slack report** — output as text (gateway routes automatically):
 ```

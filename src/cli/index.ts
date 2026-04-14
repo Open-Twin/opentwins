@@ -8,6 +8,5 @@ import './commands/status.js';
 import './commands/run.js';
 import './commands/browser.js';
 import './commands/config.js';
-import './commands/ui.js';
 import './commands/logs.js';
 import './commands/audit.js';

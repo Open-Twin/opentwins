@@ -5,34 +5,47 @@ import { program } from '../program.js';
 import { handleAction } from '../error-handler.js';
 import { loadConfig } from '../../config/loader.js';
 import { createScheduler } from '../../scheduler/index.js';
-import { startDaemon, isDaemonRunning } from '../../scheduler/daemon.js';
+import { startDaemon, stopDaemon, isDaemonRunning } from '../../scheduler/daemon.js';
 import { resetLimitsIfNeeded } from '../../scheduler/limits-reset.js';
 import { getPidFile } from '../../util/paths.js';
 import * as log from '../../util/logger.js';
 
+interface StartOptions {
+  daemon?: boolean;
+  port: string;
+}
+
 program
   .command('start')
-  .description('Start the OpenTwins scheduler (cron-style automation)')
+  .description('Start OpenTwins (scheduler + dashboard)')
   .option('-d, --daemon', 'Run as detached background daemon')
-  .action(handleAction(async (opts: { daemon?: boolean }) => {
+  .option('-p, --port <port>', 'Dashboard port', '3847')
+  .action(handleAction(async (opts: StartOptions) => {
     const config = loadConfig();
+
+    // Treat repeat `start` as restart: stop any existing daemon first.
+    // Skip when we're the spawned child (OPENTWINS_DAEMON=1) — the pidfile
+    // points at our own PID in that case.
+    if (process.env.OPENTWINS_DAEMON !== '1' && await isDaemonRunning()) {
+      log.info('Existing OpenTwins daemon detected — stopping it first...');
+      await stopDaemon();
+      // Brief wait for the port to actually release before we try to bind it.
+      await new Promise((r) => setTimeout(r, 500));
+    }
 
     // Reset limits on startup
     resetLimitsIfNeeded();
 
     if (opts.daemon) {
-      const alreadyRunning = await isDaemonRunning();
-      if (alreadyRunning) {
-        log.warn('Scheduler daemon is already running. Use `opentwins stop` to stop it first.');
-        return;
-      }
-      const pid = await startDaemon();
-      log.success(`OpenTwins scheduler started as daemon (PID: ${pid})`);
-      log.info('Use `opentwins ui` to open the dashboard in another terminal.');
+      const extraArgs: string[] = [];
+      if (opts.port !== '3847') extraArgs.push('--port', opts.port);
+      const pid = await startDaemon(extraArgs);
+      log.success(`OpenTwins started as daemon (PID: ${pid})`);
+      log.info(`Dashboard available at http://localhost:${opts.port}`);
       return;
     }
 
-    console.log(chalk.bold('Starting OpenTwins scheduler...'));
+    console.log(chalk.bold('Starting OpenTwins...'));
     console.log('');
 
     const autoRunPlatforms = config.platforms.filter((p) => p.enabled && p.auto_run);
@@ -44,6 +57,9 @@ program
     await scheduler.start();
     log.success('Scheduler running');
 
+    const { startDashboard } = await import('../../ui/server.js');
+    await startDashboard(parseInt(opts.port));
+
     // If spawned as detached daemon, write our own PID so parent can track us
     if (process.env.OPENTWINS_DAEMON === '1') {
       const pidFile = getPidFile();
@@ -53,11 +69,11 @@ program
     }
 
     console.log('');
-    log.info('Press Ctrl+C to stop. Run `opentwins ui` in another terminal for the dashboard.');
+    log.info('Press Ctrl+C to stop.');
 
     const shutdown = async () => {
       console.log('');
-      log.info('Shutting down scheduler...');
+      log.info('Shutting down...');
       await scheduler.stop();
       // Clean up PID file if we wrote one
       if (process.env.OPENTWINS_DAEMON === '1') {
@@ -66,7 +82,7 @@ program
           unlinkSync(getPidFile());
         } catch { /* ignore */ }
       }
-      log.success('Scheduler stopped.');
+      log.success('Stopped.');
       process.exit(0);
     };
 

@@ -78,7 +78,7 @@ Returns the post title and body text. Run this BEFORE upvoting or typing a comme
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var titleEl = document.querySelector('h1') || document.querySelector('.story__title'); var title = titleEl ? titleEl.innerText.trim() : ''; var bodyEl = document.querySelector('.content') || document.querySelector('article') || document.querySelector('.post-body'); var body = bodyEl ? bodyEl.innerText.trim().slice(0, 500) : ''; if (!body) { var text = document.body.innerText; var lines = text.split(String.fromCharCode(10)).filter(function(l) { return l.trim().length > 50; }); body = lines.slice(0, 5).join(String.fromCharCode(10)).slice(0, 500); } return { title: title, body: body }; }"}
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var titleEl = document.querySelector('.post-page__title') || document.querySelector('.product-update__title') || document.querySelector('.firestore-post__title') || document.querySelector('h1'); var title = titleEl ? titleEl.innerText.trim() : ''; var bodyEl = document.querySelector('.post-page__body') || document.querySelector('.firestore-post__main'); var body = bodyEl ? bodyEl.innerText.trim().slice(0, 500) : ''; if (!body) { var text = document.body.innerText; var lines = text.split(String.fromCharCode(10)).filter(function(l) { return l.trim().length > 50; }); body = lines.slice(0, 5).join(String.fromCharCode(10)).slice(0, 500); } return { title: title, body: body }; }"}
 ENDJSON
 ```
 

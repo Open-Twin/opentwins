@@ -31,8 +31,8 @@ If `schedule.json` (FLAT FILE at root, not subdirectory!) missing OR `metadata.f
 ## 1. Read Limits
 
 Read `limits.json`, apply resets:
-- Daily: `last_reset != today` -> reset to 0
-- Weekly: Monday AND `last_reset` before today -> reset to 0
+- Daily: `last_reset != today` -> reset `current` to 0 AND filter `history` to today's entries only (keep `date == today`)
+- Weekly: Monday AND `last_reset` before today -> reset `current` to 0 AND filter `history` to this week's entries only (keep `date >= week_start`)
 - Calculate: `available = limit - current`
 
 ## 1b. Read Today Summary
@@ -159,7 +159,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
      ```
      Then skip to next candidate.
      Otherwise use `title` + `content` to write a contextual comment. 🚨 **Pulse uses QUILL editor — MUST use BROWSER-engage.md SS 4b (Quill path). Do NOT use SS 4 (TipTap path) — it silently fails on Pulse.** SS 4b uses `quillInstance.setText()` to properly update Delta state, then verifies by searching for our comment in the rendered list (not by checking editor emptiness).
-9. **After each successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
+9. **After each successful comment:** `echo "{post_id}" >> memory/commented_posts.txt`
 10. 🚨 **MANDATORY: Send connection request to post author** — use `username` from SS 2. Run BROWSER-notifications.md SS 7 (navigate to profile → safety checks → custom-invite → personalized note → send). Skip silently if: already connected, pending, recruiter headline, or `weekly.connection_requests.current >= limit`. 🚨 **Connection notes: NEVER mention company** — use individual framing only.
 11. If no qualifying posts, try up to 2 more queries from different categories
 12. **Task completion:** Mark "completed" only when `comments_done >= config.max_comments`. If 0 posted, stays "pending"
@@ -176,7 +176,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
    ```
    Only navigate to posts NOT in tracking file.
 6. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) before writing comment. 🚨 Use the `content` field from SS 3 extraction to inform your comment — your comment MUST directly address the post's topic.
-7. Navigate to unchecked post URL, 🚨 **MANDATORY: Read post content** (BROWSER-engage.md SS 3c), then use BROWSER-notifications.md SS 5 for comment. After success: `exec echo "{post_id}" >> memory/commented_posts.txt`
+7. Navigate to unchecked post URL, 🚨 **MANDATORY: Read post content** (BROWSER-engage.md SS 3c), then use BROWSER-notifications.md SS 5 for comment. After success: `echo "{post_id}" >> memory/commented_posts.txt`
 8. 🚨 **MANDATORY: Send connection request to post author** after commenting — BROWSER-notifications.md SS 7 (safety checks + personalized note). Skip if already connected/pending/recruiter. 🚨 **Connection notes: NEVER mention company.**
 
 ### publish_article
@@ -262,6 +262,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
    - Post/Article/Poll/Newsletter/Repost: weekly counter += 1
 
 3. 🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
+   - 🚨 Use the **Read** then **Write** tool to update this file — `printf > file` crashes on non-ASCII (smart quotes, em-dash) in `last_snippet`.
 
 4. 🚨 **MANDATORY Slack report** (every heartbeat, even if nothing done).
    Output as text (gateway routes to Slack automatically). Do NOT use `message` tool with `target` parameter — it will error.

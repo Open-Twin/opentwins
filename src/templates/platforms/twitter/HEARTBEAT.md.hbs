@@ -18,7 +18,7 @@ If schedule.json missing OR `for_date != today`:
 
 ## § 1. Read Limits
 
-Reset daily if `last_reset != today` → `current = 0`. Reset weekly if Monday AND `last_reset` before today.
+Reset daily if `last_reset != today` → `current = 0`, filter `history` to today's entries only (keep `date == today`). Reset weekly if Monday AND `last_reset` before today → filter `history` to this week's entries only (keep `date >= week_start`).
 INSIGHTS.md: read only for schedule gen / original content, NOT routine heartbeats.
 
 ## § 1b. Read Today Summary
@@ -110,7 +110,7 @@ Promo pre-check: `current >= limit` → mark done.
 7. 🚨 **MANDATORY: Apply Reply Quality Rules** (BROWSER-engage.md §A/B/C/E/F) — check if defaulting to reframe+professional angle, enforce 30-word cap (20 for 200+ likes tweets), ban "X is the new Y", run anti-AI check, no company mentions
 8. 🚨 **Navigate to tweet page FIRST** → write reply (SOUL.md) → post reply (BROWSER-core.md § 1)
    🚨 NEVER reply from search results — clicking reply button on search redirects to `/compose/post` (generic compose, loses reply context). Always navigate to individual tweet URL first.
-9. **After successful reply:** `exec echo "{tweet_id}" >> memory/commented_posts.txt`
+9. **After successful reply:** `echo "{tweet_id}" >> memory/commented_posts.txt`
 10. 🚨 **MANDATORY: Follow tweet author** — BROWSER-notifications.md § 11 (from tweet page, no navigation). Skip silently if already following.
 11. Update: `promo_replies.current += 1`
 12. Log: `Type: "Promo Reply", Product: X, Liked: Yes, Target Likes: N`
@@ -139,7 +139,7 @@ Promo pre-check: `current >= limit` → mark done.
 8. 🚨 **MANDATORY: Apply Reply Quality Rules** (BROWSER-engage.md §A/B/C/F) — check if defaulting to reframe+professional angle, enforce 35-word cap (20 for 200+ likes), ban "X is the new Y", run anti-AI check, no company mentions
 9. Write genuinely valuable reply — NO product mention, NO links (SOUL.md § Strategic)
 10. Post reply (BROWSER-core.md § 1)
-11. **After successful reply:** `exec echo "{tweet_id}" >> memory/commented_posts.txt`
+11. **After successful reply:** `echo "{tweet_id}" >> memory/commented_posts.txt`
 12. 🚨 **MANDATORY: Follow tweet author** — BROWSER-notifications.md § 11 (from tweet page, no navigation). Skip silently if already following.
 13. Update: `strategic_replies.current += 1`
 14. Log: `Type: "Strategic Reply", Account: @handle, Likes: N`. Mark done.
@@ -217,6 +217,7 @@ Read PLAYBOOK.md → "Memory Update". Done.
 - Reply: "{full text of what was posted}"
 ```
 2. 🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
+   - 🚨 Use the **Read** then **Write** tool to update this file — `printf > file` crashes on non-ASCII (smart quotes, em-dash) in `last_snippet`.
 
 3. 🚨 Slack Report — output as LAST text message before HEARTBEAT_OK (gateway routes to Slack automatically). Do NOT use `message` tool with `target` parameter — it will error.
 ```
