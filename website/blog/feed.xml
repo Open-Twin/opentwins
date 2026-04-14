@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>OpenTwins Blog</title>
+    <link>https://opentwins.ai/blog/</link>
+    <atom:link href="https://opentwins.ai/blog/feed.xml" rel="self" type="application/rss+xml" />
+    <description>Guides on AI-powered social media automation, LinkedIn growth, building in public and safe engagement strategies.</description>
+    <language>en</language>
+    <lastBuildDate>Tue, 14 Apr 2026 06:11:02 +0000</lastBuildDate>
+    <item>
+      <title>Case Study: 0 to 1000 LinkedIn Connections in 30 Days</title>
+      <link>https://opentwins.ai/blog/case-study-linkedin-connections-30-days.html</link>
+      <guid isPermaLink="true">https://opentwins.ai/blog/case-study-linkedin-connections-30-days.html</guid>
+      <description>How a tech leader used OpenTwins to grow from 0 to 1,047 LinkedIn connections in 30 days. Week-by-week breakdown with config settings and real metrics.</description>
+      <pubDate>Thu, 09 Apr 2026 10:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>Ethical AI Twin: Authenticity in Automated Engagement</title>
+      <link>https://opentwins.ai/blog/ethical-ai-twin-authenticity-automated-engagement.html</link>
+      <guid isPermaLink="true">https://opentwins.ai/blog/ethical-ai-twin-authenticity-automated-engagement.html</guid>
+      <description>How OpenTwins maintains authenticity in AI-powered social media engagement through voice calibration, rate limits and ethical design. The anti-spam approach.</description>
+      <pubDate>Thu, 09 Apr 2026 09:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>Grow Your LinkedIn Presence with AI Agents</title>
+      <link>https://opentwins.ai/blog/grow-linkedin-presence-ai-agents.html</link>
+      <guid isPermaLink="true">https://opentwins.ai/blog/grow-linkedin-presence-ai-agents.html</guid>
+      <description>A step-by-step framework for using AI agents to build genuine LinkedIn authority. Covers engagement patterns, rate limits and measuring ROI.</description>
+      <pubDate>Tue, 07 Apr 2026 09:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>Build in Public Without the Time Cost</title>
+      <link>https://opentwins.ai/blog/build-in-public-without-time-cost.html</link>
+      <guid isPermaLink="true">https://opentwins.ai/blog/build-in-public-without-time-cost.html</guid>
+      <description>How founders can share their journey across multiple platforms without spending hours each day. Automation strategies that keep authenticity intact.</description>
+      <pubDate>Sun, 05 Apr 2026 09:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>AI Social Media Engagement: A Practical Guide</title>
+      <link>https://opentwins.ai/blog/ai-social-media-engagement-guide.html</link>
+      <guid isPermaLink="true">https://opentwins.ai/blog/ai-social-media-engagement-guide.html</guid>
+      <description>Everything you need to know about using AI for social media engagement in 2026. Choosing tools, measuring results and avoiding common pitfalls.</description>
+      <pubDate>Fri, 03 Apr 2026 09:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>How OpenTwins Works: Architecture Deep Dive</title>
+      <link>https://opentwins.ai/blog/opentwins-architecture-deep-dive.html</link>
+      <guid isPermaLink="true">https://opentwins.ai/blog/opentwins-architecture-deep-dive.html</guid>
+      <description>Technical walkthrough of OpenTwins internals: the agent loop, browser automation, Claude integration, content strategy engine and real-time dashboard.</description>
+      <pubDate>Wed, 01 Apr 2026 09:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>Social Media Automation Without Getting Banned</title>
+      <link>https://opentwins.ai/blog/social-media-automation-without-getting-banned.html</link>
+      <guid isPermaLink="true">https://opentwins.ai/blog/social-media-automation-without-getting-banned.html</guid>
+      <description>How to automate your social media presence safely. Understand what triggers platform detection and what doesn&#x27;t, with practical limits for each platform.</description>
+      <pubDate>Sun, 29 Mar 2026 09:00:00 +0000</pubDate>
+    </item>
+  </channel>
+</rss>

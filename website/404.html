@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page not found · OpenTwins</title>
+  <meta name="description" content="That page doesn't exist on opentwins.ai. Head back home or browse the blog.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2dd4bf">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: #080b12;
+      color: #e2e8f0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background-image: radial-gradient(ellipse 60% 40% at 50% 10%, rgba(45,212,191,0.08) 0%, transparent 60%);
+    }
+    .wrap { max-width: 520px; text-align: center; }
+    .logo {
+      width: 64px; height: 64px; border-radius: 14px; margin: 0 auto 24px;
+      display: block;
+    }
+    .code {
+      font-family: 'JetBrains Mono', monospace;
+      color: #2dd4bf;
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: clamp(32px, 5vw, 44px);
+      font-weight: 800;
+      margin: 0 0 16px;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #2dd4bf 0%, #60a5fa 50%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p { color: #94a3b8; margin: 0 0 32px; font-size: 16px; line-height: 1.6; }
+    .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    a.btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    a.primary {
+      background: linear-gradient(135deg, #2dd4bf 0%, #3b82f6 100%);
+      color: #0f172a;
+      box-shadow: 0 8px 30px rgba(45,212,191,0.25);
+    }
+    a.primary:hover { transform: translateY(-1px); box-shadow: 0 12px 40px rgba(45,212,191,0.35); }
+    a.ghost {
+      color: #e2e8f0;
+      border: 1px solid #1e293b;
+    }
+    a.ghost:hover { border-color: rgba(45,212,191,0.4); }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <img class="logo" src="/logo-clean.svg" alt="OpenTwins" width="64" height="64">
+    <div class="code">// 404</div>
+    <h1>This page went off-grid</h1>
+    <p>The URL doesn't match anything on opentwins.ai. Maybe a broken link, maybe a typo. Head back to the homepage or dig into the blog.</p>
+    <div class="actions">
+      <a class="btn primary" href="/">Back to home</a>
+      <a class="btn ghost" href="/blog/">Read the blog</a>
+    </div>
+  </main>
+</body>
+</html>
