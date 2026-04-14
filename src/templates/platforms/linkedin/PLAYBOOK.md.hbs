@@ -36,6 +36,8 @@ End-of-day and on-demand tasks. **Do NOT load on routine heartbeats.** Only read
    - Midday window can be likes-only when comment budget is tight
    Adjust to match exactly.
 5. 🚨 **Articles: MANDATORY per `weekly.articles.limit` from limits.json.** Tuesday + Friday. Always include `publish_article` task at 10:00 on those days — do NOT skip. If `weekly.articles.current >= weekly.articles.limit` → skip the task but keep other tasks.
+
+🚨 **Article days = article-only.** On Tuesday and Friday, do NOT include a `publish_post` task. One article is the day's primary content — publishing both an article and a post on the same day floods the feed, duplicates the theme, and reads as automation. Post cadence is Mon/Wed/Thu/Sat/Sun only (up to 5 posts/week). If `content-ready/{today_date}/linkedin-post.md` exists on a Tue/Fri, ignore it — the post will be used on the next non-article day via amplification if still relevant.
    - 🚨 MUST include `content_source` in `publish_post` config:
      ```json
      "config": {

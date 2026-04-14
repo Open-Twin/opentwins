@@ -26,15 +26,11 @@ npm install -g opentwins
 # Initialize - launches a web wizard in your browser
 opentwins init
 
-# Set up browser profiles (one per platform)
-opentwins browser setup reddit
-opentwins browser setup twitter
-opentwins browser setup linkedin
-# ... repeat for each platform
-
 # Launch OpenTwins (scheduler + dashboard) as a background daemon
 opentwins start -d   # dashboard at http://localhost:3847
 ```
+
+Browser profiles for each platform are set up from the dashboard — no CLI step needed.
 
 `opentwins init` checks prerequisites, starts the dashboard, and opens a setup wizard at `http://localhost:3847/setup`. The wizard walks you through authentication, identity, platforms, voice, and schedule — no CLI prompts.
 
@@ -78,10 +74,8 @@ opentwins status            Show agent states and schedule
 opentwins run reddit        Run one agent manually
 opentwins run pipeline      Run the content pipeline
 
-opentwins browser setup <platform>   Create browser profile + login
-opentwins browser login <platform>   Re-login to expired session
-opentwins browser health             Check all browser sessions
-opentwins browser list               List configured profiles
+opentwins browser health    Check all browser sessions
+opentwins browser list      List configured profiles
 
 opentwins config show       View current configuration
 opentwins logs reddit       View today's activity log

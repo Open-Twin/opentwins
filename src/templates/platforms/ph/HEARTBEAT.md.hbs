@@ -82,13 +82,26 @@ Empty notifications is normal — skip to § 4.
    Empty result -> all tracked, skip to S4
 
 5. For each NEW notification (max 5 browser ops per notification):
-   - **A:** Navigate to threadUrl/replyUrl
-   - **B:** Wait 3s. Check our comment on page using BROWSER-notifications.md S2 (max 2 evaluate calls)
+   - **A (Per-thread cap — MANDATORY, before navigate):** Extract thread slug from URL (last path segment after `/posts/` or `/products/`, strip query/hash). Count today's entries for this slug:
+     ```bash
+     TODAY=$(date +%Y-%m-%d)
+     THREAD_SLUG=$(echo "${threadUrl}" | sed -E 's#^.*/(posts|products)/([^/?#]+).*$#\2#')
+     COUNT=$(grep -F "${THREAD_SLUG}|" memory/ph_thread_replies.txt 2>/dev/null | grep -c "|${TODAY}T")
+     ```
+     🚨 Use LOCAL time for BOTH `TODAY` and appends (see step H) — mixing local and UTC causes the cap to silently fail near midnight.
+     🚨 If `COUNT >= 3` → **SKIP this notification**. Do NOT navigate or reply. Append the commentId to `replied_notifications_ph.txt` to prevent re-processing. Log `Type=Reply Skipped, Reason=per_thread_cap, slug=${THREAD_SLUG}, count=${COUNT}`, move to next.
+     Rationale: 3+ comments from same account on one PH launch thread looks bot-like. Note: PH renders nested replies behind per-comment "Show replies" buttons, so browser-counting "{{display_name}}" on the page MISSES nested replies. Tracking file is the authoritative count.
+     Known limitation: PH uses two slug systems — `/posts/{slug}` ≠ `/products/{slug}` for some products (e.g. `posts/caveman` vs `products/caveman-claude-code-skill-plugin`). When slugs diverge, the cap treats them as different threads. Most launches have matching slugs so the cap works in practice.
+   - **B:** Navigate to threadUrl/replyUrl. Wait 3s. Check our comment on page using BROWSER-notifications.md S2 (max 2 evaluate calls)
    - **C:** Comment found -> reply using BROWSER-notifications.md S8, compose from notification preview text
    - **D:** Comment NOT found after 2 evals -> SKIP, track anyway
    - **E:** ALWAYS reply in English (Ukrainian only if comment is Ukrainian, per SOUL.md)
    - **F:** Verify reply (editor count dropped to 1 or text on page)
    - **G:** Verification fails -> retry ONCE. Still fails -> log Error, track, continue
+   - **H (After successful reply):** append to per-thread tracking using LOCAL time (must match the TODAY check in step A):
+     ```bash
+     printf '%s\n' "${THREAD_SLUG}|$(date +%Y-%m-%dT%H:%M:%S%z)" >> memory/ph_thread_replies.txt
+     ```
 
    PH does NOT render threaded replies in DOM. Notification URLs navigate to page but nested reply not visible. Use notification preview as context.
 
@@ -137,7 +150,11 @@ MANDATORY: Execute ALL overdue tasks in sequence.
 6. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) — check if defaulting to agree+expand, enforce 40-word cap, don't quote their framing, rotate angles, no company mentions
 7. Apply Self-Review Gate (TOOLS.md). Check limits.json
 8. Post comment using BROWSER-engage.md S7
-9. **After successful comment:** use `makerUsername` from S7 Step 3 verify result + `echo "{post_slug}" >> memory/commented_posts.txt`
+9. **After successful comment:** use `makerUsername` from S7 Step 3 verify result + `echo "{post_slug}" >> memory/commented_posts.txt`. ALSO append to per-thread tracking (use LOCAL time — must match § 3 step A):
+   ```bash
+   THREAD_SLUG=$(echo "${postUrl}" | sed -E 's#^.*/(posts|products)/([^/?#]+).*$#\2#')
+   printf '%s\n' "${THREAD_SLUG}|$(date +%Y-%m-%dT%H:%M:%S%z)" >> memory/ph_thread_replies.txt
+   ```
 10. 🚨 **CRITICAL — Follow maker for EVERY product. NEVER skip this even to save steps.**
    - Extract maker username from S7 Step 3 verify result (`makerUsername` field) — do NOT call S4 separately
    - 🚨 **CHECK `followed_makers.json` FIRST** via grep:

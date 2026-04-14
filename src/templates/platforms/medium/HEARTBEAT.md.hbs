@@ -96,6 +96,17 @@ printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"a
    Only process lines prefixed with "NEW:".
 5. 🚨 **Loop through ALL new notifications** — do NOT stop after the first one:
    For each NEW notification:
+   - 🚨 **Per-author daily cap (MANDATORY)** — before navigating, count today's ACTUAL replies to this author (excluding skip entries):
+     ```bash
+     TODAY=$(date +%Y-%m-%d)
+     COUNT=$(grep -F "response|${AUTHOR}|" memory/replied_notifications_medium.txt 2>/dev/null | grep -c "|${TODAY}T")
+     ```
+     🚨 If `COUNT >= 3` → **SKIP this notification**. Do NOT navigate or reply. Append ONE entry with a non-timestamp marker after the pipe, so step 4's batch grep finds it (prevents re-processing) but the per-author count above does NOT match (because the timestamp position starts with `SKIPPED@` not `${TODAY}T`):
+     ```bash
+     printf '%s\n' "response|${AUTHOR}|${URL}|SKIPPED@${TODAY}" >> memory/replied_notifications_medium.txt
+     ```
+     Log: `Type=Reply Skipped, Author, Reason=per_author_daily_cap, count=${COUNT}`, move to next.
+     Rationale: 3+ replies to same person on Medium in one day looks bot-like. Reply chains cap at 3 per author per day.
    - Navigate to article URL
    - ❌ **Do NOT use BROWSER-notifications.md § 2** (alreadyReplied check) — it false-positives on all notification pages because our original comment's `/@{{handle_slug}}` link is always present. Tracking file is the authoritative dedup.
    - Read context (BROWSER-core.md § 2 or inline evaluate)

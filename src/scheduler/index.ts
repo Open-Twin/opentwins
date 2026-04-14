@@ -25,6 +25,28 @@ function findWorker(name: string): string {
   return resolve(__dirname, name); // Fallback
 }
 
+// Module-level registry so the UI server can reload the scheduler in-place
+// after config changes (e.g. interval tweak) without tearing down the host
+// process — which would also kill the UI server itself.
+let activeScheduler: Bree | null = null;
+
+export function setActiveScheduler(s: Bree | null): void {
+  activeScheduler = s;
+}
+
+export function getActiveScheduler(): Bree | null {
+  return activeScheduler;
+}
+
+export async function reloadActiveScheduler(config: OpenTwinsConfig): Promise<boolean> {
+  if (!activeScheduler) return false;
+  await activeScheduler.stop();
+  const next = createScheduler(config);
+  await next.start();
+  activeScheduler = next;
+  return true;
+}
+
 export function createScheduler(config: OpenTwinsConfig): Bree {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const jobs: any[] = [];
@@ -72,10 +94,29 @@ export function createScheduler(config: OpenTwinsConfig): Bree {
     });
   });
 
+  // Custom logger: silence Bree's per-worker lifecycle noise (online /
+  // exited with code 0) — cron fires every 5 min and most cycles are
+  // no-op interval checks; logging each spawn floods the output. Keep
+  // non-zero exits, warnings, and errors visible. Also drop trailing
+  // `undefined` that Bree passes when metadata isn't configured.
+  const isLifecycleNoise = (msg: unknown): boolean => {
+    if (typeof msg !== 'string') return false;
+    return / online$/.test(msg) || / exited with code 0/.test(msg);
+  };
+  const cleanLogger = {
+    info: (msg: unknown, meta?: unknown) => {
+      if (isLifecycleNoise(msg)) return;
+      meta == null ? console.log(msg) : console.log(msg, meta);
+    },
+    warn: (msg: unknown, meta?: unknown) => meta == null ? console.warn(msg) : console.warn(msg, meta),
+    error: (msg: unknown, meta?: unknown) => meta == null ? console.error(msg) : console.error(msg, meta),
+  };
+
   return new Bree({
     jobs,
     root: false,
     defaultExtension: 'js',
+    logger: cleanLogger,
     errorHandler: (error: unknown, workerMetadata: { name: string }) => {
       const msg = error instanceof Error ? error.message : String(error);
       console.error(`[${workerMetadata.name}] Error:`, msg);
