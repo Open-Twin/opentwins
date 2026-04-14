@@ -97,7 +97,7 @@ Empty notifications is normal — skip to § 4.
 Before any scheduled tasks.
 
 ### 3a: API pre-check
-1. `devto-api.sh check-replies` + `my-articles`
+1. `{{opentwins_home}}/agent-devto/scripts/devto-api.sh check-replies` + `my-articles`
 2. Cross-ref with memory — unlogged = new
 
 ### 3b: Browser notification extraction
@@ -141,7 +141,7 @@ NEVER pipe `.metadata.for_date` and `.tasks[]` in the same jq expression — the
 For each due task:
 - Check limits before acting
 - Tags: from task config, else 2-3 from queries.json (all fresh daily)
-- Search: `devto-api.sh search {tag} 10`
+- Search: `{{opentwins_home}}/agent-devto/scripts/devto-api.sh search {tag} 10`
 - 🚨 **MAX 3 search iterations per task.** Track with a counter variable. If no qualifying target after 3 tag rotations → mark task "failed". Do NOT keep searching — each search + navigate cycle costs 4+ steps.
 - **Filter BEFORE navigating:**
   1. Quality: reactions>=5 OR comments>=3; comments<=50; sweet spot 3-20
@@ -149,7 +149,7 @@ For each due task:
   3. 🚨 **URL handling:** The search API returns full URLs (e.g. `https://dev.to/someone/my-article-1a2b`). Extract the slug (last path segment) for tracking files, but **ALWAYS use the full URL from the API for navigation**. NEVER construct URLs by guessing author prefixes — wrong authors cause 404s.
   4. 🚨 **Recommended search scorer** (outputs both slug AND full URL for safe navigation):
      ```bash
-     devto-api.sh search {tag} 10 2>/dev/null | python3 -c "
+     {{opentwins_home}}/agent-devto/scripts/devto-api.sh search {tag} 10 2>/dev/null | python3 -c "
      import json, sys
      data = json.load(sys.stdin)
      for a in data:
@@ -208,7 +208,7 @@ Standard engagement. Follow execution steps above.
 Before executing any `publish_article` task:
 
 1. Read the file at `config.content_source` — it already has canonical_url, tags, title, and body
-2. Use this content for the article (save and publish via devto-api.sh)
+2. Use this content for the article (save and publish via {{opentwins_home}}/agent-devto/scripts/devto-api.sh)
 3. After publish → mark task done
 
 ### Publish article
@@ -219,7 +219,7 @@ Before executing any `publish_article` task:
 4. Series: ai_dev → "Vibe Coding Lessons", building → "Building in Public", productivity → "Developer Productivity"
 5. Tags: max 4, pick from `queries.json → hashtags` array (refreshed daily by content planner, stripped of `#` prefix for Dev.to tag format)
 6. Save as `new-article-{date}.md` with frontmatter (title, published: true, tags, series)
-7. `devto-api.sh publish <file.md> --series "Series Name"`, log + mark done
+7. `{{opentwins_home}}/agent-devto/scripts/devto-api.sh publish <file.md> --series "Series Name"`, log + mark done
 8. Update `weekly.articles.current += 1`
 
 ### update_memory

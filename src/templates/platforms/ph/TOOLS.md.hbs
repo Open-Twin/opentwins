@@ -33,10 +33,10 @@
 
 Before opening browser for engagement tasks, ALWAYS use API to discover launches first.
 
-Script: `{{opentwins_home}}/scripts/ph-api.sh`
+Script: `{{opentwins_home}}/agent-ph/scripts/ph-api.sh`
 
 **Pre-check steps:**
-1. Run `ph-api.sh today 15` + `ph-api.sh newest 10`
+1. Run `{{opentwins_home}}/agent-ph/scripts/ph-api.sh today 15` + `{{opentwins_home}}/agent-ph/scripts/ph-api.sh newest 10`
 2. Filter for relevant topics ({{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}})
 3. Identify 2-3 launches worth commenting on (5+ votes, relevant topic)
 4. THEN open browser to comment and upvote
