@@ -12,7 +12,6 @@ import * as log from '../../util/logger.js';
 
 interface StartOptions {
   daemon?: boolean;
-  noUi?: boolean;
   port: string;
 }
 
@@ -20,7 +19,6 @@ program
   .command('start')
   .description('Start OpenTwins (scheduler + dashboard)')
   .option('-d, --daemon', 'Run as detached background daemon')
-  .option('--no-ui', 'Skip the dashboard, run scheduler only')
   .option('-p, --port <port>', 'Dashboard port', '3847')
   .action(handleAction(async (opts: StartOptions) => {
     const config = loadConfig();
@@ -35,13 +33,10 @@ program
         return;
       }
       const extraArgs: string[] = [];
-      if (opts.noUi) extraArgs.push('--no-ui');
       if (opts.port !== '3847') extraArgs.push('--port', opts.port);
       const pid = await startDaemon(extraArgs);
       log.success(`OpenTwins started as daemon (PID: ${pid})`);
-      if (!opts.noUi) {
-        log.info(`Dashboard available at http://localhost:${opts.port}`);
-      }
+      log.info(`Dashboard available at http://localhost:${opts.port}`);
       return;
     }
 
@@ -57,10 +52,8 @@ program
     await scheduler.start();
     log.success('Scheduler running');
 
-    if (!opts.noUi) {
-      const { startDashboard } = await import('../../ui/server.js');
-      await startDashboard(parseInt(opts.port));
-    }
+    const { startDashboard } = await import('../../ui/server.js');
+    await startDashboard(parseInt(opts.port));
 
     // If spawned as detached daemon, write our own PID so parent can track us
     if (process.env.OPENTWINS_DAEMON === '1') {

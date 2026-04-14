@@ -72,7 +72,6 @@ opentwins init --cli        Interactive CLI setup (fallback, headless-friendly)
 opentwins init --force      Overwrite an existing config
 opentwins start             Start scheduler + dashboard (foreground)
 opentwins start -d          Same, as a detached background daemon
-opentwins start --no-ui     Scheduler only (skip the dashboard)
 opentwins stop              Stop the daemon (scheduler + dashboard)
 opentwins status            Show agent states and schedule
 

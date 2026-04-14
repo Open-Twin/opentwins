@@ -143,7 +143,6 @@ opentwins init --cli        - interactive CLI setup (headless fallback)
 opentwins init --force      - overwrite existing config
 opentwins start             - start scheduler + dashboard (foreground)
 opentwins start -d          - same, detached as background daemon
-opentwins start --no-ui     - scheduler only, skip dashboard
 opentwins stop              - stop daemon (scheduler + dashboard)
 opentwins run <platform>    - run single agent manually
 opentwins run pipeline      - run content pipeline
