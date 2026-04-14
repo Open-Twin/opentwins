@@ -110,7 +110,7 @@ Filter `schedule.json`: `status="pending"` AND `time <= now`
      If `error: 'no_compose_button'` → replies disabled on this post, skip to next candidate.
    - Run BROWSER-core.md S 5 (ONE evaluate: 1.5s wait + type + 0.5s wait + submit — auto-detects "Publish reply" or "Publish post")
    - Language: ALWAYS English (Ukrainian only if post is Ukrainian, per SOUL.md)
-5. **After each successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
+5. **After each successful comment:** `echo "{post_id}" >> memory/commented_posts.txt`
 6. 🚨 **MANDATORY: Follow post author from post page** — BROWSER-engage.md S 7 (no navigation needed). Every comment = follow.
 7. Log: Type = "Comment", increment `comments_done` in memory
 8. Completion: `comments_done >= config.max_comments` → mark "done". If `comments_done == 0` AND all candidates exhausted → keep "pending" for retry with different queries next heartbeat.

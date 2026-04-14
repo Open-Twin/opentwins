@@ -137,7 +137,7 @@ MANDATORY: Execute ALL overdue tasks in sequence.
 6. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) — check if defaulting to agree+expand, enforce 40-word cap, don't quote their framing, rotate angles, no company mentions
 7. Apply Self-Review Gate (TOOLS.md). Check limits.json
 8. Post comment using BROWSER-engage.md S7
-9. **After successful comment:** use `makerUsername` from S7 Step 3 verify result + `exec echo "{post_slug}" >> memory/commented_posts.txt`
+9. **After successful comment:** use `makerUsername` from S7 Step 3 verify result + `echo "{post_slug}" >> memory/commented_posts.txt`
 10. 🚨 **CRITICAL — Follow maker for EVERY product. NEVER skip this even to save steps.**
    - Extract maker username from S7 Step 3 verify result (`makerUsername` field) — do NOT call S4 separately
    - 🚨 **CHECK `followed_makers.json` FIRST** via grep:

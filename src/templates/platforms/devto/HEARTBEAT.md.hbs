@@ -42,7 +42,7 @@ All steps MANDATORY. Execute in order. SS 0 runs first every time.
 🚨 **NEVER generate a schedule for tomorrow.** Only generate for TODAY. Schedule generation happens once per day in the morning. If all today's tasks are done, return HEARTBEAT_OK — do NOT create a new schedule.
 
 1. `cat schedule.json | jq -r '.metadata.for_date'`
-2. `exec date +%Y-%m-%d`
+2. `date +%Y-%m-%d`
 3. If dates match -> skip to SS 1
 4. If mismatch or missing:
    a. Log to `memory/{today}.md` via `cat >> file <<'EOF'`

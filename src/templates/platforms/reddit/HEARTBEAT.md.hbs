@@ -100,7 +100,7 @@ Per due task:
 9. Focus + type (BROWSER-engage.md § 4 step 4 — async evaluate with embedded 2s wait)
    - 🚨 **Page-loss guard:** If typing evaluate returns `no editor`, check URL immediately. If `about:blank` or wrong domain → re-navigate ONCE and retry from step 7. Do NOT probe with multiple evaluates — one URL check is enough.
 10. Verify text (§ 4 step 5) → submit (§ 4 step 6) → verify comment (§ 4 step 7 — async evaluate with embedded 3s wait)
-11. **After successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
+11. **After successful comment:** `echo "{post_id}" >> memory/commented_posts.txt`
 12. MANDATORY update limits.json: `comments.current += 1`, `last_comment_at`, `upvotes.current += upvoted_count` (0 or 1). NEVER write unchanged values.
 13. MANDATORY update schedule.json: increment `comments_done`. If `>= config.max_comments` -> `status: "done"`
 14. Log Type = "Comment", upvoted: Yes/No
@@ -125,7 +125,7 @@ Per due task:
    - 🚨 **Factual accuracy:** On r/todayilearned and similar factual subs, NEVER add details about real people/events you're not certain about. React to the story instead ("wild story", "that's insane"). Wrong facts = mass downvotes + collapsed comment + karma destruction.
    - 🚨 **Page-loss guard:** If `no editor`, check URL. If `about:blank` → re-navigate ONCE, retry from step 8. One check, not multiple probes.
 10. Verify text → submit → wait 3s → verify comment (§ 4 steps 5-7)
-11. **After successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
+11. **After successful comment:** `echo "{post_id}" >> memory/commented_posts.txt`
 12. MANDATORY update limits.json: `comments.current += 1`, `last_comment_at`, `upvotes.current += upvoted_count`
 13. MANDATORY update schedule.json: increment `comments_done`. If `>= config.max_comments` -> `status: "done"`
 14. Log Type = "Karma Comment", upvoted: Yes/No

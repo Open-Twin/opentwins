@@ -154,7 +154,7 @@ if daily.comments.current >= limit: mark_done("daily limit reached")
      ENDJSON
      ```
    - 🚨 If `skipped: true, reason: 'already_commented_on_page'`: skip comment, append post_id to tracking file, and move on
-6. **After each successful comment:** `exec echo "{post_id}" >> memory/commented_posts.txt`
+6. **After each successful comment:** `echo "{post_id}" >> memory/commented_posts.txt`
 7. After comment: `daily.comments.current++` in limits.json
 8. Log: `memory/{today}.md` -> `Type="Comment" | URL | text(100 chars)`
 9. 1 comment/heartbeat max. Upvotes unlimited (3-5).
