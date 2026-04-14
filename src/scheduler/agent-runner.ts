@@ -13,7 +13,9 @@ if (!isMainThread && workerData?.configJson) {
   const platform: string = workerData.platform;
 
   runPlatformAgent(config, platform)
-    .then(() => parentPort?.postMessage(`${platform}: heartbeat complete`))
+    .then((ran) => {
+      if (ran) parentPort?.postMessage(`${platform}: heartbeat complete`);
+    })
     .catch((err) => parentPort?.postMessage(`${platform}: ERROR - ${err.message}`));
 }
 
@@ -37,13 +39,13 @@ export async function runPlatformAgent(
   config: OpenTwinsConfig,
   platform: string,
   options?: { skipActiveHoursCheck?: boolean; skipIntervalCheck?: boolean }
-): Promise<void> {
+): Promise<boolean> {
   // Check active hours (skip for manual runs)
   if (!options?.skipActiveHoursCheck) {
     const now = new Date();
     const hour = now.getHours();
     if (hour < config.active_hours.start || hour > config.active_hours.end) {
-      return;
+      return false;
     }
   }
 
@@ -54,7 +56,7 @@ export async function runPlatformAgent(
     const lastCompleted = getLastHeartbeatTime(platform);
     const elapsed = Date.now() - lastCompleted;
     if (lastCompleted > 0 && elapsed < intervalMs) {
-      return; // Not enough time since last completion
+      return false; // Not enough time since last completion
     }
   }
 
@@ -65,7 +67,7 @@ export async function runPlatformAgent(
   const locked = acquireLock(platform);
   if (!locked) {
     fileLog('agent', 'Skipped (locked)', { platform });
-    return;
+    return false;
   }
 
   const startTime = Date.now();
@@ -97,4 +99,5 @@ export async function runPlatformAgent(
     writeHeartbeatTime(platform);
     releaseLock(platform);
   }
+  return true;
 }

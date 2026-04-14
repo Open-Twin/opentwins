@@ -94,12 +94,20 @@ export function createScheduler(config: OpenTwinsConfig): Bree {
     });
   });
 
-  // Custom logger: Bree calls `logger.info(msg, metadata)` where metadata is
-  // often `undefined` (when `outputWorkerMetadata` isn't enabled), which
-  // default-console prints as a trailing "undefined". Drop the 2nd arg when
-  // it's nullish to keep the output clean.
+  // Custom logger: silence Bree's per-worker lifecycle noise (online /
+  // exited with code 0) — cron fires every 5 min and most cycles are
+  // no-op interval checks; logging each spawn floods the output. Keep
+  // non-zero exits, warnings, and errors visible. Also drop trailing
+  // `undefined` that Bree passes when metadata isn't configured.
+  const isLifecycleNoise = (msg: unknown): boolean => {
+    if (typeof msg !== 'string') return false;
+    return / online$/.test(msg) || / exited with code 0/.test(msg);
+  };
   const cleanLogger = {
-    info: (msg: unknown, meta?: unknown) => meta == null ? console.log(msg) : console.log(msg, meta),
+    info: (msg: unknown, meta?: unknown) => {
+      if (isLifecycleNoise(msg)) return;
+      meta == null ? console.log(msg) : console.log(msg, meta);
+    },
     warn: (msg: unknown, meta?: unknown) => meta == null ? console.warn(msg) : console.warn(msg, meta),
     error: (msg: unknown, meta?: unknown) => meta == null ? console.error(msg) : console.error(msg, meta),
   };
