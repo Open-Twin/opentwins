@@ -1,102 +1,105 @@
 import type { PlatformLimits } from './schema.js';
 import type { PlatformType } from '../util/platform-types.js';
 
+// Conservative starting limits — tuned to keep new accounts under
+// platform anti-spam heuristics. Users can raise these manually once
+// the account has a track record.
 export const DEFAULT_LIMITS: Record<PlatformType, PlatformLimits> = {
   reddit: {
     daily: {
-      comments: { limit: 10 },
-      upvotes: { limit: 20 },
+      comments: { limit: 6 },
+      upvotes: { limit: 12 },
     },
     weekly: {
-      posts: { limit: 2 },
+      posts: { limit: 1 },
     },
   },
   twitter: {
     daily: {
-      promo_replies: { limit: 5 },
-      non_promo_engagement: { limit: 20 },
-      strategic_replies: { limit: 5 },
+      promo_replies: { limit: 3 },
+      non_promo_engagement: { limit: 10 },
+      strategic_replies: { limit: 3 },
     },
     weekly: {
-      original_tweets: { limit: 14 },
-      quote_tweets: { limit: 5 },
-      articles: { limit: 2 },
+      original_tweets: { limit: 7 },
+      quote_tweets: { limit: 3 },
+      articles: { limit: 1 },
       polls: { limit: 1 },
     },
   },
   linkedin: {
     daily: {
-      comments: { limit: 4 },
-      reactions: { limit: 12 },
+      comments: { limit: 3 },
+      reactions: { limit: 8 },
     },
     weekly: {
-      posts: { limit: 5 },
-      articles: { limit: 2 },
-      connection_requests: { limit: 120 },
-      reposts: { limit: 2 },
+      posts: { limit: 3 },
+      articles: { limit: 1 },
+      connection_requests: { limit: 25 },
+      reposts: { limit: 1 },
       polls: { limit: 1 },
     },
   },
   bluesky: {
     daily: {
-      comments: { limit: 10 },
+      comments: { limit: 6 },
     },
     weekly: {
-      posts: { limit: 3 },
-      quotes: { limit: 4 },
+      posts: { limit: 2 },
+      quotes: { limit: 2 },
     },
   },
   threads: {
     daily: {
-      comments: { limit: 10 },
+      comments: { limit: 6 },
     },
     weekly: {
-      posts: { limit: 3 },
-      quotes: { limit: 6 },
+      posts: { limit: 2 },
+      quotes: { limit: 3 },
     },
   },
   medium: {
     daily: {
-      responses: { limit: 5 },
-      clap_sessions: { limit: 15 },
+      responses: { limit: 3 },
+      clap_sessions: { limit: 8 },
     },
   },
   substack: {
     daily: {
-      comments: { limit: 4 },
-      likes: { limit: 8 },
-      subscribes: { limit: 3 },
+      comments: { limit: 3 },
+      likes: { limit: 5 },
+      subscribes: { limit: 2 },
       notes_posted: { limit: 2 },
-      restacks: { limit: 3 },
+      restacks: { limit: 2 },
     },
     weekly: {
-      newsletters: { limit: 2 },
+      newsletters: { limit: 1 },
     },
   },
   devto: {
     daily: {
-      comments: { limit: 6 },
-      reactions: { limit: 15 },
+      comments: { limit: 3 },
+      reactions: { limit: 8 },
     },
     weekly: {
-      articles: { limit: 2 },
+      articles: { limit: 1 },
       tag_follows: { limit: 2 },
     },
   },
   ph: {
     daily: {
-      comments: { limit: 8 },
-      upvotes: { limit: 12 },
-      follows: { limit: 25 },
-      bookmarks: { limit: 50 },
+      comments: { limit: 4 },
+      upvotes: { limit: 6 },
+      follows: { limit: 10 },
+      bookmarks: { limit: 15 },
     },
   },
   ih: {
     daily: {
-      comments: { limit: 4 },
+      comments: { limit: 3 },
     },
     weekly: {
-      posts: { limit: 2 },
+      posts: { limit: 1 },
     },
   },
 };
