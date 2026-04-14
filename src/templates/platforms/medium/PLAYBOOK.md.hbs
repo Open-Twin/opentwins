@@ -14,12 +14,12 @@
 
 ### Step 1: Check article listing (RSS — no browser needed)
 
-Use `exec` to fetch the public RSS feed:
+Fetch the public RSS feed and **scope the extraction at curl time** — the raw feed is ~80 KB on one-line XML, which overflows the harness output cap and forces a cache file. Pipe through grep to keep only the metadata fields:
 ```bash
-curl -s "https://medium.com/feed/@{{handle_slug}}"
+curl -s "https://medium.com/feed/@{{handle_slug}}" | grep -E "<title>|<pubDate>|<category>" | head -60
 ```
 
-Extract from each `<item>`: `<title>`, `<pubDate>`, `<category>` tags. This gives article titles, dates, and topics without browser.
+This returns ~4 KB instead of 80 KB. Each `<item>` contributes one `<title>`, one `<pubDate>`, and N `<category>` lines — that's all that's needed for memory updates. ❌ Never use `curl ... | head -200` here: RSS lines are long, 200 lines = whole feed.
 
 **Note:** RSS does NOT include claps or response counts — use memory files for those.
 
