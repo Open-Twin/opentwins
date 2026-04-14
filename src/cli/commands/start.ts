@@ -19,7 +19,7 @@ interface StartOptions {
 program
   .command('start')
   .description('Start OpenTwins (scheduler + dashboard)')
-  .option('-d, --daemon', 'Run scheduler as detached background daemon (dashboard not started — run `opentwins ui` separately)')
+  .option('-d, --daemon', 'Run as detached background daemon')
   .option('--no-ui', 'Skip the dashboard, run scheduler only')
   .option('-p, --port <port>', 'Dashboard port', '3847')
   .action(handleAction(async (opts: StartOptions) => {
@@ -31,12 +31,17 @@ program
     if (opts.daemon) {
       const alreadyRunning = await isDaemonRunning();
       if (alreadyRunning) {
-        log.warn('Scheduler daemon is already running. Use `opentwins stop` to stop it first.');
+        log.warn('OpenTwins daemon is already running. Use `opentwins stop` to stop it first.');
         return;
       }
-      const pid = await startDaemon();
-      log.success(`OpenTwins scheduler started as daemon (PID: ${pid})`);
-      log.info('Run `opentwins ui` to open the dashboard.');
+      const extraArgs: string[] = [];
+      if (opts.noUi) extraArgs.push('--no-ui');
+      if (opts.port !== '3847') extraArgs.push('--port', opts.port);
+      const pid = await startDaemon(extraArgs);
+      log.success(`OpenTwins started as daemon (PID: ${pid})`);
+      if (!opts.noUi) {
+        log.info(`Dashboard available at http://localhost:${opts.port}`);
+      }
       return;
     }
 
