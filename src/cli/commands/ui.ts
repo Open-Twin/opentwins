@@ -4,7 +4,7 @@ import * as log from '../../util/logger.js';
 
 program
   .command('ui')
-  .description('Start local dashboard on localhost:3847')
+  .description('Start the dashboard only (scheduler not started — use `opentwins start` for both)')
   .option('-p, --port <port>', 'Port number', '3847')
   .action(handleAction(async (opts: { port: string }) => {
     const port = parseInt(opts.port);

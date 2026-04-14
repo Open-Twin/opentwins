@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { getLockFile, getLastHeartbeatFile, getPipelineStatePath } from '../util/paths.js';
 import { getDb } from '../db/index.js';
 import { loadConfig, configExists } from '../config/loader.js';
-import { isDaemonRunning, startDaemon, stopDaemon } from '../scheduler/daemon.js';
+import { isDaemonRunning } from '../scheduler/daemon.js';
 import { getQualityMetrics, getDisagreementRatio } from './api/quality.js';
 import { handleUpdateConfig } from './api/config.js';
 import { handleListAgents, handleGetAgent, handleRunAgent, handleStopAgent, handleUpdateLimits, handleUpdateAgent, handleGetAgentFeed, handleBrowserSetup, handleBrowserConfirm } from './api/agents.js';
@@ -15,7 +15,7 @@ import { handleBrowserStart, handleBrowserStop, handleBrowserOpen, handleBrowser
 import { handleUsage } from './api/usage.js';
 import { getSessions } from '../util/session-parser.js';
 import * as log from '../util/logger.js';
-import { fileLog, fileError, readLogs, cleanOldLogs } from '../util/logger.js';
+import { fileLog, readLogs, cleanOldLogs } from '../util/logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -195,24 +195,6 @@ export async function startDashboard(port: number): Promise<void> {
 
   app.get('/api/quality', (req, res) => getQualityMetrics(req, res));
   app.get('/api/quality/disagreement', (req, res) => getDisagreementRatio(req, res));
-
-  // Auto-start daemon if any platform has auto_run enabled
-  if (configExists()) {
-    const initConfig = loadConfig();
-    const hasAutoRun = initConfig.platforms.some((p) => p.enabled && p.auto_run);
-    if (hasAutoRun) {
-      const running = await isDaemonRunning();
-      if (!running) {
-        try {
-          const pid = await startDaemon();
-          fileLog('server', 'Daemon auto-started', { pid });
-        } catch (err) {
-          fileError('server', 'Daemon auto-start failed', { error: err instanceof Error ? err.message : String(err) });
-        }
-      }
-    }
-  }
-
 
   // Config editing
   app.put('/api/config', (req, res) => { handleUpdateConfig(req, res); });

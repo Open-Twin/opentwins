@@ -10,11 +10,19 @@ import { resetLimitsIfNeeded } from '../../scheduler/limits-reset.js';
 import { getPidFile } from '../../util/paths.js';
 import * as log from '../../util/logger.js';
 
+interface StartOptions {
+  daemon?: boolean;
+  noUi?: boolean;
+  port: string;
+}
+
 program
   .command('start')
-  .description('Start the OpenTwins scheduler (cron-style automation)')
-  .option('-d, --daemon', 'Run as detached background daemon')
-  .action(handleAction(async (opts: { daemon?: boolean }) => {
+  .description('Start OpenTwins (scheduler + dashboard)')
+  .option('-d, --daemon', 'Run scheduler as detached background daemon (dashboard not started — run `opentwins ui` separately)')
+  .option('--no-ui', 'Skip the dashboard, run scheduler only')
+  .option('-p, --port <port>', 'Dashboard port', '3847')
+  .action(handleAction(async (opts: StartOptions) => {
     const config = loadConfig();
 
     // Reset limits on startup
@@ -28,11 +36,11 @@ program
       }
       const pid = await startDaemon();
       log.success(`OpenTwins scheduler started as daemon (PID: ${pid})`);
-      log.info('Use `opentwins ui` to open the dashboard in another terminal.');
+      log.info('Run `opentwins ui` to open the dashboard.');
       return;
     }
 
-    console.log(chalk.bold('Starting OpenTwins scheduler...'));
+    console.log(chalk.bold('Starting OpenTwins...'));
     console.log('');
 
     const autoRunPlatforms = config.platforms.filter((p) => p.enabled && p.auto_run);
@@ -44,6 +52,11 @@ program
     await scheduler.start();
     log.success('Scheduler running');
 
+    if (!opts.noUi) {
+      const { startDashboard } = await import('../../ui/server.js');
+      await startDashboard(parseInt(opts.port));
+    }
+
     // If spawned as detached daemon, write our own PID so parent can track us
     if (process.env.OPENTWINS_DAEMON === '1') {
       const pidFile = getPidFile();
@@ -53,11 +66,11 @@ program
     }
 
     console.log('');
-    log.info('Press Ctrl+C to stop. Run `opentwins ui` in another terminal for the dashboard.');
+    log.info('Press Ctrl+C to stop.');
 
     const shutdown = async () => {
       console.log('');
-      log.info('Shutting down scheduler...');
+      log.info('Shutting down...');
       await scheduler.stop();
       // Clean up PID file if we wrote one
       if (process.env.OPENTWINS_DAEMON === '1') {
@@ -66,7 +79,7 @@ program
           unlinkSync(getPidFile());
         } catch { /* ignore */ }
       }
-      log.success('Scheduler stopped.');
+      log.success('Stopped.');
       process.exit(0);
     };
 
