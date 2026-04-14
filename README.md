@@ -32,9 +32,8 @@ opentwins browser setup twitter
 opentwins browser setup linkedin
 # ... repeat for each platform
 
-# Start the scheduler in background and open the dashboard
-opentwins start -d   # background daemon
-opentwins ui         # dashboard at http://localhost:3847
+# Launch OpenTwins (scheduler + dashboard) as a background daemon
+opentwins start -d   # dashboard at http://localhost:3847
 ```
 
 `opentwins init` checks prerequisites, starts the dashboard, and opens a setup wizard at `http://localhost:3847/setup`. The wizard walks you through authentication, identity, platforms, voice, and schedule — no CLI prompts.
@@ -71,9 +70,10 @@ opentwins --version
 opentwins init              Launch the web setup wizard (default)
 opentwins init --cli        Interactive CLI setup (fallback, headless-friendly)
 opentwins init --force      Overwrite an existing config
-opentwins start             Start the scheduler (foreground)
-opentwins start -d          Start the scheduler as background daemon
-opentwins stop              Stop the daemon
+opentwins start             Start scheduler + dashboard (foreground)
+opentwins start -d          Same, as a detached background daemon
+opentwins start --no-ui     Scheduler only (skip the dashboard)
+opentwins stop              Stop the daemon (scheduler + dashboard)
 opentwins status            Show agent states and schedule
 
 opentwins run reddit        Run one agent manually
@@ -85,8 +85,6 @@ opentwins browser health             Check all browser sessions
 opentwins browser list               List configured profiles
 
 opentwins config show       View current configuration
-opentwins ui                Start web dashboard only
-
 opentwins logs reddit       View today's activity log
 opentwins audit reddit      View today's quality metrics
 ```
@@ -124,7 +122,7 @@ Runs daily to generate fresh content for all platforms:
 
 ### Web Dashboard
 
-Access at `http://localhost:3847` when running `opentwins ui`. The dashboard can control the scheduler daemon via the Automation On/Off button.
+Access at `http://localhost:3847` when OpenTwins is running (`opentwins start` or `opentwins start -d`). The dashboard can control the scheduler daemon via the Automation On/Off button.
 
 - **Command** — Mission control: KPI cards (agents, runs, tool calls, automation), platform agent cards, recent runs table, content pipeline flow
 - **Agents** — Per-agent controls with hero panel (run/stop/remove), today's stats, limits with progress bars, behavior tuning, today's schedule, live activity feed from the latest Claude session

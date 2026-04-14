@@ -5,7 +5,7 @@ import * as log from '../../util/logger.js';
 
 program
   .command('stop')
-  .description('Stop the OpenTwins daemon')
+  .description('Stop the OpenTwins daemon (scheduler + dashboard)')
   .action(handleAction(async () => {
     const stopped = await stopDaemon();
     if (stopped) {

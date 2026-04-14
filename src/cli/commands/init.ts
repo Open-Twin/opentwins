@@ -319,8 +319,7 @@ program
     }
     console.log('');
     console.log('  2. Start your twins:');
-    console.log('     opentwins start -d   # scheduler in background');
-    console.log('     opentwins ui         # open dashboard');
+    console.log('     opentwins start -d   # scheduler + dashboard at http://localhost:3847');
     console.log('');
 
     const startDashboard = await confirm({

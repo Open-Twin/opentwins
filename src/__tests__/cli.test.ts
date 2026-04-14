@@ -98,7 +98,7 @@ describe('cli command registration', () => {
     const names = program.commands.map((c) => c.name());
 
     // The CLI must surface every command we advertise.
-    for (const expected of ['init', 'start', 'stop', 'status', 'run', 'browser', 'config', 'ui', 'logs', 'audit']) {
+    for (const expected of ['init', 'start', 'stop', 'status', 'run', 'browser', 'config', 'logs', 'audit']) {
       expect(names).toContain(expected);
     }
   });
