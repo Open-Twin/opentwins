@@ -369,15 +369,23 @@ export async function handleUpdateAgent(req: Request, res: Response): Promise<vo
       }
       saveConfig(config);
 
-      // Restart daemon so it picks up the new config (auto_run or interval changes)
-      const needsRestart = auto_run !== undefined || (heartbeat_interval_minutes !== undefined && config.platforms[platformIndex].auto_run);
-      if (needsRestart) {
+      // Reload the in-process scheduler so it picks up the new config.
+      // In-place reload avoids killing the UI server we're currently
+      // responding from, which would happen with a full daemon restart.
+      const needsReload = auto_run !== undefined || (heartbeat_interval_minutes !== undefined && config.platforms[platformIndex].auto_run);
+      if (needsReload) {
         try {
-          const { stopDaemon, startDaemon } = await import('../../scheduler/daemon.js');
-          await stopDaemon();
-          const hasAutoRun = config.platforms.some((p) => p.enabled && p.auto_run);
-          if (hasAutoRun) {
-            await startDaemon();
+          const { reloadActiveScheduler } = await import('../../scheduler/index.js');
+          const reloaded = await reloadActiveScheduler(config);
+          if (!reloaded) {
+            // No active scheduler in this process (e.g. only daemon running,
+            // UI spawned separately): fall back to daemon restart.
+            const { stopDaemon, startDaemon } = await import('../../scheduler/daemon.js');
+            await stopDaemon();
+            const hasAutoRun = config.platforms.some((p) => p.enabled && p.auto_run);
+            if (hasAutoRun) {
+              await startDaemon();
+            }
           }
         } catch { /* best effort */ }
       }

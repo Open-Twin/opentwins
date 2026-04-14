@@ -25,6 +25,28 @@ function findWorker(name: string): string {
   return resolve(__dirname, name); // Fallback
 }
 
+// Module-level registry so the UI server can reload the scheduler in-place
+// after config changes (e.g. interval tweak) without tearing down the host
+// process — which would also kill the UI server itself.
+let activeScheduler: Bree | null = null;
+
+export function setActiveScheduler(s: Bree | null): void {
+  activeScheduler = s;
+}
+
+export function getActiveScheduler(): Bree | null {
+  return activeScheduler;
+}
+
+export async function reloadActiveScheduler(config: OpenTwinsConfig): Promise<boolean> {
+  if (!activeScheduler) return false;
+  await activeScheduler.stop();
+  const next = createScheduler(config);
+  await next.start();
+  activeScheduler = next;
+  return true;
+}
+
 export function createScheduler(config: OpenTwinsConfig): Bree {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const jobs: any[] = [];

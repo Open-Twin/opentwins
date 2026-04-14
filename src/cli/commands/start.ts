@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { program } from '../program.js';
 import { handleAction } from '../error-handler.js';
 import { loadConfig } from '../../config/loader.js';
-import { createScheduler } from '../../scheduler/index.js';
+import { createScheduler, setActiveScheduler } from '../../scheduler/index.js';
 import { startDaemon, stopDaemon, isDaemonRunning } from '../../scheduler/daemon.js';
 import { resetLimitsIfNeeded } from '../../scheduler/limits-reset.js';
 import { getPidFile } from '../../util/paths.js';
@@ -55,6 +55,7 @@ program
 
     const scheduler = createScheduler(config);
     await scheduler.start();
+    setActiveScheduler(scheduler);
     log.success('Scheduler running');
 
     const { startDashboard } = await import('../../ui/server.js');
@@ -75,6 +76,7 @@ program
       console.log('');
       log.info('Shutting down...');
       await scheduler.stop();
+      setActiveScheduler(null);
       // Clean up PID file if we wrote one
       if (process.env.OPENTWINS_DAEMON === '1') {
         try {
