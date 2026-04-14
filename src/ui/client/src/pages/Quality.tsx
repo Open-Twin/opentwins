@@ -80,9 +80,11 @@ export function Quality() {
   const historyData = data?.history?.map((h) => {
     let label: string;
     if (h.hour) {
-      // Hour key is UTC "YYYY-MM-DDTHH" — render in local time
-      const utc = new Date(h.hour + ':00:00Z');
-      label = `${String(utc.getHours()).padStart(2, '0')}:00`;
+      // Hour key is already server-local time ("YYYY-MM-DDTHH") — the
+      // memory log timestamps it came from have no timezone, and the
+      // server used local getHours() when building the range. Just
+      // render HH from the string.
+      label = `${h.hour.slice(11, 13)}:00`;
     } else {
       label = h.date.slice(5); // MM-DD
     }
