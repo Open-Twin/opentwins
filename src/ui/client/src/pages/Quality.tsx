@@ -18,13 +18,17 @@ interface QualityData {
   } | null;
   history: Array<{
     date: string;
+    hour?: string; // present when bucketed by hour
     styles: string;
     comments: number;
     disagreements: number;
     avg_words: number;
   }>;
   emDashViolations: number;
+  range?: { days?: number; hours?: number };
 }
+
+type QualityTimeframe = '24h' | '7' | '14' | '30';
 
 const PLATFORM_COLORS: Record<string, string> = {
   reddit: '#FF4500', twitter: '#1DA1F2', linkedin: '#0A66C2', bluesky: '#0085FF',
@@ -58,12 +62,14 @@ export function Quality() {
   const { data: statusData } = useApi<{ platforms: Array<{ platform: string }> }>('/api/status');
   const platforms = statusData?.platforms.map((p) => p.platform) || [];
   const [platform, setPlatform] = useState('');
-  const [days, setDays] = useState('14');
+  const [days, setDays] = useState<QualityTimeframe>('14');
 
   const activePlatform = platform || platforms[0] || 'linkedin';
+  const isHourly = days === '24h';
 
+  const qs = isHourly ? 'hours=24' : `days=${days}`;
   const { data, loading } = useApi<QualityData>(
-    `/api/quality?platform=${activePlatform}&date=${today()}&days=${days}`,
+    `/api/quality?platform=${activePlatform}&date=${today()}&${qs}`,
     [activePlatform, days]
   );
 
@@ -71,12 +77,22 @@ export function Quality() {
     ? Object.entries(JSON.parse(data.today.styles || '{}')).map(([name, value]) => ({ name, value: value as number }))
     : [];
 
-  const historyData = data?.history?.map((h) => ({
-    date: h.date.slice(5),
-    comments: h.comments,
-    disagreeRate: h.comments > 0 ? Math.round((h.disagreements / h.comments) * 100) : 0,
-    avgWords: h.avg_words,
-  })) || [];
+  const historyData = data?.history?.map((h) => {
+    let label: string;
+    if (h.hour) {
+      // Hour key is UTC "YYYY-MM-DDTHH" — render in local time
+      const utc = new Date(h.hour + ':00:00Z');
+      label = `${String(utc.getHours()).padStart(2, '0')}:00`;
+    } else {
+      label = h.date.slice(5); // MM-DD
+    }
+    return {
+      date: label,
+      comments: h.comments,
+      disagreeRate: h.comments > 0 ? Math.round((h.disagreements / h.comments) * 100) : 0,
+      avgWords: h.avg_words,
+    };
+  }) || [];
 
   const todayComments = data?.today?.comments || 0;
   const todayAvgWords = data?.today?.avg_words || 0;
@@ -142,12 +158,13 @@ export function Quality() {
         <div className="flex items-center gap-2">
           <span className="mono text-[12px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Timeframe</span>
           <div className="flex gap-1">
-            {(['7', '14', '30'] as const).map((d) => {
-              const isActive = days === d;
+            {(['24h', '7', '14', '30'] as const).map((tf) => {
+              const isActive = days === tf;
+              const label = tf === '24h' ? '24 hours' : `${tf} days`;
               return (
                 <button
-                  key={d}
-                  onClick={() => setDays(d)}
+                  key={tf}
+                  onClick={() => setDays(tf)}
                   className="px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200"
                   style={{
                     background: isActive ? 'var(--c-panel)' : 'transparent',
@@ -155,7 +172,7 @@ export function Quality() {
                     border: `1px solid ${isActive ? 'var(--c-teal-dim)' : 'var(--c-border-dim)'}`,
                   }}
                 >
-                  {d} days
+                  {label}
                 </button>
               );
             })}
@@ -210,7 +227,7 @@ export function Quality() {
 
           {/* ── Charts ──────────────────────────────────────── */}
           <div className="animate-fade-up stagger-3">
-            <div className="section-title mb-4">Trends · {days} days</div>
+            <div className="section-title mb-4">Trends · {isHourly ? 'last 24 hours' : `${days} days`}</div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Style Distribution */}
               <ChartPanel
@@ -249,7 +266,7 @@ export function Quality() {
               {/* Volume */}
               <ChartPanel
                 title="Volume"
-                subtitle="Comments posted per day"
+                subtitle={isHourly ? 'Comments posted per hour' : 'Comments posted per day'}
                 isEmpty={historyData.length === 0}
                 emptyHint="History builds up as the agent runs"
               >

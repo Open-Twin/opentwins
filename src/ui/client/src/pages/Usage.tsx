@@ -21,13 +21,21 @@ interface DailyUsage extends UsageTotals {
   platform: string;
 }
 
+interface HourlyUsage extends UsageTotals {
+  hour: string; // "YYYY-MM-DDTHH"
+  platform: string;
+}
+
 interface UsageReport {
-  days: DailyUsage[];
+  days?: DailyUsage[];
+  hours?: HourlyUsage[];
   totals: UsageTotals;
   byPlatform: Record<string, UsageTotals>;
   byModel: Record<string, UsageTotals>;
-  range: { start: string; end: string; days: number };
+  range: { start: string; end: string; days?: number; hours?: number };
 }
+
+type Timeframe = '24h' | '7' | '14' | '30';
 
 const PLATFORM_COLORS: Record<string, string> = {
   reddit: '#FF4500', twitter: '#1DA1F2', linkedin: '#0A66C2', bluesky: '#0085FF',
@@ -68,58 +76,82 @@ function formatCost(n: number): string {
 }
 
 export function Usage() {
-  const [days, setDays] = useState<'7' | '14' | '30'>('7');
+  const [timeframe, setTimeframe] = useState<Timeframe>('7');
   const [platform, setPlatform] = useState<string>('all');
+  const isHourly = timeframe === '24h';
 
   const { data: statusData } = useApi<{ platforms: Array<{ platform: string }> }>('/api/status');
   const platforms = ['all', ...(statusData?.platforms.map((p) => p.platform) || [])];
 
+  const qs = isHourly ? 'hours=24' : `days=${timeframe}`;
   const url = platform === 'all'
-    ? `/api/usage?days=${days}`
-    : `/api/usage?days=${days}&platform=${platform}`;
+    ? `/api/usage?${qs}`
+    : `/api/usage?${qs}&platform=${platform}`;
 
-  const { data, loading } = useApi<UsageReport>(url, [days, platform]);
+  const { data, loading } = useApi<UsageReport>(url, [timeframe, platform]);
 
-  // Derive chart data — fill in missing days so the chart shows a continuous range
-  const dailyChartData = useMemo(() => {
+  // Derive chart data — fill in missing buckets so the chart shows a continuous range
+  const chartData = useMemo(() => {
     if (!data) return [];
-    const byDate: Record<string, {
-      date: string;
+
+    type Bucket = {
+      key: string;
+      label: string;
       input: number;
       output: number;
       cacheWrite: number;
       cacheRead: number;
       cost: number;
       errors: number;
-    }> = {};
+    };
 
-    // Fill full range with zeros
-    const startD = new Date(data.range.start);
-    const endD = new Date(data.range.end);
-    for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
-      const key = d.toISOString().split('T')[0];
-      byDate[key] = { date: key, input: 0, output: 0, cacheWrite: 0, cacheRead: 0, cost: 0, errors: 0 };
+    const byKey: Record<string, Bucket> = {};
+
+    if (isHourly && data.hours) {
+      // Build 24 hourly buckets using LOCAL time
+      const end = new Date();
+      end.setMinutes(0, 0, 0);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      for (let i = 23; i >= 0; i--) {
+        const d = new Date(end.getTime() - i * 3600000);
+        const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}`;
+        byKey[key] = { key, label: `${pad(d.getHours())}:00`, input: 0, output: 0, cacheWrite: 0, cacheRead: 0, cost: 0, errors: 0 };
+      }
+
+      for (const h of data.hours) {
+        // API keys are UTC — convert to local hour key to match our buckets
+        const utc = new Date(h.hour + ':00:00Z');
+        const key = `${utc.getFullYear()}-${pad(utc.getMonth() + 1)}-${pad(utc.getDate())}T${pad(utc.getHours())}`;
+        const entry = byKey[key];
+        if (!entry) continue;
+        entry.input += h.inputTokens;
+        entry.output += h.outputTokens;
+        entry.cacheWrite += h.cacheCreateTokens;
+        entry.cacheRead += h.cacheReadTokens;
+        entry.cost += h.costUsd;
+        entry.errors += h.errors;
+      }
+    } else if (data.days && data.range.start && data.range.end) {
+      const startD = new Date(data.range.start);
+      const endD = new Date(data.range.end);
+      for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
+        const key = d.toISOString().split('T')[0];
+        byKey[key] = { key, label: key.slice(5), input: 0, output: 0, cacheWrite: 0, cacheRead: 0, cost: 0, errors: 0 };
+      }
+      for (const d of data.days) {
+        const entry = byKey[d.date];
+        if (!entry) continue;
+        entry.input += d.inputTokens;
+        entry.output += d.outputTokens;
+        entry.cacheWrite += d.cacheCreateTokens;
+        entry.cacheRead += d.cacheReadTokens;
+        entry.cost += d.costUsd;
+        entry.errors += d.errors;
+      }
     }
 
-    // Aggregate across platforms per date
-    for (const d of data.days) {
-      const entry = byDate[d.date];
-      if (!entry) continue;
-      entry.input += d.inputTokens;
-      entry.output += d.outputTokens;
-      entry.cacheWrite += d.cacheCreateTokens;
-      entry.cacheRead += d.cacheReadTokens;
-      entry.cost += d.costUsd;
-      entry.errors += d.errors;
-    }
-
-    return Object.values(byDate)
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .map((d) => ({
-        ...d,
-        label: d.date.slice(5), // MM-DD
-      }));
-  }, [data]);
+    return Object.values(byKey).sort((a, b) => a.key.localeCompare(b.key));
+  }, [data, isHourly]);
 
   // Per-platform table rows
   const platformRows = useMemo(() => {
@@ -131,8 +163,12 @@ export function Usage() {
 
   const totals = data?.totals;
   const hasErrors = (totals?.errors ?? 0) > 0;
-  const dailyAvgCost = totals && data ? totals.costUsd / data.range.days : 0;
+  const numDays = data?.range.days ?? 0;
+  const numHours = data?.range.hours ?? 0;
+  const spanDays = isHourly ? numHours / 24 : numDays;
+  const dailyAvgCost = totals && spanDays > 0 ? totals.costUsd / spanDays : 0;
   const projectedMonth = dailyAvgCost * 30;
+  const spanLabel = isHourly ? `${numHours}h` : `${numDays}d`;
 
   // Cache hit rate: how much of the input context came from cache
   // (cache_read) / (input + cache_read + cache_write) — higher is better
@@ -190,12 +226,13 @@ export function Usage() {
         <div className="flex items-center gap-2">
           <span className="mono text-[12px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Timeframe</span>
           <div className="flex gap-1">
-            {(['7', '14', '30'] as const).map((d) => {
-              const isActive = days === d;
+            {(['24h', '7', '14', '30'] as const).map((tf) => {
+              const isActive = timeframe === tf;
+              const label = tf === '24h' ? '24 hours' : `${tf} days`;
               return (
                 <button
-                  key={d}
-                  onClick={() => setDays(d)}
+                  key={tf}
+                  onClick={() => setTimeframe(tf)}
                   className="px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200"
                   style={{
                     background: isActive ? 'var(--c-panel)' : 'transparent',
@@ -203,7 +240,7 @@ export function Usage() {
                     border: `1px solid ${isActive ? 'var(--c-teal-dim)' : 'var(--c-border-dim)'}`,
                   }}
                 >
-                  {d} days
+                  {label}
                 </button>
               );
             })}
@@ -229,7 +266,7 @@ export function Usage() {
             <KpiCard
               label="Estimated Cost"
               value={formatCost(totals.costUsd)}
-              sub={`${data!.range.days}d · avg ${formatCost(dailyAvgCost)}/day`}
+              sub={`${spanLabel} · avg ${formatCost(isHourly ? totals.costUsd / Math.max(1, numHours) : dailyAvgCost)}/${isHourly ? 'hr' : 'day'}`}
               accent="teal"
             />
             <KpiCard
@@ -264,7 +301,7 @@ export function Usage() {
                   <span className="font-semibold" style={{ color: 'var(--c-teal)' }}>{formatCost(projectedMonth)}</span>
                 </div>
                 <div className="mono text-[11px] mt-1" style={{ color: 'var(--c-text-muted)' }}>
-                  Based on {data!.range.days}-day average · If you're on Claude Code subscription, actual billing is the flat fee
+                  Based on {isHourly ? '24-hour' : `${numDays}-day`} average · If you're on Claude Code subscription, actual billing is the flat fee
                 </div>
               </div>
             </div>
@@ -273,9 +310,9 @@ export function Usage() {
           {/* ── Charts ────────────────────────────────────── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-fade-up stagger-4">
             {/* Cost over time */}
-            <ChartPanel title="Daily Cost" subtitle={`USD per day · ${data!.range.days} days`}>
+            <ChartPanel title={isHourly ? 'Hourly Cost' : 'Daily Cost'} subtitle={isHourly ? `USD per hour · last 24h` : `USD per day · ${numDays} days`}>
               <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={dailyChartData} barSize={18} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <BarChart data={chartData} barSize={18} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                   <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
                   <YAxis
@@ -295,9 +332,9 @@ export function Usage() {
             </ChartPanel>
 
             {/* Output tokens over time — what Claude actually generated */}
-            <ChartPanel title="Daily Output" subtitle="Tokens Claude generated per day">
+            <ChartPanel title={isHourly ? 'Hourly Output' : 'Daily Output'} subtitle={isHourly ? 'Tokens per hour' : 'Tokens Claude generated per day'}>
               <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={dailyChartData} barSize={18} margin={{ top: 10, right: 10, left: -5, bottom: 0 }}>
+                <BarChart data={chartData} barSize={18} margin={{ top: 10, right: 10, left: -5, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                   <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
                   <YAxis
@@ -319,12 +356,12 @@ export function Usage() {
             {/* Errors over time */}
             <ChartPanel
               title="Errors"
-              subtitle="Tool failures per day"
-              isEmpty={dailyChartData.every((d) => d.errors === 0)}
+              subtitle={isHourly ? 'Tool failures per hour' : 'Tool failures per day'}
+              isEmpty={chartData.every((d) => d.errors === 0)}
               emptyHint="No errors recorded in this range"
             >
               <ResponsiveContainer width="100%" height={240}>
-                <LineChart data={dailyChartData} margin={{ top: 10, right: 20, left: -15, bottom: 0 }}>
+                <LineChart data={chartData} margin={{ top: 10, right: 20, left: -15, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                   <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: '#94a3b8', fontSize: 11, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} allowDecimals={false} />

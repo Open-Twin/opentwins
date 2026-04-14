@@ -68,6 +68,20 @@ export interface DailyUsage {
   errors: number;
 }
 
+export interface HourlyUsage {
+  // ISO-hour key — "YYYY-MM-DDTHH" (UTC)
+  hour: string;
+  platform: string;
+  sessions: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreateTokens: number;
+  cacheReadTokens: number;
+  totalTokens: number;
+  costUsd: number;
+  errors: number;
+}
+
 export interface UsageTotals {
   sessions: number;
   inputTokens: number;
@@ -196,8 +210,20 @@ export interface UsageReport {
   byModel: Record<string, UsageTotals>;
 }
 
+export interface HourlyUsageReport {
+  hours: HourlyUsage[];
+  totals: UsageTotals;
+  byPlatform: Record<string, UsageTotals>;
+  byModel: Record<string, UsageTotals>;
+}
+
 function dateKey(iso: string): string {
   return (iso || '').slice(0, 10);
+}
+
+function hourKey(iso: string): string {
+  // "2026-04-14T06:12:34.000Z" → "2026-04-14T06"
+  return (iso || '').slice(0, 13);
 }
 
 export function getUsageReport(platforms: string[], startDate: string, endDate: string): UsageReport {
@@ -266,6 +292,77 @@ export function getUsageReport(platforms: string[], startDate: string, endDate: 
     }
   }
   report.days.sort((a, b) => a.date.localeCompare(b.date));
+
+  return report;
+}
+
+export function getHourlyUsageReport(
+  platforms: string[],
+  startIso: string,
+  endIso: string,
+): HourlyUsageReport {
+  const report: HourlyUsageReport = {
+    hours: [],
+    totals: emptyTotals(),
+    byPlatform: {},
+    byModel: {},
+  };
+
+  // hour -> platform -> HourlyUsage
+  const hourMap = new Map<string, Map<string, HourlyUsage>>();
+
+  for (const platform of platforms) {
+    for (const file of listSessionFiles(platform)) {
+      const usage = extractUsageFromSession(file, platform);
+      if (!usage) continue;
+
+      if (!usage.startedAt) continue;
+      if (usage.startedAt < startIso || usage.startedAt > endIso) continue;
+
+      const hr = hourKey(usage.startedAt);
+      if (!hr) continue;
+
+      if (!hourMap.has(hr)) hourMap.set(hr, new Map());
+      const hourPlatforms = hourMap.get(hr)!;
+      const existing = hourPlatforms.get(platform) || {
+        hour: hr,
+        platform,
+        sessions: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheCreateTokens: 0,
+        cacheReadTokens: 0,
+        totalTokens: 0,
+        costUsd: 0,
+        errors: 0,
+      };
+      existing.sessions += 1;
+      existing.inputTokens += usage.inputTokens;
+      existing.outputTokens += usage.outputTokens;
+      existing.cacheCreateTokens += usage.cacheCreateTokens;
+      existing.cacheReadTokens += usage.cacheReadTokens;
+      existing.totalTokens += usage.totalTokens;
+      existing.costUsd += usage.costUsd;
+      existing.errors += usage.errorCount;
+      hourPlatforms.set(platform, existing);
+
+      addUsage(report.totals, usage);
+
+      if (!report.byPlatform[platform]) report.byPlatform[platform] = emptyTotals();
+      addUsage(report.byPlatform[platform], usage);
+
+      const modelKey = usage.modelFamily;
+      if (!report.byModel[modelKey]) report.byModel[modelKey] = emptyTotals();
+      addUsage(report.byModel[modelKey], usage);
+    }
+  }
+
+  for (const [, platformMap] of hourMap) {
+    for (const [, hourly] of platformMap) {
+      report.hours.push(hourly);
+    }
+  }
+  report.hours.sort((a, b) => a.hour.localeCompare(b.hour));
 
   return report;
 }
