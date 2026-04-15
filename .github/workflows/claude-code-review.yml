@@ -39,6 +39,23 @@ jobs:
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
           prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          # The code-review plugin posts review comments via `gh pr review`.
+          # Without explicit Bash(gh:*) permission, the action's default
+          # allowlist silently denies the call (permission_denials_count: 1,
+          # "No buffered inline comments") and no review ever appears on the
+          # PR. Allow gh + git CLIs and the read-only file/search tools.
+          settings: |
+            {
+              "permissions": {
+                "allow": [
+                  "Bash(gh:*)",
+                  "Bash(git:*)",
+                  "Read",
+                  "Glob",
+                  "Grep"
+                ]
+              }
+            }
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 
