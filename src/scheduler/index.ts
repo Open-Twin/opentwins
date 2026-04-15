@@ -103,12 +103,22 @@ export function createScheduler(config: OpenTwinsConfig): Bree {
     if (typeof msg !== 'string') return false;
     return / online$/.test(msg) || / exited with code 0/.test(msg);
   };
+  // Bree logs "Job X is already running" as warn when cron fires while a
+  // worker is still active. That's expected — heartbeats can outlast the
+  // 5-min cron tick. Silence it; fileLog captures it if anyone needs a trail.
+  const isAlreadyRunning = (msg: unknown): boolean => {
+    const text = msg instanceof Error ? msg.message : (typeof msg === 'string' ? msg : '');
+    return /is already running$/.test(text);
+  };
   const cleanLogger = {
     info: (msg: unknown, meta?: unknown) => {
       if (isLifecycleNoise(msg)) return;
       meta == null ? console.log(msg) : console.log(msg, meta);
     },
-    warn: (msg: unknown, meta?: unknown) => meta == null ? console.warn(msg) : console.warn(msg, meta),
+    warn: (msg: unknown, meta?: unknown) => {
+      if (isAlreadyRunning(msg)) return;
+      meta == null ? console.warn(msg) : console.warn(msg, meta);
+    },
     error: (msg: unknown, meta?: unknown) => meta == null ? console.error(msg) : console.error(msg, meta),
   };
 
