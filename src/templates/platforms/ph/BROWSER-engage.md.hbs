@@ -1,4 +1,4 @@
-# BROWSER-engage.md - PH Upvote, Comment, Follow & Streak Patterns
+# BROWSER-engage.md - PH Upvote, Comment & Follow Patterns
 
 ## Comment Quality Rules
 
@@ -105,24 +105,6 @@ ENDJSON
 ```
 
 "Follow" button: find via evaluate and click
-
-## S6. Streak Keeper (Homepage Upvote)
-
-Homepage vote buttons work with JS `.click()` (unlike launch pages).
-
-**Click:**
-```bash
-exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { const btn = document.querySelector('button[data-test=\"vote-button\"]'); if (!btn) return { error: 'vote_btn_not_found' }; const filledDiv = btn.querySelector('[data-filled]'); if (filledDiv && filledDiv.getAttribute('data-filled') === 'true') return { skipped: true, reason: 'already_upvoted' }; btn.click(); return { clicked: true }; }"}
-ENDJSON
-```
-
-**Verify (1.5s wait embedded — NO separate sleep step):**
-```bash
-exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); const btn = document.querySelector('button[data-test=\"vote-button\"]'); const filledDiv = btn ? btn.querySelector('[data-filled]') : null; const filled = filledDiv ? filledDiv.getAttribute('data-filled') : 'none'; return { verified: filled === 'true', text: btn ? btn.innerText.trim() : 'N/A' }; }"}
-ENDJSON
-```
 
 ## S7. Comment on a Launch
 

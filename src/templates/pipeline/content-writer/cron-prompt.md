@@ -7,6 +7,8 @@
 
 If the content brief doesn't exist → output "No brief for today. Skipping." and stop.
 
+If the brief has a `## ROTATE OUT` section at the top, those words/concepts were overused recently. Do NOT use them in any post or article today. Write around them.
+
 Do NOT read any other files. The brief is your single source of truth.
 
 ## Step 2: Write the Medium Article
