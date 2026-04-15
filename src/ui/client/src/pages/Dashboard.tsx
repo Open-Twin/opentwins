@@ -22,7 +22,7 @@ interface StatusData {
   pipelineRunStartedAt?: string | null;
   pipelineRunCompletedAt?: string | null;
   platforms: Array<{ platform: string; enabled: boolean; auto_run: boolean; handle: string }>;
-  platformSchedules: Array<{ platform: string; nextRun: string }>;
+  platformSchedules: Array<{ platform: string; nextRun: string | null; running?: boolean }>;
   recentRuns: Array<{
     id: string;
     agent_name: string;
@@ -274,7 +274,7 @@ export function Dashboard() {
                         <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--c-blue)' }}></span>
                         running now
                       </span>
-                    ) : sched ? (
+                    ) : sched && sched.nextRun ? (
                       <Countdown target={sched.nextRun} />
                     ) : p.auto_run ? (
                       <span style={{ color: 'var(--c-green)' }}>auto-run</span>

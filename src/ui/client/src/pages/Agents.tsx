@@ -303,7 +303,7 @@ export function Agents() {
 function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { platform: string; summary: AgentSummary; onRefresh: () => void; onRemove: (p: string) => void; agentCount: number }) {
   const { enabled: agentsEnabled, reason: agentsDisabledReason } = useAgentsEnabled();
   const { data: agent, loading, refetch } = useApi<AgentDetail>(`/api/agents/${platform}`, [platform]);
-  const { data: statusData, refetch: refetchStatus } = useApi<{ daemon: boolean; platformSchedules: Array<{ platform: string; nextRun: string; intervalMin: number }> }>('/api/status');
+  const { data: statusData, refetch: refetchStatus } = useApi<{ daemon: boolean; platformSchedules: Array<{ platform: string; nextRun: string | null; running?: boolean; intervalMin: number }> }>('/api/status');
   const { mutate: runAgent, loading: starting } = useMutation(`/api/agents/${platform}/run`, 'POST');
   const { mutate: stopAgent, loading: stopping } = useMutation(`/api/agents/${platform}/stop`, 'POST');
   const { mutate: saveLimits, loading: savingLimits } = useMutation(`/api/agents/${platform}/limits`);
@@ -513,12 +513,17 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
               <span>Last run <strong style={{ color: 'var(--c-text)' }}>{agent.lastRun?.startedAt ? new Date(agent.lastRun.startedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}</strong></span>
               {agent.auto_run && (() => {
                 const sched = statusData?.platformSchedules?.find((s) => s.platform === platform);
-                return sched ? (
+                if (!sched) return null;
+                return (
                   <>
                     <span style={{ color: 'var(--c-border)' }}>·</span>
-                    <span>Next <InlineCountdown target={sched.nextRun} /></span>
+                    <span>Next {sched.running || !sched.nextRun ? (
+                      <strong style={{ color: 'var(--c-blue)' }}>after current run</strong>
+                    ) : (
+                      <InlineCountdown target={sched.nextRun} />
+                    )}</span>
                   </>
-                ) : null;
+                );
               })()}
             </div>
             <div className="flex items-center gap-3">

@@ -131,6 +131,14 @@ export async function startDashboard(port: number): Promise<void> {
       const intervalMs = intervalMin * 60 * 1000;
       const { start, end } = config.active_hours;
 
+      // If the platform is currently running, don't compute a countdown —
+      // the next run can't start until the current one completes, and any
+      // "now + interval" computation would reset on every request, making
+      // the UI timer jump around.
+      if (runningPlatforms.has(p.platform)) {
+        return { platform: p.platform, nextRun: null, running: true, intervalMin };
+      }
+
       // Read last heartbeat completion time
       const hbFile = getLastHeartbeatFile(p.platform);
       let lastCompleted = 0;
@@ -159,7 +167,7 @@ export async function startDashboard(port: number): Promise<void> {
         nextRun = new Date(now.getTime() + intervalMs);
       }
 
-      return { platform: p.platform, nextRun: nextRun.toISOString(), intervalMin };
+      return { platform: p.platform, nextRun: nextRun.toISOString(), running: false, intervalMin };
     });
 
     // Read pipeline stage state (written by pipeline-runner)
