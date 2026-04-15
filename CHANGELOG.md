@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026.4.16
+
+### Scheduler & CLI
+
+**Improved**
+- 5-min cron replaced with main-thread 1-min tick — workers only spawn for due heartbeats; idle cycles cost microseconds vs full worker thread. Latency "due" → "starts" drops from ≤5 min to ≤1 min.
+- Expected scheduler noise silenced: `Job "X" is already running` and exit 143 (SIGTERM cancellations) no longer surface as errors.
+
+### Browser API
+
+**Fixed**
+- Tolerant JSON parser on `/api/browser/*`. Agents writing regex (`\d`, `\s`, `\w`, `\.`) inside `evaluate` payloads no longer crash on JSON.parse — server retries with auto-doubled escapes and returns a structured error hint instead of an HTML stack trace.
+
+### Dashboard
+
+**Fixed**
+- "Next" countdown freezes correctly while running (shows "after current run") and stops resetting on refresh when overdue (shows "starting soon").
+- "Last run" timestamp updates without manual refresh.
+- Final "Session complete" activity-feed event appears after a run finishes.
+- `/api/status` now polls every 10s so schedule state transitions surface without reload.
+
+### Templates
+
+**New**
+- Lightweight `ROTATE OUT` anti-repetition: planner skims last 3-5 briefs and lists overplayed terms; writer avoids them.
+
+**Improved**
+- Threads + Bluesky content-writer specs use hard CHARACTER limits (Threads 500, Bluesky 300) instead of word counts that exceeded platform caps.
+
+**Removed**
+- PH: redundant `streak_keeper` task and standalone S6 procedure (browse_and_engage already maintains the streak).
+- All platforms: redundant `generate_tomorrow_schedule` end-of-day task (HEARTBEAT's morning check covers it).
+
+### CI
+
+**New**
+- 4 tests for scheduler tick.
+- `claude-code-review` workflow now has `Bash(gh:*)` permissions — previous runs silently denied the plugin's `gh pr review` call, so no review was ever posted on PRs.
+
+**Improved**
+- Node version matrix updated.
+
 ## 2026.4.15
 
 ### Scheduler & CLI
