@@ -1044,6 +1044,19 @@ function AgentFeed({ platform, running }: { platform: string; running: boolean }
     return () => clearInterval(id);
   }, [running, refetch]);
 
+  // Catch the final "Session complete" event: when `running` flips from
+  // true to false, do one more refetch ~2s later. The event is typically
+  // written after the state transition, so the last in-flight poll missed
+  // it.
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    if (wasRunning.current && !running) {
+      const id = setTimeout(() => refetch(), 2000);
+      return () => clearTimeout(id);
+    }
+    wasRunning.current = running;
+  }, [running, refetch]);
+
   const events = data?.events || [];
   const hasSession = !!data?.sessionFile;
 
