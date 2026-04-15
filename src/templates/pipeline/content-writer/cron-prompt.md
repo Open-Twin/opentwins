@@ -70,8 +70,8 @@ Write these files (follow per-platform voice rules in AGENT.md):
 1. **linkedin-post.md** — Professional but human. Line breaks. End with question. 150-300 words each.
 2. **twitter-thread.md** — Each post is a 3-5 tweet thread. Tweets under 280 chars, separated by `\n\n` within each post. First tweet is the hook. Used for `original_tweet` tasks.
 3. **twitter-article.md** — Twitter article, 500-800 words. Adapted from Medium style but punchier, shorter paragraphs. Used for `article` tasks.
-4. **threads-post.md** — Casual, text-a-friend. `\n\n` paragraphs. 100-300 words each.
-5. **bluesky-post.md** — English only, casual. `\n\n` paragraphs. 100-300 words each.
+4. **threads-post.md** — Casual, text-a-friend. `\n\n` paragraphs. **HARD LIMIT: 500 chars per post** (platform rejects above). ~300 chars reads more native.
+5. **bluesky-post.md** — English only, casual. `\n\n` paragraphs. **HARD LIMIT: 300 chars per post** (platform disables publish above).
 6. **substack-note.md** — Personal, newsletter-adjacent. `\n\n` paragraphs. 100-200 words each.
 7. **reddit-post.md** — Each post has subreddit suggestion + title + body. SHORT, value-first, no self-promo.
 8. **ih-post.md** — Builder-to-builder, messy, real numbers. Each post stands alone.
