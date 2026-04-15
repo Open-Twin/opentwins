@@ -333,6 +333,20 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
     const id = setInterval(refetch, 10000);
     return () => clearInterval(id);
   }, [state, refetch]);
+
+  // Catch the final heartbeat-file write: when state leaves "running", the
+  // polling effect above stops, but the worker typically writes
+  // last_heartbeat in its finally block after the state transition. One
+  // trailing refetch picks up the new Last run timestamp without a manual
+  // page refresh.
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    if (wasRunning.current && state !== 'running') {
+      const id = setTimeout(() => { refetch(); refetchStatus(); }, 2000);
+      return () => clearTimeout(id);
+    }
+    wasRunning.current = state === 'running';
+  }, [state, refetch, refetchStatus]);
   const color = PLATFORM_COLORS[platform] || '#888';
 
   const handleRun = async () => {
