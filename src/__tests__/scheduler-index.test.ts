@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { VALID_CONFIG, FULL_CONFIG } from './fixtures/config.js';
+import { VALID_CONFIG } from './fixtures/config.js';
 
 // Bree constructs worker threads from real file paths on instantiation, so we
 // mock it out and just capture the jobs/config it was handed.
@@ -66,43 +66,27 @@ describe('scheduler/index createScheduler', () => {
     expect(pipeline.cron).toBe('45 0 * * *');
   });
 
-  it('uses the active_hours range in the platform cron expressions', async () => {
+  it('registers platform jobs as manual (no cron) — main-thread tick fires them', async () => {
     const { createScheduler } = await import('../scheduler/index.js');
-    createScheduler({ ...VALID_CONFIG, active_hours: { start: 9, end: 17 } });
+    createScheduler(VALID_CONFIG);
 
     const opts = BreeCtor.mock.calls[0][0] as { jobs: Array<Record<string, unknown>> };
-    const linkedin = opts.jobs.find((j) => j.name === 'linkedin') as { cron: string };
-    expect(linkedin.cron).toMatch(/^\d\/5 9-17 \* \* \*$/);
+    const platformJobs = opts.jobs.filter((j) => j.name !== 'pipeline');
+    for (const job of platformJobs) {
+      expect(job.cron).toBeUndefined();
+      expect(job.interval).toBeUndefined();
+      expect(job.timeout).toBeUndefined();
+    }
   });
 
-  it('staggers enabled-platform minute offsets so not all fire at :00', async () => {
-    const { createScheduler } = await import('../scheduler/index.js');
-    createScheduler(FULL_CONFIG);
-
-    const opts = BreeCtor.mock.calls[0][0] as { jobs: Array<Record<string, unknown>> };
-    const platformJobs = opts.jobs.filter((j) => j.name !== 'pipeline') as Array<{ cron: string; name: string }>;
-
-    const minuteOffsets = platformJobs.map((j) => {
-      const [minPart] = j.cron.split(' ');
-      return parseInt(minPart.split('/')[0]);
-    });
-
-    // At least 3 distinct offsets across 10 platforms.
-    expect(new Set(minuteOffsets).size).toBeGreaterThanOrEqual(3);
-    // All offsets are within [0,4].
-    for (const m of minuteOffsets) expect(m).toBeLessThanOrEqual(4);
-  });
-
-  it('passes timezone and serialized config to each job via workerData', async () => {
+  it('passes platform and serialized config to each job via workerData', async () => {
     const { createScheduler } = await import('../scheduler/index.js');
     createScheduler({ ...VALID_CONFIG, timezone: 'Europe/London' });
 
     const opts = BreeCtor.mock.calls[0][0] as { jobs: Array<Record<string, unknown>> };
     const linkedin = opts.jobs.find((j) => j.name === 'linkedin') as {
-      timezone: string;
       worker: { workerData: { configJson: string; platform: string } };
     };
-    expect(linkedin.timezone).toBe('Europe/London');
     expect(linkedin.worker.workerData.platform).toBe('linkedin');
 
     const parsed = JSON.parse(linkedin.worker.workerData.configJson);
