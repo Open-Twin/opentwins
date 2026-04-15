@@ -146,14 +146,14 @@ export async function startDashboard(port: number): Promise<void> {
         if (existsSync(hbFile)) lastCompleted = parseInt(readFileSync(hbFile, 'utf-8').trim()) || 0;
       } catch { /* no file yet */ }
 
-      let nextRun: Date;
-      if (lastCompleted > 0) {
-        // Next run = last completed + interval
-        nextRun = new Date(lastCompleted + intervalMs);
-      } else {
-        // Never run before — first run after the configured interval
-        nextRun = new Date(now.getTime() + intervalMs);
+      // Never run before: we don't know when the first cron fire will land,
+      // so return overdue rather than a "now + interval" estimate that would
+      // reset on every request.
+      if (lastCompleted === 0) {
+        return { platform: p.platform, nextRun: null, running: false, overdue: true, intervalMin };
       }
+
+      let nextRun = new Date(lastCompleted + intervalMs);
 
       // Ensure within active hours
       if (nextRun.getHours() > end || nextRun.getHours() < start) {
@@ -162,12 +162,13 @@ export async function startDashboard(port: number): Promise<void> {
         nextRun.setHours(start, 0, 0, 0);
       }
 
-      // If nextRun is in the past, agent is due — next run after one interval from now
-      if (nextRun.getTime() < now.getTime()) {
-        nextRun = new Date(now.getTime() + intervalMs);
-      }
+      // If nextRun is in the past, the agent is overdue — don't reset to
+      // "now + interval" (that resets every request and makes the UI timer
+      // jump). Return the stable past timestamp; frontend renders "starting
+      // soon" when diff <= 0.
+      const overdue = nextRun.getTime() < now.getTime();
 
-      return { platform: p.platform, nextRun: nextRun.toISOString(), running: false, intervalMin };
+      return { platform: p.platform, nextRun: nextRun.toISOString(), running: false, overdue, intervalMin };
     });
 
     // Read pipeline stage state (written by pipeline-runner)
