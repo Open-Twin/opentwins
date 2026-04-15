@@ -321,7 +321,13 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
 
   const state = summary.state;
 
-  // Auto-refresh agent detail every 10s while running (schedule status changes)
+  // Poll /api/status every 10s so the "Next" label (running / overdue /
+  // countdown) transitions without requiring a manual refresh. Also poll the
+  // agent detail while running so live stats update.
+  useEffect(() => {
+    const statusId = setInterval(refetchStatus, 10000);
+    return () => clearInterval(statusId);
+  }, [refetchStatus]);
   useEffect(() => {
     if (state !== 'running') return;
     const id = setInterval(refetch, 10000);
