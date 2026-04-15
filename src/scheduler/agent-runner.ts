@@ -88,6 +88,13 @@ export async function runPlatformAgent(
     });
 
     if (result.exitCode !== 0) {
+      // 143 = SIGTERM, 130 = SIGINT — the agent was cancelled (UI stop,
+      // daemon shutdown, timeout). Not a crash. Record as "cancelled"
+      // without throwing so the worker exits cleanly.
+      if (result.exitCode === 143 || result.exitCode === 130) {
+        fileLog('agent', 'Run cancelled', { platform, durationMs: Date.now() - startTime, signal: result.exitCode === 143 ? 'SIGTERM' : 'SIGINT' });
+        return false;
+      }
       throw new Error(`Agent exited with code ${result.exitCode}`);
     }
 

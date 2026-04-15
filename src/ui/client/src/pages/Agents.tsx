@@ -303,7 +303,7 @@ export function Agents() {
 function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { platform: string; summary: AgentSummary; onRefresh: () => void; onRemove: (p: string) => void; agentCount: number }) {
   const { enabled: agentsEnabled, reason: agentsDisabledReason } = useAgentsEnabled();
   const { data: agent, loading, refetch } = useApi<AgentDetail>(`/api/agents/${platform}`, [platform]);
-  const { data: statusData, refetch: refetchStatus } = useApi<{ daemon: boolean; platformSchedules: Array<{ platform: string; nextRun: string; intervalMin: number }> }>('/api/status');
+  const { data: statusData, refetch: refetchStatus } = useApi<{ daemon: boolean; platformSchedules: Array<{ platform: string; nextRun: string | null; running?: boolean; intervalMin: number }> }>('/api/status');
   const { mutate: runAgent, loading: starting } = useMutation(`/api/agents/${platform}/run`, 'POST');
   const { mutate: stopAgent, loading: stopping } = useMutation(`/api/agents/${platform}/stop`, 'POST');
   const { mutate: saveLimits, loading: savingLimits } = useMutation(`/api/agents/${platform}/limits`);
@@ -321,12 +321,32 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
 
   const state = summary.state;
 
-  // Auto-refresh agent detail every 10s while running (schedule status changes)
+  // Poll /api/status every 10s so the "Next" label (running / overdue /
+  // countdown) transitions without requiring a manual refresh. Also poll the
+  // agent detail while running so live stats update.
+  useEffect(() => {
+    const statusId = setInterval(refetchStatus, 10000);
+    return () => clearInterval(statusId);
+  }, [refetchStatus]);
   useEffect(() => {
     if (state !== 'running') return;
     const id = setInterval(refetch, 10000);
     return () => clearInterval(id);
   }, [state, refetch]);
+
+  // Catch the final heartbeat-file write: when state leaves "running", the
+  // polling effect above stops, but the worker typically writes
+  // last_heartbeat in its finally block after the state transition. One
+  // trailing refetch picks up the new Last run timestamp without a manual
+  // page refresh.
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    if (wasRunning.current && state !== 'running') {
+      const id = setTimeout(() => { refetch(); refetchStatus(); }, 2000);
+      return () => clearTimeout(id);
+    }
+    wasRunning.current = state === 'running';
+  }, [state, refetch, refetchStatus]);
   const color = PLATFORM_COLORS[platform] || '#888';
 
   const handleRun = async () => {
@@ -513,12 +533,17 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
               <span>Last run <strong style={{ color: 'var(--c-text)' }}>{agent.lastRun?.startedAt ? new Date(agent.lastRun.startedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}</strong></span>
               {agent.auto_run && (() => {
                 const sched = statusData?.platformSchedules?.find((s) => s.platform === platform);
-                return sched ? (
+                if (!sched) return null;
+                return (
                   <>
                     <span style={{ color: 'var(--c-border)' }}>·</span>
-                    <span>Next <InlineCountdown target={sched.nextRun} /></span>
+                    <span>Next {sched.running || !sched.nextRun ? (
+                      <strong style={{ color: 'var(--c-blue)' }}>after current run</strong>
+                    ) : (
+                      <InlineCountdown target={sched.nextRun} />
+                    )}</span>
                   </>
-                ) : null;
+                );
               })()}
             </div>
             <div className="flex items-center gap-3">
@@ -1031,6 +1056,19 @@ function AgentFeed({ platform, running }: { platform: string; running: boolean }
     if (!running) return;
     const id = setInterval(() => refetch(), 3000);
     return () => clearInterval(id);
+  }, [running, refetch]);
+
+  // Catch the final "Session complete" event: when `running` flips from
+  // true to false, do one more refetch ~2s later. The event is typically
+  // written after the state transition, so the last in-flight poll missed
+  // it.
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    if (wasRunning.current && !running) {
+      const id = setTimeout(() => refetch(), 2000);
+      return () => clearTimeout(id);
+    }
+    wasRunning.current = running;
   }, [running, refetch]);
 
   const events = data?.events || [];

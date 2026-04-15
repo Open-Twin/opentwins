@@ -131,6 +131,14 @@ export async function startDashboard(port: number): Promise<void> {
       const intervalMs = intervalMin * 60 * 1000;
       const { start, end } = config.active_hours;
 
+      // If the platform is currently running, don't compute a countdown —
+      // the next run can't start until the current one completes, and any
+      // "now + interval" computation would reset on every request, making
+      // the UI timer jump around.
+      if (runningPlatforms.has(p.platform)) {
+        return { platform: p.platform, nextRun: null, running: true, intervalMin };
+      }
+
       // Read last heartbeat completion time
       const hbFile = getLastHeartbeatFile(p.platform);
       let lastCompleted = 0;
@@ -138,14 +146,14 @@ export async function startDashboard(port: number): Promise<void> {
         if (existsSync(hbFile)) lastCompleted = parseInt(readFileSync(hbFile, 'utf-8').trim()) || 0;
       } catch { /* no file yet */ }
 
-      let nextRun: Date;
-      if (lastCompleted > 0) {
-        // Next run = last completed + interval
-        nextRun = new Date(lastCompleted + intervalMs);
-      } else {
-        // Never run before — first run after the configured interval
-        nextRun = new Date(now.getTime() + intervalMs);
+      // Never run before: we don't know when the first cron fire will land,
+      // so return overdue rather than a "now + interval" estimate that would
+      // reset on every request.
+      if (lastCompleted === 0) {
+        return { platform: p.platform, nextRun: null, running: false, overdue: true, intervalMin };
       }
+
+      let nextRun = new Date(lastCompleted + intervalMs);
 
       // Ensure within active hours
       if (nextRun.getHours() > end || nextRun.getHours() < start) {
@@ -154,12 +162,13 @@ export async function startDashboard(port: number): Promise<void> {
         nextRun.setHours(start, 0, 0, 0);
       }
 
-      // If nextRun is in the past, agent is due — next run after one interval from now
-      if (nextRun.getTime() < now.getTime()) {
-        nextRun = new Date(now.getTime() + intervalMs);
-      }
+      // If nextRun is in the past, the agent is overdue — don't reset to
+      // "now + interval" (that resets every request and makes the UI timer
+      // jump). Return the stable past timestamp; frontend renders "starting
+      // soon" when diff <= 0.
+      const overdue = nextRun.getTime() < now.getTime();
 
-      return { platform: p.platform, nextRun: nextRun.toISOString(), intervalMin };
+      return { platform: p.platform, nextRun: nextRun.toISOString(), running: false, overdue, intervalMin };
     });
 
     // Read pipeline stage state (written by pipeline-runner)

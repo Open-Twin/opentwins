@@ -149,15 +149,26 @@ export function handleGetAgent(req: Request, res: Response): void {
     },
     api_keys: platformConfig?.api_keys || {},
     requiredApiKeys: PLATFORM_API_KEYS[platform as keyof typeof PLATFORM_API_KEYS] || null,
-    lastRun: agentLogs[platform] || (() => {
-      // Fall back to last heartbeat file timestamp if server was restarted
-      const hbFile = getLastHeartbeatFile(platform);
-      if (!existsSync(hbFile)) return null;
+    lastRun: (() => {
+      // Scheduler-initiated runs happen in worker threads and only touch
+      // the heartbeat file — they never update agentLogs (which lives in
+      // the main process's memory). If we blindly preferred agentLogs, a
+      // stale "Run Now" entry would mask every subsequent scheduled run.
+      // Use whichever timestamp is more recent.
+      const logged = agentLogs[platform];
+      let hbTs = 0;
       try {
-        const ts = parseInt(readFileSync(hbFile, 'utf-8').trim());
-        if (!ts) return null;
-        return { output: '', startedAt: new Date(ts).toISOString(), completedAt: new Date(ts).toISOString(), exitCode: 0 };
-      } catch { return null; }
+        const hbFile = getLastHeartbeatFile(platform);
+        if (existsSync(hbFile)) hbTs = parseInt(readFileSync(hbFile, 'utf-8').trim()) || 0;
+      } catch { /* no file */ }
+
+      const loggedTs = logged?.startedAt ? new Date(logged.startedAt).getTime() : 0;
+      if (loggedTs >= hbTs) return logged || null;
+      if (hbTs > 0) {
+        const iso = new Date(hbTs).toISOString();
+        return { output: '', startedAt: iso, completedAt: iso, exitCode: 0 };
+      }
+      return logged || null;
     })(),
   });
 }
