@@ -374,42 +374,46 @@ export function Dashboard() {
             <p className="text-[13px] mb-5" style={{ color: 'var(--c-text-muted)' }}>
               A daily three-step factory: <span style={{ color: 'var(--c-text-dim)' }}>research</span> what's happening, <span style={{ color: 'var(--c-text-dim)' }}>analyze</span> what to act on, then <span style={{ color: 'var(--c-text-dim)' }}>plan and write</span> today's posts.
             </p>
-            <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-              {PIPELINE_GROUPS.map((group, gi) => (
-                <div key={group.name} className="relative">
-                  <div className="rounded-lg p-3 h-full" style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid var(--c-border-dim)' }}>
-                    <div className="flex items-baseline justify-between mb-3">
-                      <div className="flex items-baseline gap-2">
-                        <span className="mono text-[11px] font-semibold" style={{ color: 'var(--c-teal)' }}>{group.step}.</span>
-                        <span className="text-[14px] font-semibold" style={{ color: 'var(--c-text)' }}>{group.name}</span>
-                        {stagesByGroup(group.name).length > 1 && stagesByGroup(group.name)[0].parallel && (
-                          <span className="mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: 'var(--c-teal-dim)', background: 'rgba(94, 234, 212, 0.08)' }}>parallel</span>
-                        )}
-                      </div>
+            <div className="flex flex-col gap-2">
+              {PIPELINE_GROUPS.map((group, gi) => {
+                const stages = stagesByGroup(group.name);
+                const isParallel = stages.length > 1 && stages[0].parallel;
+                return (
+                  <div key={group.name}>
+                    {/* Step header: number badge · title · subtitle · "parallel" pill */}
+                    <div className="flex items-baseline gap-2.5 mb-2">
+                      <span className="mono text-[10px] font-semibold inline-flex items-center justify-center w-5 h-5 rounded" style={{ color: 'var(--c-teal)', background: 'rgba(94, 234, 212, 0.08)', border: '1px solid rgba(94, 234, 212, 0.2)' }}>{group.step}</span>
+                      <span className="text-[14px] font-semibold" style={{ color: 'var(--c-text)' }}>{group.name}</span>
+                      <span className="text-[12px]" style={{ color: 'var(--c-text-muted)' }}>— {group.subtitle}</span>
+                      {isParallel && (
+                        <span className="mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: 'var(--c-teal-dim)', background: 'rgba(94, 234, 212, 0.06)' }}>{stages.length} run in parallel</span>
+                      )}
                     </div>
-                    <p className="text-[12px] mb-3" style={{ color: 'var(--c-text-muted)' }}>{group.subtitle}</p>
-                    <div className="flex flex-col gap-2">
-                      {stagesByGroup(group.name).map((stage) => (
+                    {/* Stages: parallel groups → grid; sequential → stacked rows */}
+                    <div className={isParallel ? 'grid gap-2' : 'flex flex-col gap-2'} style={isParallel ? { gridTemplateColumns: `repeat(${stages.length}, minmax(0, 1fr))` } : undefined}>
+                      {stages.map((stage) => (
                         <PipelineStageTile
                           key={stage.id}
                           stage={stage}
                           run={status?.pipelineStages?.[stage.id]}
+                          variant={isParallel ? 'compact' : 'wide'}
                           onClick={() => setOpenStage({ id: stage.id, label: stage.label })}
                         />
                       ))}
                     </div>
+                    {/* Down arrow between steps */}
+                    {gi < PIPELINE_GROUPS.length - 1 && (
+                      <div className="flex justify-center my-1.5">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                          <path d="M7 2v9M3.5 7.5L7 11l3.5-3.5" stroke="var(--c-border)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                    )}
                   </div>
-                  {gi < PIPELINE_GROUPS.length - 1 && (
-                    <div className="hidden lg:flex absolute top-1/2 -right-2.5 -translate-y-1/2 items-center justify-center w-5 h-5 rounded-full pointer-events-none" style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border-dim)', zIndex: 1 }}>
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                        <path d="M2 5h6M5.5 2.5L8 5l-2.5 2.5" stroke="var(--c-text-muted)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
-            <div className="mono text-[11px] mt-4 flex items-center gap-3 flex-wrap" style={{ color: 'var(--c-text-muted)' }}>
+            <div className="mono text-[11px] mt-5 pt-4 flex items-center gap-3 flex-wrap" style={{ color: 'var(--c-text-muted)', borderTop: '1px solid var(--c-border-dim)' }}>
               <span style={{ opacity: 0.6 }}>status:</span>
               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-green)' }} /> done</span>
               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-blue)' }} /> running</span>
@@ -486,7 +490,29 @@ function fmtStageDuration(ms?: number): string {
   return s === 0 ? `${m}m` : `${m}m ${s}s`;
 }
 
-function PipelineStageTile({ stage, run, onClick }: { stage: StageMeta; run?: StageRun; onClick: () => void }) {
+function StageStatusMeta({ status, run }: { status: string; run?: StageRun }): ReactNode {
+  if (status === 'completed' && run?.completedAt) {
+    return (
+      <span className="mono text-[11px] tabular-nums" style={{ color: 'var(--c-text-muted)' }}>
+        {fmtStageTime(run.completedAt)}{run.durationMs != null && <span style={{ opacity: 0.6 }}> · {fmtStageDuration(run.durationMs)}</span>}
+      </span>
+    );
+  }
+  if (status === 'running') {
+    return (
+      <span className="mono text-[11px] flex items-center gap-1.5" style={{ color: 'var(--c-blue)' }}>
+        <span className="status-dot online" />
+        running
+      </span>
+    );
+  }
+  if (status === 'failed') {
+    return <span className="mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--c-red)' }}>failed</span>;
+  }
+  return <span className="mono text-[11px]" style={{ color: 'var(--c-text-muted)', opacity: 0.55 }}>not yet today</span>;
+}
+
+function PipelineStageTile({ stage, run, variant, onClick }: { stage: StageMeta; run?: StageRun; variant: 'compact' | 'wide'; onClick: () => void }) {
   const status = run?.status || 'idle';
   const dotColor =
     status === 'completed' ? 'var(--c-green)' :
@@ -494,46 +520,53 @@ function PipelineStageTile({ stage, run, onClick }: { stage: StageMeta; run?: St
     status === 'failed'    ? 'var(--c-red)'   :
                              'var(--c-text-muted)';
 
-  let meta: ReactNode = null;
-  if (status === 'completed' && run?.completedAt) {
-    meta = (
-      <span className="mono text-[10.5px] tabular-nums" style={{ color: 'var(--c-text-muted)' }}>
-        {fmtStageTime(run.completedAt)}{run.durationMs != null && ` · ${fmtStageDuration(run.durationMs)}`}
-      </span>
-    );
-  } else if (status === 'running') {
-    meta = (
-      <span className="mono text-[10.5px] flex items-center gap-1" style={{ color: 'var(--c-blue)' }}>
-        <span className="status-dot online" />
-        running
-      </span>
-    );
-  } else if (status === 'failed') {
-    meta = (
-      <span className="mono text-[10.5px]" style={{ color: 'var(--c-red)' }}>failed</span>
-    );
-  } else {
-    meta = (
-      <span className="mono text-[10.5px]" style={{ color: 'var(--c-text-muted)', opacity: 0.6 }}>not yet today</span>
+  const baseStyle = {
+    background: status === 'failed' ? 'rgba(248, 113, 113, 0.04)'
+              : status === 'running' ? 'rgba(96, 165, 250, 0.04)'
+              : 'rgba(255,255,255,0.02)',
+    border: '1px solid var(--c-border-dim)',
+  };
+
+  const sharedHandlers = {
+    onMouseEnter: (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor = 'var(--c-teal-dim)'; e.currentTarget.style.background = 'rgba(94, 234, 212, 0.05)'; },
+    onMouseLeave: (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor = 'var(--c-border-dim)'; e.currentTarget.style.background = baseStyle.background; },
+  };
+
+  if (variant === 'wide') {
+    // Sequential stages — wide horizontal row with name + tagline left, meta right.
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="text-left rounded-md px-3.5 py-2.5 transition-colors cursor-pointer flex items-center gap-3"
+        style={baseStyle}
+        title={run?.error ? `Failed: ${run.error}` : 'View outputs'}
+        {...sharedHandlers}
+      >
+        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: dotColor }} />
+        <span className="text-[13px] font-semibold shrink-0" style={{ color: 'var(--c-text)' }}>{stage.label}</span>
+        <span className="text-[12.5px] truncate" style={{ color: 'var(--c-text-muted)' }}>— {stage.tagline}</span>
+        <span className="ml-auto shrink-0"><StageStatusMeta status={status} run={run} /></span>
+      </button>
     );
   }
 
+  // Compact stage — for parallel grid; stacks name/tagline/meta vertically.
   return (
     <button
       type="button"
       onClick={onClick}
-      className="text-left rounded-md px-2.5 py-2 transition-colors cursor-pointer group"
-      style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--c-border-dim)' }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--c-teal-dim)'; e.currentTarget.style.background = 'rgba(94, 234, 212, 0.04)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--c-border-dim)'; e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+      className="text-left rounded-md px-3 py-2.5 transition-colors cursor-pointer flex flex-col"
+      style={baseStyle}
       title={run?.error ? `Failed: ${run.error}` : 'View outputs'}
+      {...sharedHandlers}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mb-1">
         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: dotColor }} />
-        <span className="text-[12.5px] font-medium truncate flex-1" style={{ color: 'var(--c-text)' }}>{stage.label}</span>
-        {meta}
+        <span className="text-[13px] font-semibold truncate" style={{ color: 'var(--c-text)' }}>{stage.label}</span>
       </div>
-      <div className="text-[11.5px] mt-1 ml-4" style={{ color: 'var(--c-text-muted)' }}>{stage.tagline}</div>
+      <div className="text-[11.5px] leading-snug ml-4 mb-2" style={{ color: 'var(--c-text-muted)' }}>{stage.tagline}</div>
+      <div className="ml-4 mt-auto"><StageStatusMeta status={status} run={run} /></div>
     </button>
   );
 }
