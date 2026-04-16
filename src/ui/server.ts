@@ -7,6 +7,7 @@ import { getDb } from '../db/index.js';
 import { loadConfig, configExists } from '../config/loader.js';
 import { isDaemonRunning } from '../scheduler/daemon.js';
 import { getQualityMetrics, getDisagreementRatio } from './api/quality.js';
+import { handlePipelineStageFiles } from './api/pipeline.js';
 import { handleUpdateConfig } from './api/config.js';
 import { handleListAgents, handleGetAgent, handleRunAgent, handleStopAgent, handleUpdateLimits, handleUpdateAgent, handleGetAgentFeed, handleBrowserSetup, handleBrowserConfirm } from './api/agents.js';
 import { handleSetup, handleSetupStatus, handleValidateAuth } from './api/setup.js';
@@ -233,6 +234,7 @@ export async function startDashboard(port: number): Promise<void> {
 
   app.get('/api/quality', (req, res) => getQualityMetrics(req, res));
   app.get('/api/quality/disagreement', (req, res) => getDisagreementRatio(req, res));
+  app.get('/api/pipeline/stage/:stageId/files', (req, res) => handlePipelineStageFiles(req, res));
 
   // Config editing
   app.put('/api/config', (req, res) => { handleUpdateConfig(req, res); });

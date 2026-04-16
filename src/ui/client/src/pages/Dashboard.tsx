@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi, today } from '../hooks/useApi.ts';
 import { useAgentsEnabled, HealthBanner } from '../contexts/HealthContext.tsx';
+import { PipelineStageModal } from '../components/PipelineStageModal.tsx';
 
 interface PipelineStageState {
   status: 'idle' | 'running' | 'completed' | 'failed';
@@ -108,6 +109,7 @@ export function Dashboard() {
   const { data: activityResp, refetch: refetchActivity } = useApi<{ sessions: Array<{ platform: string; toolCount: number; eventCount: number }> }>(`/api/activity?date=${today()}`);
   const { data: agents, refetch: refetchAgents } = useApi<Array<{ platform: string; limits: { daily: Record<string, { limit: number; current: number }>; weekly?: Record<string, { limit: number; current: number }> } | null }>>('/api/agents');
   const autoRunCount = status?.platforms.filter((p) => p.auto_run).length || 0;
+  const [openStage, setOpenStage] = useState<{ id: string; label: string } | null>(null);
 
   // Auto-refresh dashboard every 10 seconds
   useEffect(() => {
@@ -396,13 +398,18 @@ export function Dashboard() {
                 }
 
                 nodes.push(
-                  <div
+                  <button
                     key={stage.id}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                    type="button"
+                    onClick={() => setOpenStage({ id: stage.id, label: stage.label })}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:bg-white/[0.04] cursor-pointer"
                     style={{
                       background: 'rgba(255,255,255,0.02)',
                       border: '1px solid var(--c-border-dim)',
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--c-teal-dim)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--c-border-dim)'; }}
+                    title="View outputs"
                   >
                     <div className="w-1.5 h-1.5 rounded-full" style={{
                       background: run?.status === 'completed' ? 'var(--c-green)' :
@@ -411,13 +418,13 @@ export function Dashboard() {
                                   'var(--c-text-muted)',
                     }} />
                     <span className="text-[13px] font-medium" style={{ color: 'var(--c-text-dim)' }}>{stage.label}</span>
-                  </div>
+                  </button>
                 );
 
                 return nodes;
               })}
             </div>
-            <div className="mono text-[12px] mt-4 flex items-center gap-4" style={{ color: 'var(--c-text-muted)' }}>
+            <div className="mono text-[12px] mt-4 flex items-center gap-4 flex-wrap" style={{ color: 'var(--c-text-muted)' }}>
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-green)' }} />
                 <span>completed</span>
@@ -427,14 +434,27 @@ export function Dashboard() {
                 <span>running</span>
               </div>
               <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-red)' }} />
+                <span>failed</span>
+              </div>
+              <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-text-muted)' }} />
                 <span>idle</span>
               </div>
+              <div className="ml-auto opacity-60">click any stage to view outputs</div>
             </div>
           </div>
         </div>
       )}
 
+      {openStage && (
+        <PipelineStageModal
+          stageId={openStage.id}
+          stageLabel={openStage.label}
+          date={today()}
+          onClose={() => setOpenStage(null)}
+        />
+      )}
     </div>
   );
 }
