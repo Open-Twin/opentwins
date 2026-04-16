@@ -22,21 +22,22 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
-          # Cache both lockfiles so the client install doesn't try to use a
-          # cache populated only with root's packages.
           cache-dependency-path: |
             package-lock.json
             src/ui/client/package-lock.json
+
+      - name: Pin npm
+        # npm bundled with Node 22/24 hangs in the client install step with
+        # "Exit handler never called!" (npm/cli #4769, #8074). 10.8.2 ships
+        # the fix for the specific lifecycle-exit code path.
+        run: npm install -g npm@10.8.2
 
       - name: Install root dependencies
         run: npm ci --no-audit --no-fund
 
       - name: Install client dependencies
-        # `npm ci` here triggers the well-known "Exit handler never called!"
-        # hang on Ubuntu Node 22/24 (npm/cli #4769, #8074). Plain `npm install`
-        # uses a different exit path that doesn't reproduce the bug.
         working-directory: src/ui/client
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Build
         run: npm run build
