@@ -74,22 +74,21 @@ describe('extractEventsFromSession', () => {
     expect(events[0].kind).toBe('error');
   });
 
-  it('treats result type as done', () => {
+  it('does not synthesize a feed event for result type', () => {
+    // result/last-prompt no longer produce a "Session complete" feed event;
+    // the completed status is surfaced via summarizeSession().completed
+    // instead. Tested below in the summarizeSession describe.
     const path = writeSession([
       { type: 'result', timestamp: '2026-04-11T10:05:00.000Z', result: 'Heartbeat complete' },
     ]);
-    const events = extractEventsFromSession(path);
-    expect(events).toHaveLength(1);
-    expect(events[0].kind).toBe('done');
+    expect(extractEventsFromSession(path)).toHaveLength(0);
   });
 
-  it('treats last-prompt type as done', () => {
+  it('does not synthesize a feed event for last-prompt type', () => {
     const path = writeSession([
       { type: 'last-prompt', timestamp: '' },
     ]);
-    const events = extractEventsFromSession(path);
-    expect(events).toHaveLength(1);
-    expect(events[0].kind).toBe('done');
+    expect(extractEventsFromSession(path)).toHaveLength(0);
   });
 
   it('returns empty array for missing file', () => {
