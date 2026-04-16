@@ -218,11 +218,20 @@ export function Dashboard() {
           // an empty second column when only a couple of agents are configured.
           const cols = total >= 4 ? 2 : 1;
           const rowsPerCol = Math.ceil(total / cols);
-          const gridColsClass = cols === 2 ? 'grid grid-cols-1 md:grid-cols-2' : 'grid grid-cols-1';
+          // CSS grid defaults to row-major fill, but we want column-major
+          // (items 0..rowsPerCol-1 fill the left column, then continue to the
+          // right). Forcing grid-auto-flow:column + explicit row count lines
+          // the visual layout up with our colIdx/rowIdx math below.
+          const headerGrid: React.CSSProperties = cols === 2
+            ? { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }
+            : { display: 'grid', gridTemplateColumns: '1fr' };
+          const bodyGrid: React.CSSProperties = cols === 2
+            ? { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridTemplateRows: `repeat(${rowsPerCol}, auto)`, gridAutoFlow: 'column' }
+            : { display: 'grid', gridTemplateColumns: '1fr' };
           return (
           <div className="panel noise overflow-hidden">
             {/* Header strip — matches Recent Runs sizing/typography */}
-            <div className={gridColsClass} style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
+            <div style={{ ...headerGrid, borderBottom: '1px solid var(--c-border-dim)' }}>
               {Array.from({ length: cols }).map((_, c) => (
                 <div key={c} className="grid items-center gap-3 px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)', borderLeft: c > 0 ? '1px solid var(--c-border-dim)' : 'none', gridTemplateColumns: '6px minmax(0, 1fr) 116px 40px 40px 56px' }}>
                   <span /><span>Agent</span>
@@ -233,7 +242,7 @@ export function Dashboard() {
                 </div>
               ))}
             </div>
-            <div className={gridColsClass}>
+            <div style={bodyGrid}>
               {status?.platforms.map((p, i) => {
                 const run = lastRun[p.platform];
                 const acts = actionsByPlatform[p.platform] || 0;
