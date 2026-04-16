@@ -388,7 +388,7 @@ export function Dashboard() {
                       <span className="text-[13px] font-semibold" style={{ color: 'var(--c-text)' }}>· {group.name}</span>
                       <span className="text-[12px]" style={{ color: 'var(--c-text-muted)' }}>· {group.subtitle}</span>
                       {isParallel && (
-                        <span className="mono text-[10px] uppercase tracking-wider ml-auto" style={{ color: 'var(--c-text-muted)' }}>{stages.length} stages run in parallel</span>
+                        <span className="mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded ml-auto" style={{ color: 'var(--c-text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--c-border-dim)' }}>{stages.length} in parallel</span>
                       )}
                     </div>
                     {/* Uniform stage rows */}
@@ -523,20 +523,22 @@ function PipelineStageRow({ stage, run, orderLabel, isLast, onClick }: { stage: 
     <button
       type="button"
       onClick={onClick}
-      className="text-left flex items-center gap-3 px-3.5 py-2.5 transition-colors cursor-pointer w-full"
+      className="text-left grid items-center gap-x-3 px-3.5 py-2.5 transition-colors cursor-pointer w-full"
       style={{
         borderBottom: isLast ? 'none' : '1px solid var(--c-border-dim)',
         borderLeft: `2px solid ${accentBar}`,
+        // [order] [dot] [name] [tagline (flex)] [meta]
+        gridTemplateColumns: '32px 12px minmax(140px, max-content) minmax(0, 1fr) max-content',
       }}
       onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(94, 234, 212, 0.04)'; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
       title={run?.error ? `Failed: ${run.error}` : 'View outputs'}
     >
-      <span className="mono text-[10.5px] tabular-nums shrink-0 w-7" style={{ color: 'var(--c-text-muted)', opacity: 0.6 }}>{orderLabel}</span>
-      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: dotColor }} />
-      <span className="text-[13px] font-semibold shrink-0" style={{ color: 'var(--c-text)', minWidth: 160 }}>{stage.label}</span>
-      <span className="text-[12.5px] truncate flex-1" style={{ color: 'var(--c-text-muted)' }}>{stage.tagline}</span>
-      <span className="shrink-0"><StageStatusMeta status={status} run={run} /></span>
+      <span className="mono text-[10.5px] tabular-nums" style={{ color: 'var(--c-text-muted)', opacity: 0.6 }}>{orderLabel}</span>
+      <span className="w-2 h-2 rounded-full" style={{ background: dotColor }} />
+      <span className="text-[13px] font-semibold truncate" style={{ color: 'var(--c-text)' }}>{stage.label}</span>
+      <span className="text-[12.5px] truncate" style={{ color: 'var(--c-text-muted)' }}>{stage.tagline}</span>
+      <span><StageStatusMeta status={status} run={run} /></span>
     </button>
   );
 }
