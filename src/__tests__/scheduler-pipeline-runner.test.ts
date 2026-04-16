@@ -14,6 +14,11 @@ vi.mock('../util/paths.js', async () => {
     getOpenTwinsHome: () => tmpDir,
     getWorkspacesDir: () => resolve(tmpDir, 'workspaces'),
     getPipelineWorkspaceDir: () => resolve(tmpDir, 'workspaces', 'pipeline'),
+    // Path helpers in paths.js call each other via direct (in-module) refs,
+    // so vi.mock can't transparently rewire them — we have to override every
+    // helper that touches the home dir, or test runs leak into the real
+    // ~/.opentwins (e.g. polluting pipeline-state.json with "Error: boom").
+    getPipelineStatePath: () => resolve(tmpDir, 'locks', 'pipeline-state.json'),
   };
 });
 
@@ -25,6 +30,7 @@ describe('scheduler/pipeline-runner runPipeline', () => {
   beforeEach(() => {
     tmpDir = mkdtempSync(resolve(tmpdir(), 'opentwins-pipeline-'));
     mkdirSync(resolve(tmpDir, 'workspaces', 'pipeline'), { recursive: true });
+    mkdirSync(resolve(tmpDir, 'locks'), { recursive: true });
     runClaudeAgentMock.mockReset();
     runClaudeAgentMock.mockResolvedValue({ output: 'ok', durationMs: 100, exitCode: 0 });
   });
