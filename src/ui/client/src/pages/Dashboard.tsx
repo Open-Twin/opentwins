@@ -242,12 +242,20 @@ export function Dashboard() {
           const bodyGrid: React.CSSProperties = cols === 2
             ? { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridTemplateRows: `repeat(${rowsPerCol}, auto)`, gridAutoFlow: 'column' }
             : { display: 'grid', gridTemplateColumns: '1fr' };
+          // Per-row column template. In 2-col mode each column is half the
+          // panel width, so we jam the data to the right with content-sized
+          // columns. In 1-col mode the row spans full width — distribute the
+          // columns with fr weights so they spread out like the Recent Runs
+          // table instead of all clustering on the right.
+          const rowGridTemplate = cols === 2
+            ? '6px minmax(0, 1fr) 116px 40px 40px 56px'
+            : '6px minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)';
           return (
           <div className="panel noise overflow-hidden">
             {/* Header strip — matches Recent Runs sizing/typography */}
             <div style={{ ...headerGrid, borderBottom: '1px solid var(--c-border-dim)' }}>
               {Array.from({ length: cols }).map((_, c) => (
-                <div key={c} className="grid items-center gap-3 px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)', borderLeft: c > 0 ? '1px solid var(--c-border-dim)' : 'none', gridTemplateColumns: '6px minmax(0, 1fr) 116px 40px 40px 56px' }}>
+                <div key={c} className="grid items-center gap-3 px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)', borderLeft: c > 0 ? '1px solid var(--c-border-dim)' : 'none', gridTemplateColumns: rowGridTemplate }}>
                   <span /><span>Agent</span>
                   <span>Status</span>
                   <span className="text-right">Act</span>
@@ -277,7 +285,7 @@ export function Dashboard() {
                       borderBottom: isLastInCol ? 'none' : '1px solid var(--c-border-dim)',
                       borderLeft: colIdx > 0 ? '1px solid var(--c-border-dim)' : 'none',
                       opacity: p.enabled ? 1 : 0.5,
-                      gridTemplateColumns: '6px minmax(0, 1fr) 116px 40px 40px 56px',
+                      gridTemplateColumns: rowGridTemplate,
                     }}
                     title={`${p.platform} — ${status_}`}
                   >
