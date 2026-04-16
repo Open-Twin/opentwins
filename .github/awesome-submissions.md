@@ -38,16 +38,16 @@ Legend: ☐ not submitted · ◐ submitted, pending review · ☑ merged · ✗ 
 
 | # | List                                                                                                         | Section / Category                       | Method      | Status |
 | - | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------- | ----------- | ------ |
-| 1 | [hesreallyhim/awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code)                      | Tooling                                  | Issue form  | ☐      |
-| 2 | [webfuse-com/awesome-claude](https://github.com/webfuse-com/awesome-claude)                                  | Applications                             | PR          | ☐      |
-| 3 | [jim-schwoebel/awesome_ai_agents](https://github.com/jim-schwoebel/awesome_ai_agents)                        | Marketing AI Agent                       | PR          | ☐      |
-| 4 | [e2b-dev/awesome-ai-agents](https://github.com/e2b-dev/awesome-ai-agents)                                    | Open-source › Productivity               | Form + PR   | ☐      |
-| 5 | [kyrolabs/awesome-agents](https://github.com/kyrolabs/awesome-agents)                                        | Automation › Browser                     | PR          | ☐      |
-| 6 | [Jenqyang/Awesome-AI-Agents](https://github.com/Jenqyang/Awesome-AI-Agents)                                  | Applications › Autonomous Agents         | PR          | ☐      |
-| 7 | [slavakurilyak/awesome-ai-agents](https://github.com/slavakurilyak/awesome-ai-agents)                        | Open-source agents                       | PR          | ☐      |
-| 8 | [caramaschiHG/awesome-ai-agents-2026](https://github.com/caramaschiHG/awesome-ai-agents-2026)                | Social / Marketing category              | PR          | ☐      |
-| 9 | [angrykoala/awesome-browser-automation](https://github.com/angrykoala/awesome-browser-automation)            | Tools › AI                               | PR          | ☐      |
-|10 | [awesome-selfhosted/awesome-selfhosted](https://github.com/awesome-selfhosted/awesome-selfhosted)            | Social Networking and Forums (stretch)   | PR          | ☐      |
+| 1 | [hesreallyhim/awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code)                      | Tooling                                  | Issue form  | ☐ human UI only — CLI submissions auto-closed per template |
+| 2 | [webfuse-com/awesome-claude](https://github.com/webfuse-com/awesome-claude)                                  | Applications › Agents (new subsection)   | PR          | ◐ [#189](https://github.com/webfuse-com/awesome-claude/pull/189) |
+| 3 | [jim-schwoebel/awesome_ai_agents](https://github.com/jim-schwoebel/awesome_ai_agents)                        | Building › Tools (alphabetical)          | PR          | ◐ [#216](https://github.com/jim-schwoebel/awesome_ai_agents/pull/216) |
+| 4 | [e2b-dev/awesome-ai-agents](https://github.com/e2b-dev/awesome-ai-agents)                                    | Open-source › Productivity               | Form + PR   | ☐ needs Google Form fill first |
+| 5 | [kyrolabs/awesome-agents](https://github.com/kyrolabs/awesome-agents)                                        | Automation › Browser                     | PR          | ◐ [#385](https://github.com/kyrolabs/awesome-agents/pull/385) |
+| 6 | [Jenqyang/Awesome-AI-Agents](https://github.com/Jenqyang/Awesome-AI-Agents)                                  | Applications › Autonomous Agents         | PR          | ◐ [#174](https://github.com/Jenqyang/Awesome-AI-Agents/pull/174) |
+| 7 | [slavakurilyak/awesome-ai-agents](https://github.com/slavakurilyak/awesome-ai-agents)                        | All Projects (alphabetical)              | PR          | ◐ [#224](https://github.com/slavakurilyak/awesome-ai-agents/pull/224) |
+| 8 | [caramaschiHG/awesome-ai-agents-2026](https://github.com/caramaschiHG/awesome-ai-agents-2026)                | Task and Workflow Agents › Automation    | PR          | ◐ [#157](https://github.com/caramaschiHG/awesome-ai-agents-2026/pull/157) |
+| 9 | [angrykoala/awesome-browser-automation](https://github.com/angrykoala/awesome-browser-automation)            | Tools › AI                               | PR          | ◐ [#99](https://github.com/angrykoala/awesome-browser-automation/pull/99) |
+|10 | [awesome-selfhosted/awesome-selfhosted](https://github.com/awesome-selfhosted/awesome-selfhosted)            | Social Networking and Forums (stretch)   | PR          | ☐ submit after others land |
 
 Lists intentionally **skipped** (and why):
 
