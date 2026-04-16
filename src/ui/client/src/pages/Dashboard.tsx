@@ -189,7 +189,7 @@ export function Dashboard() {
         <KpiCard
           label="Agents"
           value={`${enabledAgents}/${totalAgents}`}
-          sub={enabledAgents === totalAgents ? 'all enabled' : `${totalAgents - enabledAgents} paused`}
+          sub={enabledAgents === totalAgents ? 'all configured' : `${totalAgents - enabledAgents} disabled`}
           accent="teal"
         />
         <KpiCard
