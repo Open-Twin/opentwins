@@ -1,0 +1,208 @@
+# Awesome-List Submissions Tracker
+
+A tracker for submitting OpenTwins to relevant curated "awesome" lists. Each
+entry below has a ready-to-paste submission packet — no rewriting needed.
+
+> **Process note:** These submissions must be filed manually (fork the target
+> repo, edit the README in the right section, open a PR). The only exception is
+> `hesreallyhim/awesome-claude-code`, which requires an issue instead of a PR.
+
+## Submission metadata (shared across all lists)
+
+| Field            | Value                                                                                               |
+| ---------------- | --------------------------------------------------------------------------------------------------- |
+| Display name     | OpenTwins                                                                                           |
+| Repository URL   | https://github.com/Open-Twin/opentwins                                                              |
+| Homepage         | https://opentwins.ai                                                                                |
+| Author           | Open-Twin                                                                                           |
+| Author link      | https://github.com/Open-Twin                                                                        |
+| License          | MIT                                                                                                 |
+| Keywords         | ai, agents, social-media, automation, digital-twins, claude, claude-code                            |
+
+### Description variants
+
+- **One-liner (≤ 15 words):**
+  Autonomous AI agents that engage on 10 social platforms using your identity, voice, and content strategy.
+
+- **Short (1 sentence, ~30 words):**
+  CLI that deploys autonomous AI agents to engage on Reddit, Twitter/X, LinkedIn, Bluesky, Threads, Medium, Substack, Dev.to, Product Hunt, and Indie Hackers — powered by Claude Code and Chrome CDP browser automation.
+
+- **Medium (2–3 sentences):**
+  OpenTwins is a CLI and dashboard that runs autonomous digital-twin agents across ten social platforms (Reddit, Twitter/X, LinkedIn, Bluesky, Threads, Medium, Substack, Dev.to, Product Hunt, Indie Hackers). Each agent uses Claude Code as its AI brain and Chrome CDP for real browser automation, with a 7-stage content pipeline for trend scouting, competitive intel, and platform-specific writing. Everything is local: SQLite for activity and quality metrics, Bree for scheduling, a web dashboard at `localhost:3847`.
+
+---
+
+## Target lists
+
+Legend: ☐ not submitted · ◐ submitted, pending review · ☑ merged · ✗ rejected
+
+| # | List                                                                                                         | Section / Category                       | Method      | Status |
+| - | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------- | ----------- | ------ |
+| 1 | [hesreallyhim/awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code)                      | Tooling                                  | Issue form  | ☐      |
+| 2 | [webfuse-com/awesome-claude](https://github.com/webfuse-com/awesome-claude)                                  | Applications                             | PR          | ☐      |
+| 3 | [jim-schwoebel/awesome_ai_agents](https://github.com/jim-schwoebel/awesome_ai_agents)                        | Marketing AI Agent                       | PR          | ☐      |
+| 4 | [e2b-dev/awesome-ai-agents](https://github.com/e2b-dev/awesome-ai-agents)                                    | Open-source › Productivity               | Form + PR   | ☐      |
+| 5 | [kyrolabs/awesome-agents](https://github.com/kyrolabs/awesome-agents)                                        | Automation › Browser                     | PR          | ☐      |
+| 6 | [Jenqyang/Awesome-AI-Agents](https://github.com/Jenqyang/Awesome-AI-Agents)                                  | Applications › Autonomous Agents         | PR          | ☐      |
+| 7 | [slavakurilyak/awesome-ai-agents](https://github.com/slavakurilyak/awesome-ai-agents)                        | Open-source agents                       | PR          | ☐      |
+| 8 | [caramaschiHG/awesome-ai-agents-2026](https://github.com/caramaschiHG/awesome-ai-agents-2026)                | Social / Marketing category              | PR          | ☐      |
+
+Lists intentionally **skipped** (don't fit):
+
+- `kaushikb11/awesome-llm-agents` — framework-only scope, OpenTwins is an end-user app.
+- `ComposioHQ/awesome-claude-skills`, `awesome-claude-plugins` — OpenTwins is not a Skill or Plugin.
+- `awesome-claude-code-subagents` — list is limited to subagent prompts.
+
+---
+
+## 1. hesreallyhim/awesome-claude-code (PRIMARY target)
+
+**How to submit:** Open an issue using the "Recommend a Resource" template.
+The repo explicitly forbids PRs from anyone other than Claude.
+
+- Issue URL: https://github.com/hesreallyhim/awesome-claude-code/issues/new/choose
+- Template: **Recommend a Resource**
+
+**Fields:**
+
+| Field          | Value                                                                                               |
+| -------------- | --------------------------------------------------------------------------------------------------- |
+| Display Name   | OpenTwins                                                                                           |
+| Category       | Tooling                                                                                             |
+| Primary Link   | https://github.com/Open-Twin/opentwins                                                              |
+| Author Name    | Open-Twin                                                                                           |
+| Author Link    | https://github.com/Open-Twin                                                                        |
+| License        | MIT                                                                                                 |
+| Description    | CLI and dashboard that deploys autonomous AI agents on 10 social platforms (Reddit, Twitter/X, LinkedIn, Bluesky, Threads, Medium, Substack, Dev.to, Product Hunt, Indie Hackers). Uses Claude Code as the AI brain and Chrome CDP for browser automation, with a local web dashboard for control, activity, and quality metrics. |
+
+**Checklist reminders before filing:**
+- [ ] First commit is ≥ 1 week old
+- [ ] No duplicate issue open
+- [ ] Primary link returns 200
+- [ ] Repo README, LICENSE, and CONTRIBUTING present (already true)
+
+---
+
+## 2. webfuse-com/awesome-claude
+
+**Section:** `## Applications`
+
+**Markdown entry (insert alphabetically):**
+
+```markdown
+- [OpenTwins](https://github.com/Open-Twin/opentwins) - Autonomous digital-twin agents that engage on 10 social platforms (Reddit, Twitter/X, LinkedIn, Bluesky, Threads, Medium, Substack, Dev.to, Product Hunt, Indie Hackers), powered by Claude Code and Chrome CDP.
+```
+
+**PR title:** `Add OpenTwins to Applications`
+
+---
+
+## 3. jim-schwoebel/awesome_ai_agents
+
+**Section:** `## Marketing AI Agent` (also applicable: `Content Creation`, `Personal Assistant`)
+
+**Markdown entry:**
+
+```markdown
+- **[OpenTwins](https://github.com/Open-Twin/opentwins)** - Autonomous digital-twin agents for 10 social platforms (Reddit, Twitter/X, LinkedIn, Bluesky, Threads, Medium, Substack, Dev.to, Product Hunt, Indie Hackers). Runs a 7-stage content pipeline (trend scout → competitive intel → engagement tracker → network mapper → amplification → planner → writer), powered by Claude Code with a local dashboard. [[website](https://opentwins.ai)]
+```
+
+**PR title:** `Add OpenTwins under Marketing AI Agent`
+
+---
+
+## 4. e2b-dev/awesome-ai-agents
+
+**Submission form:** https://forms.gle/UXQFCogLYrPFvfoUA (fill this first, then open a PR).
+
+**Section:** `Open-source projects` → `Productivity`
+
+**Markdown entry (keep alphabetical):**
+
+```markdown
+- [OpenTwins](https://github.com/Open-Twin/opentwins) - Autonomous agents for 10 social platforms, powered by Claude Code.
+```
+
+**PR title:** `Add OpenTwins (Productivity, open-source)`
+
+---
+
+## 5. kyrolabs/awesome-agents
+
+**Section:** `## Automation` → `### Browser` (OpenTwins drives real Chrome sessions via CDP)
+
+**Markdown entry:**
+
+```markdown
+- [OpenTwins](https://github.com/Open-Twin/opentwins) - Autonomous digital-twin agents across 10 social platforms using Claude Code and Chrome CDP. ![GitHub stars](https://img.shields.io/github/stars/Open-Twin/opentwins?style=social)
+```
+
+**PR title:** `Add OpenTwins to Automation › Browser`
+
+---
+
+## 6. Jenqyang/Awesome-AI-Agents
+
+**Section:** `## Applications` → `### Autonomous Agents`
+
+**Markdown entry:**
+
+```markdown
+- [OpenTwins](https://github.com/Open-Twin/opentwins) - Autonomous digital twins that run hourly on 10 social platforms, orchestrated by Claude Code with a 7-stage content pipeline. ![GitHub Repo stars](https://img.shields.io/github/stars/Open-Twin/opentwins)
+```
+
+**PR title:** `Add OpenTwins under Applications › Autonomous Agents`
+
+---
+
+## 7. slavakurilyak/awesome-ai-agents
+
+**Section:** `Open-source agents` (alphabetical)
+
+**Markdown entry:**
+
+```markdown
+- [OpenTwins](https://github.com/Open-Twin/opentwins) - Autonomous agents for 10 social platforms, powered by Claude Code and Chrome CDP.
+```
+
+**PR title:** `Add OpenTwins to open-source agents`
+
+---
+
+## 8. caramaschiHG/awesome-ai-agents-2026
+
+**Section:** Social / Marketing / Content (whichever exists — check on PR)
+
+**Markdown entry:**
+
+```markdown
+- [OpenTwins](https://github.com/Open-Twin/opentwins) — Autonomous digital-twin agents across 10 social platforms (Reddit, Twitter/X, LinkedIn, Bluesky, Threads, Medium, Substack, Dev.to, Product Hunt, Indie Hackers), powered by Claude Code with a local dashboard.
+```
+
+**PR title:** `Add OpenTwins to social/marketing agents`
+
+---
+
+## PR body template (reusable)
+
+Use this body for every PR above (adjust section name):
+
+```markdown
+## Adding OpenTwins
+
+**Project:** [OpenTwins](https://github.com/Open-Twin/opentwins) — autonomous AI agents across 10 social platforms.
+
+**Section:** <SECTION>
+
+**Why it belongs:**
+- End-user application built on Claude Code (not a framework or skill)
+- Open source, MIT, actively maintained (see releases and CI)
+- Has README, LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, CHANGELOG, and tests
+- Published on npm: https://www.npmjs.com/package/opentwins
+
+**Checklist:**
+- [x] Entry is alphabetically ordered within its section
+- [x] Link returns 200
+- [x] No duplicate entry
+- [x] Description is ≤ 2 sentences and follows the list's style
+```
