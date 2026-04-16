@@ -96,13 +96,12 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { enabled: agentsEnabled, reason: agentsDisabledReason } = useAgentsEnabled();
   const { data: status, loading, refetch } = useApi<StatusData>('/api/status');
-  const { data: activityResp, refetch: refetchActivity } = useApi<{ sessions: Array<{ sessionId: string; platform: string; toolCount: number; eventCount: number }> }>(`/api/activity?date=${today()}`);
+  const { data: activityResp, refetch: refetchActivity } = useApi<{ sessions: Array<{ platform: string; toolCount: number; eventCount: number }> }>(`/api/activity?date=${today()}`);
   const { data: agents, refetch: refetchAgents } = useApi<Array<{ platform: string; limits: { daily: Record<string, { limit: number; current: number }>; weekly?: Record<string, { limit: number; current: number }> } | null }>>('/api/agents');
   const autoRunCount = status?.platforms.filter((p) => p.auto_run).length || 0;
   const [openStage, setOpenStage] = useState<{ id: string; label: string } | null>(null);
   const [pipelineCompact, setPipelineCompact] = useCompactPref('pipeline');
   const [agentsCompact, setAgentsCompact] = useCompactPref('agents');
-  const [recentRunsCompact, setRecentRunsCompact] = useCompactPref('recent-runs');
 
   // Auto-refresh dashboard every 10 seconds
   useEffect(() => {
@@ -357,104 +356,19 @@ export function Dashboard() {
 
       {/* ── Recent Runs (compact, last 5) ──────────────────────── */}
       <div className="panel noise animate-fade-up stagger-3">
-        <div className="panel-header flex items-center justify-between gap-3">
+        <div className="panel-header flex items-center justify-between">
           <span>// Recent Runs</span>
-          <div className="flex items-center gap-3 normal-case tracking-normal">
-            {runsToday > 0 && (
-              <button
-                onClick={() => navigate('/activity')}
-                className="mono text-[13px] transition-colors hover:underline"
-                style={{ color: 'var(--c-teal-dim)' }}
-              >
-                {runsToday > 5 ? `View all ${runsToday} runs →` : `${runsToday} today`}
-              </button>
-            )}
-            <CompactToggle compact={recentRunsCompact} onToggle={() => setRecentRunsCompact((v) => !v)} />
-          </div>
+          {runsToday > 0 && (
+            <button
+              onClick={() => navigate('/activity')}
+              className="mono text-[13px] normal-case tracking-normal transition-colors hover:underline"
+              style={{ color: 'var(--c-teal-dim)' }}
+            >
+              {runsToday > 5 ? `View all ${runsToday} runs →` : `${runsToday} today`}
+            </button>
+          )}
         </div>
         {status?.recentRuns && status.recentRuns.length > 0 ? (
-          recentRunsCompact ? (() => {
-            const allRuns = status.recentRuns;
-            const sessionByid = new Map((activityResp?.sessions || []).map((s) => [s.sessionId, s]));
-            const stripRuns = allRuns.slice(0, 20); // show up to 20 dots in the strip
-            const totalCompleted = allRuns.filter((r) => r.status === 'completed').length;
-            const totalFailed = allRuns.filter((r) => r.status === 'failed').length;
-            const totalRunning = allRuns.filter((r) => r.status === 'running').length;
-            const last = allRuns[0];
-            const lastSession = last ? sessionByid.get(last.id) : undefined;
-            const fmtDur = (ms?: number | null) =>
-              ms == null ? '—' :
-              ms < 60_000 ? `${Math.round(ms / 1000)}s` :
-              `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
-            return (
-              <div className="px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-2">
-                {/* Tally */}
-                <div className="flex items-center gap-2.5 shrink-0">
-                  <span className="mono text-[11px] uppercase tracking-[0.1em] font-semibold" style={{ color: 'var(--c-teal)' }}>
-                    {allRuns.length} runs
-                  </span>
-                  <span className="mono text-[11.5px] flex items-center gap-2.5" style={{ color: 'var(--c-text-muted)' }}>
-                    <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-green)' }} />{totalCompleted}</span>
-                    {totalRunning > 0 && <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-blue)' }} />{totalRunning}</span>}
-                    {totalFailed > 0 && <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-red)' }} />{totalFailed}</span>}
-                  </span>
-                </div>
-                {/* Run-by-run dot strip — newest on left, oldest on right */}
-                <div className="flex items-center gap-1 shrink-0">
-                  {stripRuns.map((run) => {
-                    const day = run.started_at?.split('T')[0] || today();
-                    const dotColor =
-                      run.status === 'completed' ? 'var(--c-green)' :
-                      run.status === 'running'   ? 'var(--c-blue)'  :
-                      run.status === 'failed'    ? 'var(--c-red)'   :
-                                                   'var(--c-text-muted)';
-                    const platformColor = PLATFORM_COLORS[run.agent_name] || '#888';
-                    const session = sessionByid.get(run.id);
-                    const actions = session?.toolCount;
-                    const time = run.started_at ? new Date(run.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—';
-                    const tip = `${run.agent_name} · ${time} · ${fmtDur(run.duration_ms)}` +
-                      (actions != null ? ` · ${actions} actions` : '') +
-                      (run.error ? ` · failed: ${run.error}` : '');
-                    return (
-                      <button
-                        key={run.id}
-                        type="button"
-                        onClick={() => navigate(`/activity?date=${day}&platform=${run.agent_name}&session=${run.id}`)}
-                        className="inline-flex items-center justify-center w-5 h-5 rounded-full transition-transform hover:scale-125 cursor-pointer"
-                        title={tip}
-                        aria-label={tip}
-                      >
-                        <span className="block rounded-full" style={{ width: 10, height: 10, background: platformColor, border: `2px solid ${dotColor}`, boxShadow: run.status === 'running' ? '0 0 6px var(--c-blue)' : undefined }} />
-                      </button>
-                    );
-                  })}
-                </div>
-                {/* Last-run summary on the right */}
-                {last && (
-                  <div className="ml-auto flex items-center gap-2 mono text-[11.5px] min-w-0" style={{ color: 'var(--c-text-muted)' }}>
-                    <span className="opacity-60">last:</span>
-                    <span className="capitalize font-medium truncate" style={{ color: 'var(--c-text-dim)' }}>{last.agent_name}</span>
-                    <span className="opacity-60">·</span>
-                    <span className="tabular-nums" style={{ color: 'var(--c-text-dim)' }}>{last.started_at ? new Date(last.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}</span>
-                    <span className="opacity-60">·</span>
-                    <span className="tabular-nums">{fmtDur(last.duration_ms)}</span>
-                    {lastSession?.toolCount != null && (
-                      <>
-                        <span className="opacity-60">·</span>
-                        <span className="tabular-nums">{lastSession.toolCount} actions</span>
-                      </>
-                    )}
-                    {last.error && (
-                      <>
-                        <span className="opacity-60">·</span>
-                        <span className="truncate" style={{ color: 'var(--c-red)' }} title={last.error}>⚠ failed</span>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })() : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -495,7 +409,6 @@ export function Dashboard() {
               </tbody>
             </table>
           </div>
-          )
         ) : (
           <div className="p-8 text-center">
             <div className="text-sm mb-1" style={{ color: 'var(--c-text-dim)' }}>No runs today</div>
