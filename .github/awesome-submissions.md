@@ -46,12 +46,20 @@ Legend: ☐ not submitted · ◐ submitted, pending review · ☑ merged · ✗ 
 | 6 | [Jenqyang/Awesome-AI-Agents](https://github.com/Jenqyang/Awesome-AI-Agents)                                  | Applications › Autonomous Agents         | PR          | ☐      |
 | 7 | [slavakurilyak/awesome-ai-agents](https://github.com/slavakurilyak/awesome-ai-agents)                        | Open-source agents                       | PR          | ☐      |
 | 8 | [caramaschiHG/awesome-ai-agents-2026](https://github.com/caramaschiHG/awesome-ai-agents-2026)                | Social / Marketing category              | PR          | ☐      |
+| 9 | [angrykoala/awesome-browser-automation](https://github.com/angrykoala/awesome-browser-automation)            | Tools › AI                               | PR          | ☐      |
+|10 | [awesome-selfhosted/awesome-selfhosted](https://github.com/awesome-selfhosted/awesome-selfhosted)            | Social Networking and Forums (stretch)   | PR          | ☐      |
 
-Lists intentionally **skipped** (don't fit):
+Lists intentionally **skipped** (and why):
 
 - `kaushikb11/awesome-llm-agents` — framework-only scope, OpenTwins is an end-user app.
 - `ComposioHQ/awesome-claude-skills`, `awesome-claude-plugins` — OpenTwins is not a Skill or Plugin.
 - `awesome-claude-code-subagents` — list is limited to subagent prompts.
+- `sindresorhus/awesome-nodejs` — submissions paused for spam; CLI bar is "something very awesome" and maintainer redirects CLIs to awesome-cli-apps.
+- `agarrharr/awesome-cli-apps` — no natural category (no social / automation / browser-control section); closest is "Browser Replacement" which is for terminal browsers, not browser drivers.
+- `Lissy93/awesome-privacy` and the other `awesome-privacy` forks — scope is privacy-respecting *alternatives* to SaaS. OpenTwins operates *on* SaaS, so it's off-topic.
+- `transitive-bullshit/awesome-puppeteer`, `mxschmitt/awesome-playwright` — OpenTwins uses raw Chrome CDP, not Puppeteer or Playwright.
+- `sindresorhus/awesome` (root directory) — only curated awesome lists go here, not individual projects.
+- `awesomelistsio/awesome-oss-alternatives` — intended for projects that replace a specific SaaS, not tools that automate against SaaS.
 
 ---
 
@@ -180,6 +188,52 @@ The repo explicitly forbids PRs from anyone other than Claude.
 ```
 
 **PR title:** `Add OpenTwins to social/marketing agents`
+
+---
+
+## 9. angrykoala/awesome-browser-automation
+
+**Section:** `## Tools` → `### AI` (OpenTwins uses Chrome CDP + Claude to drive real browser sessions)
+
+**Markdown entry:**
+
+```markdown
+- [OpenTwins](https://github.com/Open-Twin/opentwins) - CLI that drives real Chrome sessions via CDP to run autonomous AI agents on 10 social platforms, powered by Claude Code.
+```
+
+**PR title:** `Add OpenTwins under Tools › AI`
+
+---
+
+## 10. awesome-selfhosted/awesome-selfhosted
+
+> ⚠️ **Stretch target.** The list's stated scope is "Free Software network
+> services and web applications which can be hosted on your own server(s)."
+> OpenTwins is a CLI with a local web dashboard (`localhost:3847`) and stores
+> all state locally in SQLite, so it's defensible — but maintainers may reject
+> it as "not a network service." Submit only after the others land.
+
+**Section:** `## Social Networking and Forums` (closest fit), or `## Automation`
+
+**Format required** (strict, see
+[README](https://github.com/awesome-selfhosted/awesome-selfhosted#anti-features)):
+
+```
+[Name](https://homepage/) - Short description (≤ 250 chars). ([Source Code](https://github.com/.../), [Demo](https://demo.url/)) `LICENSE` `LANGUAGE`
+```
+
+**Markdown entry:**
+
+```markdown
+- [OpenTwins](https://opentwins.ai) - Runs autonomous digital-twin agents across 10 social platforms using Claude Code and local Chrome CDP. All state (config, activity, quality metrics) stays in a local SQLite DB; web dashboard at localhost:3847. ([Source Code](https://github.com/Open-Twin/opentwins)) `MIT` `Nodejs`
+```
+
+**Reminders before filing:**
+- [ ] Description is ≤ 250 characters
+- [ ] Omit redundant words like "open-source", "free", "self-hosted" (implied by the list)
+- [ ] Project has ≥ 6 months of recent activity (check before submitting)
+
+**PR title:** `Add OpenTwins to Social Networking and Forums`
 
 ---
 
