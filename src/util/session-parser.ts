@@ -92,6 +92,19 @@ function summarizeToolCall(name: string, input: Record<string, unknown>): { summ
 
 // ── Session parsing ───────────────────────────────────────────
 
+function sessionHasTerminator(sessionFile: string): boolean {
+  let content: string;
+  try { content = readFileSync(sessionFile, 'utf-8'); } catch { return false; }
+  for (const line of content.split('\n')) {
+    if (!line) continue;
+    try {
+      const t = (JSON.parse(line) as { type?: string }).type;
+      if (t === 'result' || t === 'last-prompt') return true;
+    } catch { /* skip malformed line */ }
+  }
+  return false;
+}
+
 export function extractEventsFromSession(sessionFile: string): FeedEvent[] {
   let content: string;
   try { content = readFileSync(sessionFile, 'utf-8'); } catch { return []; }
@@ -157,14 +170,12 @@ export function extractEventsFromSession(sessionFile: string): FeedEvent[] {
           }
         }
       }
-    } else if (typ === 'result' || typ === 'last-prompt') {
-      events.push({
-        ts,
-        kind: 'done',
-        summary: `✅ Session complete`,
-        detail: typ === 'result' ? String(entry.result || '').slice(0, 500) : undefined,
-      });
     }
+    // Note: we deliberately do NOT push a synthetic "Session complete" feed
+    // event for `result` / `last-prompt`. The session terminator state is
+    // already conveyed by the dashboard's RUNNING/READY badge and by the
+    // recent-runs table status (derived from `completed` in
+    // summarizeSession). Adding a feed event was redundant and noisy.
   }
 
   return events;
@@ -179,7 +190,11 @@ export function summarizeSession(sessionFile: string, platform: string): Session
   const durationMs = startedAt && endedAt
     ? Math.max(0, new Date(endedAt).getTime() - new Date(startedAt).getTime())
     : 0;
-  const completed = events.some((e) => e.kind === 'done');
+  // A session is "completed" if the JSONL file contains at least one
+  // session-end marker (`result` or `last-prompt`). We re-scan the file
+  // here rather than push a synthetic feed event for it, since the feed
+  // event was redundant with the UI's running/ready badge.
+  const completed = sessionHasTerminator(sessionFile);
 
   return {
     sessionId: basename(sessionFile, '.jsonl'),

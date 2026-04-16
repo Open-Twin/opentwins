@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApi, today } from '../hooks/useApi.ts';
+import { DatePicker } from '../components/DatePicker.tsx';
 
 interface FeedEvent {
   ts: string;
@@ -50,6 +51,18 @@ function formatTime(iso: string): string {
   }
 }
 
+// Stable key for an error event within a session, used by the per-error
+// "acknowledge" feature. Includes sessionId so the same error in a different
+// session is still visible after acknowledgment.
+function quickHash(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+function errorKey(sessionId: string, ev: FeedEvent): string {
+  return `${sessionId}::${ev.ts}::${quickHash(ev.summary + (ev.detail || ''))}`;
+}
+
 function statusMeta(status: SessionSummary['status']) {
   switch (status) {
     case 'running':
@@ -83,6 +96,29 @@ export function ActivityLog() {
   const [date, setDate] = useState(initialDate);
   const [platform, setPlatform] = useState(initialPlatform);
   const [kindFilter, setKindFilter] = useState<EventKindFilter>('all');
+  const [errorsOnly, setErrorsOnly] = useState(false);
+  const [ackedErrors, setAckedErrors] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('opentwins.acked-errors');
+      if (raw) return new Set(JSON.parse(raw) as string[]);
+    } catch { /* corrupted, ignore */ }
+    return new Set();
+  });
+
+  // Persist ackedErrors whenever it changes.
+  useEffect(() => {
+    try {
+      localStorage.setItem('opentwins.acked-errors', JSON.stringify(Array.from(ackedErrors)));
+    } catch { /* quota / private mode, ignore */ }
+  }, [ackedErrors]);
+
+  const ackError = (key: string) => {
+    setAckedErrors((prev) => {
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+  };
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(
     focusSession ? new Set([focusSession]) : new Set()
   );
@@ -112,21 +148,41 @@ export function ActivityLog() {
     : `/api/activity?date=${date}&platform=${platform}`;
 
   const { data, loading } = useApi<{ sessions: SessionSummary[] }>(url, [date, platform]);
-  const sessions = data?.sessions || [];
+  const allSessions = data?.sessions || [];
 
-  // Summary stats across visible sessions
+  // Effective error count per session = raw errors minus the ones the user
+  // acknowledged. Used everywhere: Errors KPI card, Errors metric on each
+  // session card, and the errors-only filter. Acked errors stay rendered
+  // (dimmed) inside the expanded view so context isn't lost.
+  const effectiveErrorCount = (s: SessionSummary): number => {
+    if (s.errorCount === 0) return 0;
+    let acked = 0;
+    for (const ev of s.events) {
+      if (ev.kind === 'error' && ackedErrors.has(errorKey(s.sessionId, ev))) acked++;
+    }
+    return Math.max(0, s.errorCount - acked);
+  };
+  const sessions = errorsOnly ? allSessions.filter((s) => effectiveErrorCount(s) > 0) : allSessions;
+
+  // Summary stats across the unfiltered set so the cards remain a stable
+  // overview of the date+platform selection (clicking the Errors card to
+  // narrow the list shouldn't make the cards' own numbers change).
+  // Acknowledged errors are subtracted — that's the whole point of acking.
   const stats = useMemo(() => {
-    let events = 0, tools = 0, errors = 0, running = 0, completed = 0, incomplete = 0;
-    for (const s of sessions) {
+    let events = 0, tools = 0, errors = 0, running = 0, completed = 0, incomplete = 0, erroredSessions = 0;
+    for (const s of allSessions) {
       events += s.eventCount;
       tools += s.toolCount;
-      errors += s.errorCount;
+      const eff = effectiveErrorCount(s);
+      errors += eff;
+      if (eff > 0) erroredSessions++;
       if (s.status === 'running') running++;
       else if (s.status === 'completed') completed++;
       else incomplete++;
     }
-    return { events, tools, errors, running, completed, incomplete };
-  }, [sessions]);
+    return { events, tools, errors, running, completed, incomplete, erroredSessions };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allSessions, ackedErrors]);
 
   const toggleSession = (id: string) => {
     const next = new Set(expandedSessions);
@@ -173,8 +229,10 @@ export function ActivityLog() {
         <StatCard
           label="Errors"
           value={stats.errors}
-          sub={stats.errors > 0 ? 'tool failures' : 'clean'}
+          sub={stats.errors > 0 ? `${stats.erroredSessions} session${stats.erroredSessions === 1 ? '' : 's'} affected — click to filter` : 'clean'}
           accent={stats.errors > 0 ? 'red' : undefined}
+          onClick={stats.erroredSessions > 0 ? () => setErrorsOnly((v) => !v) : undefined}
+          active={errorsOnly}
         />
       </div>
 
@@ -183,17 +241,7 @@ export function ActivityLog() {
         {/* Date picker */}
         <div className="flex items-center gap-2">
           <span className="mono text-[12px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Date</span>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="mono px-3 py-2 rounded-lg text-sm outline-none transition-colors"
-            style={{
-              background: 'var(--c-panel)',
-              border: '1px solid var(--c-border-dim)',
-              color: 'var(--c-text)',
-            }}
-          />
+          <DatePicker value={date} onChange={setDate} />
           {!isToday && (
             <button
               onClick={() => setDate(today())}
@@ -267,9 +315,19 @@ export function ActivityLog() {
         </div>
       ) : sessions.length === 0 ? (
         <div className="panel noise py-16 text-center">
-          <div className="text-base" style={{ color: 'var(--c-text-dim)' }}>No sessions found</div>
+          <div className="text-base" style={{ color: 'var(--c-text-dim)' }}>
+            {errorsOnly ? 'No errored sessions for this date / platform' : 'No sessions found'}
+          </div>
           <div className="mono text-[13px] mt-2" style={{ color: 'var(--c-text-muted)' }}>
-            {isToday
+            {errorsOnly ? (
+              <button
+                onClick={() => setErrorsOnly(false)}
+                className="underline hover:text-white transition-colors"
+                style={{ color: 'var(--c-teal-dim)' }}
+              >
+                Clear errors filter
+              </button>
+            ) : isToday
               ? 'Trigger a run from the Agents tab to see activity here'
               : `Try selecting a different date or platform`}
           </div>
@@ -282,7 +340,12 @@ export function ActivityLog() {
             const color = PLATFORM_COLORS[s.platform] || '#888';
             const st = statusMeta(s.status);
 
-            // Filter events by kind
+            // Filter events by kind only. Acknowledged errors stay rendered
+            // (dimmed, with an "acked" badge instead of an action button) so
+            // context isn't lost — they just stop counting toward the Errors
+            // KPI/metric. Per-error ack state lives in localStorage keyed on
+            // sessionId+ts+content-hash so identical errors in future
+            // sessions are still flagged by default.
             const filteredEvents = kindFilter === 'all'
               ? s.events
               : s.events.filter((e) => e.kind === kindFilter);
@@ -340,9 +403,10 @@ export function ActivityLog() {
                     <div className="flex items-center gap-5 shrink-0">
                       <Metric label="Events" value={s.eventCount} />
                       <Metric label="Tools"  value={s.toolCount} />
-                      {s.errorCount > 0 && (
-                        <Metric label="Errors" value={s.errorCount} color="var(--c-red)" />
-                      )}
+                      {(() => {
+                        const eff = effectiveErrorCount(s);
+                        return eff > 0 ? <Metric label="Errors" value={eff} color="var(--c-red)" /> : null;
+                      })()}
                       <span className="text-sm transition-transform duration-200" style={{
                         color: 'var(--c-teal-dim)',
                         transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
@@ -392,12 +456,14 @@ export function ActivityLog() {
                           {filteredEvents.map((ev, i) => {
                             const evId = `${s.sessionId}:${i}`;
                             const isEvExpanded = expandedEvents.has(evId);
-                            const evColor = eventKindColor(ev.kind);
+                            const isAcked = ev.kind === 'error' && ackedErrors.has(errorKey(s.sessionId, ev));
+                            const evColor = isAcked ? 'var(--c-text-muted)' : eventKindColor(ev.kind);
 
                             return (
                               <div
                                 key={i}
                                 className="flex items-start gap-3 py-2 px-3 rounded-lg transition-colors hover:bg-white/[0.02] cursor-pointer"
+                                style={{ opacity: isAcked ? 0.55 : 1 }}
                                 onClick={(e) => { e.stopPropagation(); toggleEvent(evId); }}
                               >
                                 {/* Timestamp */}
@@ -406,11 +472,11 @@ export function ActivityLog() {
                                 </span>
 
                                 {/* Kind dot */}
-                                <div className="w-1.5 h-1.5 rounded-full shrink-0 mt-2" style={{ background: evColor, boxShadow: `0 0 6px ${evColor}60` }} />
+                                <div className="w-1.5 h-1.5 rounded-full shrink-0 mt-2" style={{ background: evColor, boxShadow: isAcked ? 'none' : `0 0 6px ${evColor}60` }} />
 
                                 {/* Content */}
                                 <div className="flex-1 min-w-0">
-                                  <div className="text-sm break-words leading-relaxed" style={{ color: evColor }}>
+                                  <div className="text-sm break-words leading-relaxed" style={{ color: evColor, textDecoration: isAcked ? 'line-through' : undefined }}>
                                     {ev.summary}
                                   </div>
                                   {ev.detail && isEvExpanded && (
@@ -426,6 +492,52 @@ export function ActivityLog() {
                                     </div>
                                   )}
                                 </div>
+
+                                {/* Per-error acknowledge action. Click marks
+                                    the error as acked (visible but dimmed
+                                    + struck-through, dropped from counts).
+                                    Click the "acked" badge again to undo. */}
+                                {ev.kind === 'error' && (() => {
+                                  const k = errorKey(s.sessionId, ev);
+                                  return isAcked ? (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setAckedErrors((prev) => {
+                                          const next = new Set(prev);
+                                          next.delete(k);
+                                          return next;
+                                        });
+                                      }}
+                                      title="Undo acknowledge — re-include this error in counts"
+                                      className="mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 mt-1 transition-colors"
+                                      style={{
+                                        color: 'var(--c-teal)',
+                                        background: 'rgba(45,212,191,0.08)',
+                                        border: '1px solid var(--c-teal-dim)',
+                                      }}
+                                    >
+                                      ✓ acked
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); ackError(k); }}
+                                      title="Acknowledge — drop from error counts (still visible, dimmed)"
+                                      className="mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 mt-1 transition-colors"
+                                      style={{
+                                        color: 'var(--c-text-muted)',
+                                        background: 'rgba(255,255,255,0.03)',
+                                        border: '1px solid var(--c-border-dim)',
+                                      }}
+                                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--c-teal)'; e.currentTarget.style.borderColor = 'var(--c-teal-dim)'; }}
+                                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--c-text-muted)'; e.currentTarget.style.borderColor = 'var(--c-border-dim)'; }}
+                                    >
+                                      ack
+                                    </button>
+                                  );
+                                })()}
 
                                 {/* Kind label (tiny) */}
                                 <span className="mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 mt-1" style={{
@@ -453,15 +565,26 @@ export function ActivityLog() {
 
 // ── Helpers ─────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: 'teal' | 'green' | 'blue' | 'red' }) {
+function StatCard({ label, value, sub, accent, onClick, active }: { label: string; value: string | number; sub?: string; accent?: 'teal' | 'green' | 'blue' | 'red'; onClick?: () => void; active?: boolean }) {
   const color = accent === 'teal'  ? 'var(--c-teal)'
               : accent === 'green' ? 'var(--c-green)'
               : accent === 'blue'  ? 'var(--c-blue)'
               : accent === 'red'   ? 'var(--c-red)'
               : 'var(--c-text)';
+  const clickable = !!onClick;
   return (
-    <div className="panel noise p-5">
-      <div className="text-[12px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: 'var(--c-text-muted)' }}>{label}</div>
+    <div
+      className={`panel noise p-5 ${clickable ? 'cursor-pointer transition-all hover:brightness-110' : ''}`}
+      onClick={onClick}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+      style={active ? { borderColor: color, boxShadow: `0 0 0 1px ${color}, 0 0 12px -4px ${color}` } : undefined}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[12px] uppercase tracking-[0.12em] font-medium" style={{ color: 'var(--c-text-muted)' }}>{label}</div>
+        {active && <span className="mono text-[10px] uppercase tracking-wider" style={{ color }}>● filter</span>}
+      </div>
       <div className="text-3xl font-semibold tabular-nums leading-none" style={{ color }}>{value}</div>
       {sub && <div className="mono text-[12px] mt-2" style={{ color: 'var(--c-text-muted)' }}>{sub}</div>}
     </div>

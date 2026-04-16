@@ -48,12 +48,3 @@ ENDJSON
 
 If `isPublished: false` after step 4: retry submit once. If still fails, return HEARTBEAT_BLOCKED.
 
-## S 8. Dismiss Cookie Banner (if present)
-
-Run once at browser startup, before any post interaction:
-
-```bash
-exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { var acceptBtn = document.querySelector('#onetrust-accept-btn-handler'); if (acceptBtn) { acceptBtn.click(); return { dismissed: true }; } return { noBanner: true }; }"}
-ENDJSON
-```

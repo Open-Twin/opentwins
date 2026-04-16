@@ -54,7 +54,7 @@ Read `memory/today_summary.json`. Use tallies to inform comment decisions:
 
 If file doesn't exist or `date != today`, initialize:
 ```bash
-printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":"","authors":{}}' "$(date +%Y-%m-%d)" > memory/today_summary.json
 ```
 
 ## 2. Browser Startup (with retry)
@@ -87,13 +87,27 @@ printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/replied_posts.txt || true
 
 The activity page extraction (S 1) returns `author` per post. Before replying, count how many posts from the same author appear on the activity page. If the same author has 3+ posts on the activity page → we're in a deep back-and-forth, skip the reply (append postId to tracking, move to next). Deep conversations on Threads have zero visibility to anyone else.
 
+### 3b3. Per-author daily cap (from today_summary.json)
+
+Check `authors` object in `today_summary.json` (already loaded in §1b). For the notification author:
+- If `authors[author] >= 2` → **SKIP this reply**. Append postId to `memory/replied_posts.txt` (prevents reprocessing). Log `Type=Reply Skipped, Author={author}, Reason=per_author_daily_cap, count={N}`.
+- Rationale: 3+ interactions with one person in a day looks obsessive regardless of thread depth.
+
+### 3b4. Spam detection — skip self-promo notifications
+
+Check the notification `preview` text (from S 1 extraction). If it contains ANY of these spam signals, skip:
+- Links: `beacons.ai`, `linktr.ee`, `linktree`, `bit.ly`
+- Pitches: `youtube channel`, `subscribe`, `check my link`, `dm me`, `follow me`, `join my`, `check out my`, `i feature`, `sign up`
+
+If matched → append postId to `memory/replied_posts.txt`. Log `Type=Reply Skipped, Reason=spam_detected, preview={first 60 chars}`.
+
 ### 3c. Reply loop
 
 Loop until no new unreplied posts:
 1. Run BROWSER-replies.md S 2 with `allowedIds` from step 3b → if `clicked=false`, stop
 2. Run BROWSER-core.md S 5 (Reply/Comment Flow — ONE evaluate: wait + type + submit)
 3. **If S 5 returns `no_dialog`:** Run BROWSER-replies.md S 3 (Retry — re-navigate to activity/replies and retry S 2 + S 5 once). If retry also fails → **skip this post** (remove from `allowedIds`, do NOT track as replied), move to next.
-4. **After successful reply:** `printf '%s\n' '{postId}' >> memory/replied_posts.txt` + remove from `allowedIds`
+4. **After successful reply:** `printf '%s\n' '{postId}' >> memory/replied_posts.txt` + remove from `allowedIds` + increment `authors[author]` in your in-memory copy of today_summary (written to file in §5)
 5. Loop back to step 1 (S 5 already has 0.5s post-submit wait built in)
 
 Rules:
@@ -124,6 +138,7 @@ Filter `schedule.json`: `status="pending"` AND `time <= now`
    ```
    Only IDs NOT in file pass. Empty = all commented across ALL queries → skip task, mark done.
 6. Per candidate post:
+   - **Per-author daily cap:** Check `authors[candidate.author]` in today_summary. If >= 2 → skip to next candidate (no navigation needed).
    - Navigate to post URL
    - 🚨 **MANDATORY: Run BROWSER-engage.md S 4a** (has 3s embedded wait — duplicate check + post text in ONE evaluate)
      If `alreadyCommented: true` → append post_id to `memory/commented_posts.txt` (backfill), skip to next candidate.
@@ -132,7 +147,7 @@ Filter `schedule.json`: `status="pending"` AND `time <= now`
    - Run BROWSER-core.md S 5 (ONE evaluate: 1.5s wait + type + 0.5s wait + submit)
    - 🚨 **MANDATORY: Follow AFTER comment** — Run BROWSER-engage.md S 7 (from post page, no navigation needed). Every engagement = follow.
    - Language: ALWAYS English (Ukrainian only if post is Ukrainian, per SOUL.md)
-7. **After each successful comment:** `echo "{post_id}" >> memory/commented_posts.txt`
+7. **After each successful comment:** `echo "{post_id}" >> memory/commented_posts.txt` + increment `authors[author]` in your in-memory copy of today_summary (written to file in §5)
 8. Log: Type = "Comment", increment `comments_done` in memory
 9. Completion: `comments_done >= config.max_comments` -> mark "done". If `comments_done < max_comments` AND candidates remain unprocessed → keep "pending". If ALL candidates exhausted (all queries searched, all results either commented or filtered) → mark "done" with actual count.
 
@@ -196,7 +211,7 @@ Compose dialog is identical to reply/quote dialog. Same `[role="dialog"]`, same 
 - Post/Quote: `weekly.{type}.current += 1`
 - Do NOT read+write limits.json per comment -- batch in memory, write once
 
-🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
+🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment), and write updated `authors` object (all author interaction counts from today).
 - 🚨 Use the **Read** then **Write** tool to update this file — `printf > file` crashes on non-ASCII (smart quotes, em-dash) in `last_snippet`.
 
 **🚨 MANDATORY Slack report** — output as text (gateway routes automatically):

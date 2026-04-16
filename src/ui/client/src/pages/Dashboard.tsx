@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, type ReactNode } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApi, today } from '../hooks/useApi.ts';
 import { useAgentsEnabled, HealthBanner } from '../contexts/HealthContext.tsx';
+import { PipelineStageModal } from '../components/PipelineStageModal.tsx';
+import { PIPELINE_GROUPS, stagesByGroup, type StageMeta } from '../lib/pipeline-stages.ts';
 
 interface PipelineStageState {
   status: 'idle' | 'running' | 'completed' | 'failed';
@@ -48,17 +50,6 @@ const PLATFORM_COLORS: Record<string, string> = {
   threads: '#888', medium: '#00AB6C', substack: '#FF6719', devto: '#3B49DF',
   ph: '#DA552F', ih: '#4F46E5',
 };
-
-// Pipeline stages — shown as a compact vertical timeline
-const PIPELINE_STAGES = [
-  { id: 'trend-scout',         label: 'Trend Scout',        group: 'Research',  parallel: true  },
-  { id: 'competitive-intel',   label: 'Competitive Intel',  group: 'Research',  parallel: true  },
-  { id: 'engagement-tracker',  label: 'Engagement Tracker', group: 'Research',  parallel: true  },
-  { id: 'network-mapper',      label: 'Network Mapper',     group: 'Research',  parallel: true  },
-  { id: 'amplification',       label: 'Amplification',      group: 'Analysis',  parallel: false },
-  { id: 'content-planner',     label: 'Content Planner',    group: 'Content',   parallel: false },
-  { id: 'content-writer',      label: 'Content Writer',     group: 'Content',   parallel: false },
-];
 
 // Shorten a handle/URL to a clean display form
 function cleanHandle(handle: string): string {
@@ -107,7 +98,23 @@ export function Dashboard() {
   const { data: status, loading, refetch } = useApi<StatusData>('/api/status');
   const { data: activityResp, refetch: refetchActivity } = useApi<{ sessions: Array<{ platform: string; toolCount: number; eventCount: number }> }>(`/api/activity?date=${today()}`);
   const { data: agents, refetch: refetchAgents } = useApi<Array<{ platform: string; limits: { daily: Record<string, { limit: number; current: number }>; weekly?: Record<string, { limit: number; current: number }> } | null }>>('/api/agents');
-  const autoRunCount = status?.platforms.filter((p) => p.auto_run).length || 0;
+  // Debug: ?previewAgents=N slices the platforms array to the first N before
+  // rendering, so the Agents section can be visually inspected at any agent
+  // count without editing config. URL is non-destructive — refresh without
+  // the param to see the real list.
+  const [searchParams] = useSearchParams();
+  const previewAgents = (() => {
+    const raw = searchParams.get('previewAgents');
+    if (!raw) return null;
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  })();
+  const platforms = previewAgents != null
+    ? (status?.platforms.slice(0, previewAgents) || [])
+    : (status?.platforms || []);
+  const autoRunCount = platforms.filter((p) => p.auto_run).length;
+  const [openStage, setOpenStage] = useState<{ id: string; label: string } | null>(null);
+  const [pipelineCompact, setPipelineCompact] = useCompactPref('pipeline');
 
   // Auto-refresh dashboard every 10 seconds
   useEffect(() => {
@@ -139,8 +146,8 @@ export function Dashboard() {
   status?.recentRuns?.forEach((r) => { if (!lastRun[r.agent_name]) lastRun[r.agent_name] = r; });
 
   const totalActions = Object.values(actionsByPlatform).reduce((a, b) => a + b, 0);
-  const totalAgents = status?.platforms.length || 0;
-  const enabledAgents = status?.platforms.filter((p) => p.enabled).length || 0;
+  const totalAgents = platforms.length;
+  const enabledAgents = platforms.filter((p) => p.enabled).length;
   const runsToday = status?.recentRuns?.length || 0;
   const completedToday = status?.recentRuns?.filter((r) => r.status === 'completed').length || 0;
 
@@ -181,7 +188,7 @@ export function Dashboard() {
         <KpiCard
           label="Agents"
           value={`${enabledAgents}/${totalAgents}`}
-          sub={enabledAgents === totalAgents ? 'all enabled' : `${totalAgents - enabledAgents} paused`}
+          sub={enabledAgents === totalAgents ? 'all configured' : `${totalAgents - enabledAgents} disabled`}
           accent="teal"
         />
         <KpiCard
@@ -215,81 +222,147 @@ export function Dashboard() {
             manage →
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {status?.platforms.map((p, i) => {
-            const run = lastRun[p.platform];
-            const acts = actionsByPlatform[p.platform] || 0;
-            const agentData = agents?.find((a) => a.platform === p.platform);
-            const comments = agentData?.limits?.daily?.comments?.current || agentData?.limits?.daily?.responses?.current || 0;
-            const color = PLATFORM_COLORS[p.platform] || '#888';
-            const sched = status.platformSchedules?.find((s) => s.platform === p.platform);
+        {(() => {
+          const total = platforms.length;
+          // Adaptive column count: 1 col for 1–3 agents, 2 cols for 4+. Avoids
+          // an empty second column when only a couple of agents are configured.
+          const cols = total >= 4 ? 2 : 1;
+          const rowsPerCol = Math.ceil(total / cols);
 
+          // Single-column mode: render as a real HTML table with fixed column
+          // widths matching Recent Runs so columns line up vertically.
+          // Widths: AGENT 18% · STATUS 20% · MODE/STARTED 30% · then 32%
+          // split into ACTIONS+COMMENTS (16%+16%) here, taken whole as
+          // DURATION on Recent Runs.
+          if (cols === 1) {
             return (
-              <div
-                key={p.platform}
-                className={`panel noise animate-fade-up stagger-${Math.min(i + 1, 5)} cursor-pointer transition-all duration-200 hover:border-white/10`}
-                style={{ opacity: p.enabled ? 1 : 0.5 }}
-                onClick={() => navigate('/agents')}
-              >
-                <div className="p-5">
-                  {/* Card header */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ background: color, boxShadow: `0 0 12px ${color}50` }}
-                      />
-                      <div className="min-w-0">
-                        <div className="text-base font-semibold capitalize leading-tight" style={{ color: 'var(--c-text)' }}>
-                          {p.platform}
-                        </div>
-                        <div className="mono text-[12px] truncate" style={{ color: 'var(--c-text-muted)' }}>
-                          {cleanHandle(p.handle)}
-                        </div>
-                      </div>
-                    </div>
-                    {run && <StatusBadge status={run.status} />}
-                  </div>
-
-                  {/* Stats */}
-                  <div className="grid grid-cols-2 gap-3 mb-3 pt-3" style={{ borderTop: '1px solid var(--c-border-dim)' }}>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wider mb-1" style={{ color: 'var(--c-text-muted)' }}>Actions</div>
-                      <div className="text-2xl font-semibold tabular-nums leading-none" style={{ color: acts > 0 ? 'var(--c-text)' : 'var(--c-text-muted)' }}>
-                        {acts}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wider mb-1" style={{ color: 'var(--c-text-muted)' }}>Comments</div>
-                      <div className="text-2xl font-semibold tabular-nums leading-none" style={{ color: comments > 0 ? 'var(--c-text)' : 'var(--c-text-muted)' }}>
-                        {comments}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Footer: schedule or last run */}
-                  <div className="flex items-center justify-between mono text-[12px] pt-2" style={{ borderTop: '1px solid var(--c-border-dim)', color: 'var(--c-text-muted)' }}>
-                    {run?.status === 'running' ? (
-                      <span className="flex items-center gap-1.5" style={{ color: 'var(--c-blue)' }}>
-                        <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--c-blue)' }}></span>
-                        running now
-                      </span>
-                    ) : sched && sched.nextRun ? (
-                      <Countdown target={sched.nextRun} />
-                    ) : p.auto_run ? (
-                      <span style={{ color: 'var(--c-green)' }}>auto-run</span>
-                    ) : (
-                      <span>manual only</span>
-                    )}
-                    {run?.duration_ms && (
-                      <span>{(run.duration_ms / 1000).toFixed(0)}s</span>
-                    )}
-                  </div>
-                </div>
+              <div className="panel noise overflow-x-auto">
+                <table className="w-full" style={{ tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: '18%' }} />
+                    <col style={{ width: '20%' }} />
+                    <col style={{ width: '30%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '16%' }} />
+                  </colgroup>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
+                      <th className="text-left px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Agent</th>
+                      <th className="text-left px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Status</th>
+                      <th className="text-left px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Mode</th>
+                      <th className="text-right px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Actions</th>
+                      <th className="text-right px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Comments</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {platforms.map((p, i) => {
+                      const run = lastRun[p.platform];
+                      const acts = actionsByPlatform[p.platform] || 0;
+                      const agentData = agents?.find((a) => a.platform === p.platform);
+                      const comments = agentData?.limits?.daily?.comments?.current || agentData?.limits?.daily?.responses?.current || 0;
+                      const color = PLATFORM_COLORS[p.platform] || '#888';
+                      const isLast = i === platforms.length - 1;
+                      return (
+                        <tr
+                          key={p.platform}
+                          className="transition-colors hover:bg-white/[0.03] cursor-pointer"
+                          style={{ borderBottom: isLast ? 'none' : '1px solid var(--c-border-dim)', opacity: p.enabled ? 1 : 0.5 }}
+                          onClick={() => navigate('/agents')}
+                          title={`${p.platform} — ${run?.status || 'idle'}`}
+                        >
+                          <td className="px-5 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+                              <span className="capitalize text-sm font-medium" style={{ color: 'var(--c-text)' }}>{p.platform}</span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-2.5">
+                            {run ? <StatusBadge status={run.status} /> : <span className="mono text-[12px]" style={{ color: 'var(--c-text-muted)', opacity: 0.5 }}>idle</span>}
+                          </td>
+                          <td className="px-5 py-2.5">
+                            {p.auto_run ? (
+                              <span className="mono text-[11px] uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: 'var(--c-green)', background: 'rgba(52, 211, 153, 0.1)', border: '1px solid rgba(52, 211, 153, 0.25)' }}>auto</span>
+                            ) : (
+                              <span className="mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>manual</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-2.5 text-right mono text-[13px] tabular-nums" style={{ color: acts > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)', opacity: acts > 0 ? 1 : 0.4 }}>{acts}</td>
+                          <td className="px-5 py-2.5 text-right mono text-[13px] tabular-nums" style={{ color: comments > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)', opacity: comments > 0 ? 1 : 0.4 }}>{comments}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             );
-          })}
-        </div>
+          }
+
+          // 2-column mode: CSS grid with column-major fill. Forcing
+          // grid-auto-flow:column + explicit row count lines the visual layout
+          // up with our colIdx/rowIdx math.
+          const headerGrid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' };
+          const bodyGrid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridTemplateRows: `repeat(${rowsPerCol}, auto)`, gridAutoFlow: 'column' };
+          const rowGridTemplate = '6px minmax(0, 1fr) 116px 40px 40px 56px';
+          return (
+          <div className="panel noise overflow-hidden">
+            {/* Header strip — matches Recent Runs sizing/typography */}
+            <div style={{ ...headerGrid, borderBottom: '1px solid var(--c-border-dim)' }}>
+              {Array.from({ length: cols }).map((_, c) => (
+                <div key={c} className="grid items-center gap-3 px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)', borderLeft: c > 0 ? '1px solid var(--c-border-dim)' : 'none', gridTemplateColumns: rowGridTemplate }}>
+                  <span /><span>Agent</span>
+                  <span>Status</span>
+                  <span className="text-right">Act</span>
+                  <span className="text-right">Com</span>
+                  <span className="text-right">Mode</span>
+                </div>
+              ))}
+            </div>
+            <div style={bodyGrid}>
+              {platforms.map((p, i) => {
+                const run = lastRun[p.platform];
+                const acts = actionsByPlatform[p.platform] || 0;
+                const agentData = agents?.find((a) => a.platform === p.platform);
+                const comments = agentData?.limits?.daily?.comments?.current || agentData?.limits?.daily?.responses?.current || 0;
+                const color = PLATFORM_COLORS[p.platform] || '#888';
+                const colIdx = Math.floor(i / rowsPerCol);
+                const rowIdx = i % rowsPerCol;
+                const isLastInCol = rowIdx === rowsPerCol - 1 || i === total - 1;
+                const status_ = run?.status || 'idle';
+                return (
+                  <button
+                    key={p.platform}
+                    type="button"
+                    onClick={() => navigate('/agents')}
+                    className="w-full text-left grid items-center gap-3 px-5 py-2.5 transition-colors hover:bg-white/[0.03]"
+                    style={{
+                      borderBottom: isLastInCol ? 'none' : '1px solid var(--c-border-dim)',
+                      borderLeft: colIdx > 0 ? '1px solid var(--c-border-dim)' : 'none',
+                      opacity: p.enabled ? 1 : 0.5,
+                      gridTemplateColumns: rowGridTemplate,
+                    }}
+                    title={`${p.platform} — ${status_}`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+                    <span className="capitalize text-sm font-medium truncate" style={{ color: 'var(--c-text)' }}>{p.platform}</span>
+                    <span>
+                      {run ? <StatusBadge status={run.status} /> : <span className="mono text-[12px]" style={{ color: 'var(--c-text-muted)', opacity: 0.5 }}>idle</span>}
+                    </span>
+                    <span className="mono text-[13px] tabular-nums text-right" style={{ color: acts > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)', opacity: acts > 0 ? 1 : 0.4 }}>{acts}</span>
+                    <span className="mono text-[13px] tabular-nums text-right" style={{ color: comments > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)', opacity: comments > 0 ? 1 : 0.4 }}>{comments}</span>
+                    <span className="text-right">
+                      {p.auto_run ? (
+                        <span className="mono text-[11px] uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: 'var(--c-green)', background: 'rgba(52, 211, 153, 0.1)', border: '1px solid rgba(52, 211, 153, 0.25)' }}>auto</span>
+                      ) : (
+                        <span className="mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>manual</span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          );
+        })()}
       </div>
 
       {/* ── Recent Runs (compact, last 5) ──────────────────────── */}
@@ -308,7 +381,16 @@ export function Dashboard() {
         </div>
         {status?.recentRuns && status.recentRuns.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full" style={{ tableLayout: 'fixed' }}>
+              {/* Fixed column widths so this table aligns with the
+                  Platform Agents 1-col compact table above (5 cols). The
+                  rightmost 32% holds DURATION here, ACTIONS+COMMENTS there. */}
+              <colgroup>
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '30%' }} />
+                <col style={{ width: '32%' }} />
+              </colgroup>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
                   <th className="text-left px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Agent</th>
@@ -357,12 +439,12 @@ export function Dashboard() {
         )}
       </div>
 
-      {/* ── Content Pipeline (collapsed, compact timeline) ─────── */}
+      {/* ── Content Pipeline ──────────────────────────────────── */}
       {status?.pipelineEnabled && (
         <div className="panel noise animate-fade-up stagger-4">
           <div className="panel-header flex items-center justify-between gap-4">
             <span>// Content Pipeline</span>
-            <div className="flex items-center gap-2 mono text-[13px] normal-case tracking-normal">
+            <div className="flex items-center gap-3 mono text-[13px] normal-case tracking-normal">
               {status?.pipelineRunCompletedAt && (
                 <span style={{ color: 'var(--c-text-muted)' }}>
                   last <span style={{ color: 'var(--c-text-dim)' }}>{new Date(status.pipelineRunCompletedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
@@ -376,65 +458,77 @@ export function Dashboard() {
                   next <span style={{ color: 'var(--c-teal)' }}>{new Date(status.nextPipelineRun).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
                 </span>
               )}
+              <CompactToggle compact={pipelineCompact} onToggle={() => setPipelineCompact((v) => !v)} />
             </div>
           </div>
-          <div className="p-5">
-            <div className="flex items-center gap-2 flex-wrap">
-              {PIPELINE_STAGES.flatMap((stage, i) => {
-                const run = status?.pipelineStages?.[stage.id];
-                const groupChange = i > 0 && PIPELINE_STAGES[i - 1].group !== stage.group;
-                const nodes = [];
-
-                if (groupChange) {
-                  nodes.push(
-                    <div key={`sep-${stage.id}`} className="flex items-center mx-1">
-                      <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-                        <path d="M1 6h12M9 2l4 4-4 4" stroke="var(--c-border)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+          <div className={pipelineCompact ? 'px-4 py-3' : 'p-5'}>
+            {pipelineCompact ? (
+              <PipelineCompactStrip
+                stages={status?.pipelineStages}
+                nextRun={status?.nextPipelineRun}
+                runCompletedAt={status?.pipelineRunCompletedAt}
+                onStageClick={(id, label) => setOpenStage({ id, label })}
+              />
+            ) : (
+            <>
+            <PipelineHealthBanner
+              stages={status?.pipelineStages}
+              nextRun={status?.nextPipelineRun}
+              runCompletedAt={status?.pipelineRunCompletedAt}
+            />
+            <div className="flex flex-col gap-3 mt-4">
+              {PIPELINE_GROUPS.map((group) => {
+                const stages = stagesByGroup(group.name);
+                const isParallel = stages.length > 1 && stages[0].parallel;
+                return (
+                  <div key={group.name} className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--c-border-dim)' }}>
+                    {/* Group header strip */}
+                    <div className="flex items-baseline gap-2 px-3.5 py-2" style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--c-border-dim)' }}>
+                      <span className="mono text-[10.5px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--c-teal)' }}>Step {group.step}</span>
+                      <span className="text-[13px] font-semibold" style={{ color: 'var(--c-text)' }}>{group.name}</span>
+                      <span className="text-[12px]" style={{ color: 'var(--c-text-muted)' }}>{group.subtitle}</span>
+                      {isParallel && (
+                        <span className="mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded ml-auto" style={{ color: 'var(--c-text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--c-border-dim)' }}>{stages.length} in parallel</span>
+                      )}
                     </div>
-                  );
-                }
-
-                nodes.push(
-                  <div
-                    key={stage.id}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg"
-                    style={{
-                      background: 'rgba(255,255,255,0.02)',
-                      border: '1px solid var(--c-border-dim)',
-                    }}
-                  >
-                    <div className="w-1.5 h-1.5 rounded-full" style={{
-                      background: run?.status === 'completed' ? 'var(--c-green)' :
-                                  run?.status === 'running'   ? 'var(--c-blue)' :
-                                  run?.status === 'failed'    ? 'var(--c-red)' :
-                                  'var(--c-text-muted)',
-                    }} />
-                    <span className="text-[13px] font-medium" style={{ color: 'var(--c-text-dim)' }}>{stage.label}</span>
+                    {/* Uniform stage rows */}
+                    <div className="flex flex-col" style={{ background: 'rgba(0,0,0,0.12)' }}>
+                      {stages.map((stage, si) => (
+                        <PipelineStageRow
+                          key={stage.id}
+                          stage={stage}
+                          run={status?.pipelineStages?.[stage.id]}
+                          orderLabel={stages.length > 1 ? `${group.step}.${si + 1}` : `${group.step}`}
+                          isLast={si === stages.length - 1}
+                          onClick={() => setOpenStage({ id: stage.id, label: stage.label })}
+                        />
+                      ))}
+                    </div>
                   </div>
                 );
-
-                return nodes;
               })}
             </div>
-            <div className="mono text-[12px] mt-4 flex items-center gap-4" style={{ color: 'var(--c-text-muted)' }}>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-green)' }} />
-                <span>completed</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-blue)' }} />
-                <span>running</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-text-muted)' }} />
-                <span>idle</span>
-              </div>
+            <div className="mono text-[11px] mt-4 pt-3 flex items-center gap-4 flex-wrap" style={{ color: 'var(--c-text-muted)', borderTop: '1px solid var(--c-border-dim)' }}>
+              <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-green)' }} /> done</span>
+              <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-blue)' }} /> running</span>
+              <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-red)' }} /> failed</span>
+              <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-text-muted)' }} /> not yet today</span>
+              <span className="ml-auto opacity-60">click any stage to view its outputs</span>
             </div>
+            </>
+            )}
           </div>
         </div>
       )}
 
+      {openStage && (
+        <PipelineStageModal
+          stageId={openStage.id}
+          stageLabel={openStage.label}
+          date={today()}
+          onClose={() => setOpenStage(null)}
+        />
+      )}
     </div>
   );
 }
@@ -466,6 +560,276 @@ function Countdown({ target }: { target: string }) {
     <span className="tabular-nums">
       next in <span style={{ color: 'var(--c-teal)' }}>{parts.join(' ')}</span>
     </span>
+  );
+}
+
+interface StageRun {
+  status: string;
+  startedAt?: string;
+  completedAt?: string;
+  durationMs?: number;
+  error?: string;
+}
+
+function fmtStageTime(iso?: string): string {
+  if (!iso) return '';
+  return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function fmtStageDuration(ms?: number): string {
+  if (ms == null) return '';
+  if (ms < 1000) return '<1s';
+  const totalSec = Math.round(ms / 1000);
+  if (totalSec < 60) return `${totalSec}s`;
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return s === 0 ? `${m}m` : `${m}m ${s}s`;
+}
+
+function StageStatusMeta({ status, run }: { status: string; run?: StageRun }): ReactNode {
+  if (status === 'completed' && run?.completedAt) {
+    return (
+      <span className="mono text-[11.5px] tabular-nums" style={{ color: 'var(--c-text-muted)' }}>
+        {fmtStageTime(run.completedAt)}{run.durationMs != null && <span style={{ opacity: 0.55 }}> · {fmtStageDuration(run.durationMs)}</span>}
+      </span>
+    );
+  }
+  if (status === 'running') {
+    return (
+      <span className="mono text-[11.5px] flex items-center gap-1.5" style={{ color: 'var(--c-blue)' }}>
+        <span className="status-dot online" />
+        running
+      </span>
+    );
+  }
+  if (status === 'failed') {
+    return <span className="mono text-[11.5px] uppercase tracking-wider font-medium" style={{ color: 'var(--c-red)' }}>failed</span>;
+  }
+  return <span className="mono text-[11.5px]" style={{ color: 'var(--c-text-muted)', opacity: 0.5 }}>not yet today</span>;
+}
+
+function PipelineStageRow({ stage, run, orderLabel, isLast, onClick }: { stage: StageMeta; run?: StageRun; orderLabel: string; isLast: boolean; onClick: () => void }) {
+  const status = run?.status || 'idle';
+  const dotColor =
+    status === 'completed' ? 'var(--c-green)' :
+    status === 'running'   ? 'var(--c-blue)'  :
+    status === 'failed'    ? 'var(--c-red)'   :
+                             'var(--c-text-muted)';
+
+  const accentBar =
+    status === 'failed' ? 'var(--c-red)' :
+    status === 'running' ? 'var(--c-blue)' :
+    'transparent';
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-left grid items-center gap-x-3 px-3.5 py-2.5 transition-colors cursor-pointer w-full"
+      style={{
+        borderBottom: isLast ? 'none' : '1px solid var(--c-border-dim)',
+        borderLeft: `2px solid ${accentBar}`,
+        // [order] [dot] [name] [tagline (flex)] [meta]
+        gridTemplateColumns: '32px 12px minmax(140px, max-content) minmax(0, 1fr) max-content',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(94, 234, 212, 0.04)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+      title={run?.error ? `Failed: ${run.error}` : 'View outputs'}
+    >
+      <span className="mono text-[10.5px] tabular-nums" style={{ color: 'var(--c-text-muted)', opacity: 0.6 }}>{orderLabel}</span>
+      <span className="w-2 h-2 rounded-full" style={{ background: dotColor }} />
+      <span className="text-[13px] font-semibold truncate" style={{ color: 'var(--c-text)' }}>{stage.label}</span>
+      <span className="text-[12.5px] truncate" style={{ color: 'var(--c-text-muted)' }}>{stage.tagline}</span>
+      <span><StageStatusMeta status={status} run={run} /></span>
+    </button>
+  );
+}
+
+function PipelineHealthBanner({ stages, nextRun, runCompletedAt }: { stages?: Record<string, StageRun>; nextRun?: string | null; runCompletedAt?: string | null }) {
+  const total = 7; // PIPELINE_STAGES.length — fixed count
+  const entries = Object.values(stages || {});
+  const done = entries.filter((s) => s.status === 'completed').length;
+  const running = entries.filter((s) => s.status === 'running').length;
+  const failed = entries.filter((s) => s.status === 'failed').length;
+  const failedNames = Object.entries(stages || {}).filter(([, s]) => s.status === 'failed').map(([id]) => id);
+
+  let tone: 'good' | 'warn' | 'bad' | 'neutral' = 'neutral';
+  let icon: ReactNode = null;
+  let main = '';
+  let sub = '';
+
+  if (failed > 0) {
+    tone = 'bad';
+    icon = <DotIcon color="var(--c-red)" />;
+    main = `${failed} of ${total} stage${failed === 1 ? '' : 's'} failed today`;
+    sub = failedNames.length ? `Failed: ${failedNames.join(', ')}` : '';
+  } else if (running > 0) {
+    tone = 'warn';
+    icon = <span className="status-dot online" style={{ background: 'var(--c-blue)' }} />;
+    main = `Pipeline is running — ${done} of ${total} stages done`;
+  } else if (done === total && runCompletedAt) {
+    tone = 'good';
+    icon = <CheckIcon />;
+    main = `Today's pipeline ran clean — all ${total} stages completed`;
+    sub = `Finished at ${new Date(runCompletedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+  } else if (done > 0) {
+    tone = 'warn';
+    icon = <DotIcon color="var(--c-amber)" />;
+    main = `${done} of ${total} stages done — pipeline incomplete`;
+  } else {
+    tone = 'neutral';
+    icon = <DotIcon color="var(--c-text-muted)" />;
+    main = nextRun
+      ? `Pipeline hasn't run yet today — scheduled for ${new Date(nextRun).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`
+      : 'Waiting for first pipeline run';
+  }
+
+  const bg =
+    tone === 'good' ? 'rgba(52, 211, 153, 0.06)' :
+    tone === 'warn' ? 'rgba(96, 165, 250, 0.06)' :
+    tone === 'bad'  ? 'rgba(248, 113, 113, 0.07)' :
+                      'rgba(255,255,255,0.025)';
+  const border =
+    tone === 'good' ? 'rgba(52, 211, 153, 0.2)' :
+    tone === 'warn' ? 'rgba(96, 165, 250, 0.2)' :
+    tone === 'bad'  ? 'rgba(248, 113, 113, 0.25)' :
+                      'var(--c-border-dim)';
+
+  return (
+    <div className="rounded-lg px-4 py-3 flex items-center gap-3" style={{ background: bg, border: `1px solid ${border}` }}>
+      <span className="shrink-0 flex items-center justify-center w-5 h-5">{icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className="text-[13.5px] font-medium" style={{ color: 'var(--c-text)' }}>{main}</div>
+        {sub && <div className="text-[12px] mt-0.5" style={{ color: 'var(--c-text-muted)' }}>{sub}</div>}
+      </div>
+    </div>
+  );
+}
+
+function PipelineCompactStrip({ stages, nextRun, runCompletedAt, onStageClick }: { stages?: Record<string, StageRun>; nextRun?: string | null; runCompletedAt?: string | null; onStageClick: (id: string, label: string) => void }) {
+  const total = 7;
+  const entries = Object.values(stages || {});
+  const done = entries.filter((s) => s.status === 'completed').length;
+  const running = entries.filter((s) => s.status === 'running').length;
+  const failed = entries.filter((s) => s.status === 'failed').length;
+
+  let summaryDot = 'var(--c-text-muted)';
+  let summaryText = '';
+  if (failed > 0) {
+    summaryDot = 'var(--c-red)';
+    summaryText = `${failed} of ${total} failed today`;
+  } else if (running > 0) {
+    summaryDot = 'var(--c-blue)';
+    summaryText = `running · ${done}/${total} done`;
+  } else if (done === total && runCompletedAt) {
+    summaryDot = 'var(--c-green)';
+    summaryText = `all ${total} done · ${fmtStageTime(runCompletedAt)}`;
+  } else if (done > 0) {
+    summaryDot = 'var(--c-amber)';
+    summaryText = `${done}/${total} done`;
+  } else {
+    summaryDot = 'var(--c-text-muted)';
+    summaryText = nextRun ? `scheduled ${fmtStageTime(nextRun)}` : 'idle';
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px]">
+      <span className="flex items-center gap-2 shrink-0" style={{ color: 'var(--c-text)' }}>
+        <span className="w-2 h-2 rounded-full" style={{ background: summaryDot, boxShadow: running > 0 ? '0 0 6px var(--c-blue)' : undefined }} />
+        <span className="mono text-[11.5px]" style={{ color: 'var(--c-text-dim)' }}>{summaryText}</span>
+      </span>
+      <span className="hidden md:inline" style={{ color: 'var(--c-border)' }}>|</span>
+      {PIPELINE_GROUPS.map((group, gi) => (
+        <div key={group.name} className="flex items-center gap-2.5">
+          <span className="mono text-[10px] uppercase tracking-[0.1em] font-semibold" style={{ color: 'var(--c-teal)' }}>
+            {group.step} {group.name}
+          </span>
+          <div className="flex items-center gap-1">
+            {stagesByGroup(group.name).map((stage) => {
+              const run = stages?.[stage.id];
+              const status = run?.status || 'idle';
+              const dotColor =
+                status === 'completed' ? 'var(--c-green)' :
+                status === 'running'   ? 'var(--c-blue)'  :
+                status === 'failed'    ? 'var(--c-red)'   :
+                                         'var(--c-text-muted)';
+              const tooltip = `${stage.label} — ${stage.tagline}` +
+                (status === 'completed' && run?.completedAt ? ` (${fmtStageTime(run.completedAt)}${run.durationMs != null ? ', ' + fmtStageDuration(run.durationMs) : ''})` :
+                 status === 'running' ? ' (running)' :
+                 status === 'failed' ? ` (failed${run?.error ? ': ' + run.error : ''})` :
+                 ' (not yet today)');
+              return (
+                <button
+                  key={stage.id}
+                  type="button"
+                  onClick={() => onStageClick(stage.id, stage.label)}
+                  className="inline-flex items-center justify-center w-4 h-4 rounded-full transition-transform hover:scale-125 cursor-pointer"
+                  title={tooltip}
+                  aria-label={tooltip}
+                >
+                  <span className="w-2 h-2 rounded-full" style={{ background: dotColor, boxShadow: status === 'running' ? '0 0 5px var(--c-blue)' : undefined }} />
+                </button>
+              );
+            })}
+          </div>
+          {gi < PIPELINE_GROUPS.length - 1 && (
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="opacity-40">
+              <path d="M2 5h5M4.5 2.5L7 5l-2.5 2.5" stroke="var(--c-text-muted)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Per-section "compact view" preference, persisted to localStorage so the
+// user's choice survives reloads. Each section gets its own key.
+function useCompactPref(section: string): [boolean, React.Dispatch<React.SetStateAction<boolean>>] {
+  const key = `opentwins.${section}-compact`;
+  const [v, setV] = useState<boolean>(() => {
+    try { return localStorage.getItem(key) === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(key, v ? '1' : '0'); } catch { /* ignore */ }
+  }, [key, v]);
+  return [v, setV];
+}
+
+function CompactToggle({ compact, onToggle }: { compact: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="inline-flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-white/5 mono text-[11px] uppercase tracking-wider"
+      style={{ color: 'var(--c-text-muted)', border: '1px solid var(--c-border-dim)' }}
+      title={compact ? 'Show full view' : 'Show compact view'}
+      aria-label={compact ? 'Expand section' : 'Collapse section'}
+    >
+      {compact ? (
+        <>
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 5V2h3M10 5V2H7M2 7v3h3M10 7v3H7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          expand
+        </>
+      ) : (
+        <>
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M5 2v3H2M7 2v3h3M5 10V7H2M7 10V7h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          compact
+        </>
+      )}
+    </button>
+  );
+}
+
+function DotIcon({ color }: { color: string }) {
+  return <span className="w-2 h-2 rounded-full" style={{ background: color }} />;
+}
+
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path d="M3 7.5l2.5 2.5L11 4.5" stroke="var(--c-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

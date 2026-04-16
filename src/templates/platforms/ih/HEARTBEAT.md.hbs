@@ -74,12 +74,6 @@ printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"a
 
 1. `exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/open -H 'Content-Type: application/json' -d '{"url":"https://www.indiehackers.com/"}' 2>&1`
 2. If error → retry once. Still fails → skip browser tasks, return HEARTBEAT_OK
-3. **Dismiss cookie banner** (first evaluate after page load):
-   ```bash
-   exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-   {"fn":"async () => { var b = document.querySelector('#onetrust-accept-btn-handler'); if (b) { b.click(); return {dismissed:true}; } return {noBanner:true}; }"}
-   ENDJSON
-   ```
 
 ## 3. Reply Check (FIRST - MANDATORY)
 
