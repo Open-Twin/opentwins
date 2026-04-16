@@ -385,8 +385,8 @@ export function Dashboard() {
                     {/* Group header strip */}
                     <div className="flex items-baseline gap-2 px-3.5 py-2" style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--c-border-dim)' }}>
                       <span className="mono text-[10.5px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--c-teal)' }}>Step {group.step}</span>
-                      <span className="text-[13px] font-semibold" style={{ color: 'var(--c-text)' }}>· {group.name}</span>
-                      <span className="text-[12px]" style={{ color: 'var(--c-text-muted)' }}>· {group.subtitle}</span>
+                      <span className="text-[13px] font-semibold" style={{ color: 'var(--c-text)' }}>{group.name}</span>
+                      <span className="text-[12px]" style={{ color: 'var(--c-text-muted)' }}>{group.subtitle}</span>
                       {isParallel && (
                         <span className="mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded ml-auto" style={{ color: 'var(--c-text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--c-border-dim)' }}>{stages.length} in parallel</span>
                       )}
