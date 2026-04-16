@@ -373,47 +373,62 @@ export function Dashboard() {
           </div>
         </div>
         {status?.recentRuns && status.recentRuns.length > 0 ? (
-          recentRunsCompact ? (
-            <div>
-              {/* Header strip — same column rhythm as Agents compact */}
-              <div className="grid items-center gap-x-3 pl-2.5 pr-3.5 py-1.5 mono text-[10px] uppercase tracking-[0.1em]" style={{ background: 'rgba(255,255,255,0.02)', color: 'var(--c-text-muted)', borderBottom: '1px solid var(--c-border-dim)', gridTemplateColumns: '2px 8px minmax(0, 1fr) 56px 64px' }}>
-                <span /><span /><span>Agent</span>
-                <span className="text-right">Started</span>
-                <span className="text-right">Duration</span>
+          recentRunsCompact ? (() => {
+            const runs = status.recentRuns.slice(0, 6);
+            const cols = 2;
+            const rowsPerCol = Math.ceil(runs.length / cols);
+            return (
+              <div>
+                {/* Header strip — same column rhythm as Agents compact */}
+                <div className="grid grid-cols-1 md:grid-cols-2" style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--c-border-dim)' }}>
+                  {[0, 1].map((c) => (
+                    <div key={c} className="grid items-center gap-x-3 pl-2.5 pr-3.5 py-1.5 mono text-[10px] uppercase tracking-[0.1em]" style={{ color: 'var(--c-text-muted)', borderLeft: c > 0 ? '1px solid var(--c-border-dim)' : 'none', gridTemplateColumns: '2px 8px minmax(0, 1fr) 56px 64px' }}>
+                      <span /><span /><span>Agent</span>
+                      <span className="text-right">Started</span>
+                      <span className="text-right">Duration</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2">
+                  {runs.map((run, i) => {
+                    const day = run.started_at?.split('T')[0] || today();
+                    const accentBar =
+                      run.status === 'completed' ? 'var(--c-green)' :
+                      run.status === 'running'   ? 'var(--c-blue)'  :
+                      run.status === 'failed'    ? 'var(--c-red)'   :
+                                                   'transparent';
+                    const colIdx = Math.floor(i / rowsPerCol);
+                    const rowIdx = i % rowsPerCol;
+                    const isLastInCol = rowIdx === rowsPerCol - 1 || i === runs.length - 1;
+                    return (
+                      <button
+                        key={run.id}
+                        type="button"
+                        onClick={() => navigate(`/activity?date=${day}&platform=${run.agent_name}&session=${run.id}`)}
+                        className="w-full text-left grid items-center gap-x-3 pl-2.5 pr-3.5 py-1.5 transition-colors hover:bg-white/[0.03]"
+                        style={{
+                          borderBottom: isLastInCol ? 'none' : '1px solid var(--c-border-dim)',
+                          borderLeft: colIdx > 0 ? '1px solid var(--c-border-dim)' : 'none',
+                          gridTemplateColumns: '2px 8px minmax(0, 1fr) 56px 64px',
+                        }}
+                        title={`${run.agent_name} — ${run.status}`}
+                      >
+                        <span className="h-4 rounded-sm" style={{ background: accentBar }} />
+                        <span className="w-2 h-2 rounded-full" style={{ background: PLATFORM_COLORS[run.agent_name] || '#888' }} />
+                        <span className="capitalize text-[13px] font-medium truncate" style={{ color: 'var(--c-text)' }}>{run.agent_name}</span>
+                        <span className="mono text-[12px] tabular-nums text-right" style={{ color: 'var(--c-text-dim)' }}>
+                          {run.started_at ? new Date(run.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
+                        </span>
+                        <span className="mono text-[12px] tabular-nums text-right" style={{ color: 'var(--c-text-muted)' }}>
+                          {run.duration_ms ? `${Math.floor(run.duration_ms / 60000)}m ${Math.floor((run.duration_ms % 60000) / 1000)}s` : '—'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              {status.recentRuns.slice(0, 5).map((run, i, arr) => {
-                const day = run.started_at?.split('T')[0] || today();
-                const accentBar =
-                  run.status === 'completed' ? 'var(--c-green)' :
-                  run.status === 'running'   ? 'var(--c-blue)'  :
-                  run.status === 'failed'    ? 'var(--c-red)'   :
-                                               'transparent';
-                return (
-                  <button
-                    key={run.id}
-                    type="button"
-                    onClick={() => navigate(`/activity?date=${day}&platform=${run.agent_name}&session=${run.id}`)}
-                    className="w-full text-left grid items-center gap-x-3 pl-2.5 pr-3.5 py-1.5 transition-colors hover:bg-white/[0.03]"
-                    style={{
-                      borderBottom: i === arr.length - 1 ? 'none' : '1px solid var(--c-border-dim)',
-                      gridTemplateColumns: '2px 8px minmax(0, 1fr) 56px 64px',
-                    }}
-                    title={`${run.agent_name} — ${run.status}`}
-                  >
-                    <span className="h-4 rounded-sm" style={{ background: accentBar }} />
-                    <span className="w-2 h-2 rounded-full" style={{ background: PLATFORM_COLORS[run.agent_name] || '#888' }} />
-                    <span className="capitalize text-[13px] font-medium truncate" style={{ color: 'var(--c-text)' }}>{run.agent_name}</span>
-                    <span className="mono text-[12px] tabular-nums text-right" style={{ color: 'var(--c-text-dim)' }}>
-                      {run.started_at ? new Date(run.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
-                    </span>
-                    <span className="mono text-[12px] tabular-nums text-right" style={{ color: 'var(--c-text-muted)' }}>
-                      {run.duration_ms ? `${Math.floor(run.duration_ms / 60000)}m ${Math.floor((run.duration_ms % 60000) / 1000)}s` : '—'}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
+            );
+          })() : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
