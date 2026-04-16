@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import ReactMarkdown from 'react-markdown';
+import { marked } from 'marked';
 import { getStageMeta } from '../lib/pipeline-stages.ts';
 
 interface StageFile {
@@ -14,6 +14,24 @@ interface Props {
   stageLabel: string;
   date: string;
   onClose: () => void;
+}
+
+// Render a markdown string into the themed .md-body container. Content
+// comes from agent output files we wrote ourselves on disk — no untrusted
+// user input — so we can dangerouslySetInnerHTML without sanitization.
+function MarkdownBody({ content }: { content: string }) {
+  const html = useMemo(() => marked.parse(content, { async: false }) as string, [content]);
+  return (
+    <div
+      className="md-body p-5 rounded-lg"
+      style={{
+        color: 'var(--c-text)',
+        background: 'var(--c-void)',
+        border: '1px solid var(--c-border-dim)',
+      }}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
 }
 
 function fmtBytes(n: number): string {
@@ -177,16 +195,7 @@ export function PipelineStageModal({ stageId, stageLabel, date, onClose }: Props
                 </div>
               )}
               {isMarkdown(active.name) ? (
-                <div
-                  className="md-body p-5 rounded-lg"
-                  style={{
-                    color: 'var(--c-text)',
-                    background: 'var(--c-void)',
-                    border: '1px solid var(--c-border-dim)',
-                  }}
-                >
-                  <ReactMarkdown>{active.content}</ReactMarkdown>
-                </div>
+                <MarkdownBody content={active.content} />
               ) : (
                 <pre
                   className="mono text-[12.5px] p-4 rounded-lg whitespace-pre-wrap break-words leading-relaxed"
