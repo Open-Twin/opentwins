@@ -100,12 +100,9 @@ export function Dashboard() {
   const { data: agents, refetch: refetchAgents } = useApi<Array<{ platform: string; limits: { daily: Record<string, { limit: number; current: number }>; weekly?: Record<string, { limit: number; current: number }> } | null }>>('/api/agents');
   const autoRunCount = status?.platforms.filter((p) => p.auto_run).length || 0;
   const [openStage, setOpenStage] = useState<{ id: string; label: string } | null>(null);
-  const [pipelineCompact, setPipelineCompact] = useState<boolean>(() => {
-    try { return localStorage.getItem('opentwins.pipeline-compact') === '1'; } catch { return false; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem('opentwins.pipeline-compact', pipelineCompact ? '1' : '0'); } catch { /* ignore */ }
-  }, [pipelineCompact]);
+  const [pipelineCompact, setPipelineCompact] = useCompactPref('pipeline');
+  const [agentsCompact, setAgentsCompact] = useCompactPref('agents');
+  const [recentRunsCompact, setRecentRunsCompact] = useCompactPref('recent-runs');
 
   // Auto-refresh dashboard every 10 seconds
   useEffect(() => {
@@ -205,14 +202,59 @@ export function Dashboard() {
       <div className="animate-fade-up stagger-2">
         <div className="flex items-center justify-between mb-4">
           <div className="section-title">Platform Agents</div>
-          <button
-            onClick={() => navigate('/agents')}
-            className="mono text-[13px] px-2.5 py-1 rounded-md transition-colors hover:bg-white/[0.03]"
-            style={{ color: 'var(--c-teal-dim)' }}
-          >
-            manage →
-          </button>
+          <div className="flex items-center gap-2">
+            <CompactToggle compact={agentsCompact} onToggle={() => setAgentsCompact((v) => !v)} />
+            <button
+              onClick={() => navigate('/agents')}
+              className="mono text-[13px] px-2.5 py-1 rounded-md transition-colors hover:bg-white/[0.03]"
+              style={{ color: 'var(--c-teal-dim)' }}
+            >
+              manage →
+            </button>
+          </div>
         </div>
+        {agentsCompact ? (
+          <div className="panel noise overflow-hidden">
+            {status?.platforms.map((p, i) => {
+              const run = lastRun[p.platform];
+              const acts = actionsByPlatform[p.platform] || 0;
+              const agentData = agents?.find((a) => a.platform === p.platform);
+              const comments = agentData?.limits?.daily?.comments?.current || agentData?.limits?.daily?.responses?.current || 0;
+              const color = PLATFORM_COLORS[p.platform] || '#888';
+              const isLast = i === (status?.platforms.length || 0) - 1;
+              return (
+                <button
+                  key={p.platform}
+                  type="button"
+                  onClick={() => navigate('/agents')}
+                  className="w-full text-left grid items-center gap-x-3 px-4 py-2 transition-colors hover:bg-white/[0.03]"
+                  style={{
+                    borderBottom: isLast ? 'none' : '1px solid var(--c-border-dim)',
+                    opacity: p.enabled ? 1 : 0.5,
+                    gridTemplateColumns: '12px minmax(90px, max-content) minmax(0, 1fr) 64px 64px max-content max-content',
+                  }}
+                  title={`${p.platform} — ${cleanHandle(p.handle)}`}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color, boxShadow: `0 0 8px ${color}50` }} />
+                  <span className="text-[13px] font-semibold capitalize truncate" style={{ color: 'var(--c-text)' }}>{p.platform}</span>
+                  <span className="mono text-[12px] truncate" style={{ color: 'var(--c-text-muted)' }}>{cleanHandle(p.handle)}</span>
+                  <span className="mono text-[12px] tabular-nums text-right" style={{ color: acts > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)' }}>
+                    <span style={{ opacity: 0.5 }}>act </span>{acts}
+                  </span>
+                  <span className="mono text-[12px] tabular-nums text-right" style={{ color: comments > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)' }}>
+                    <span style={{ opacity: 0.5 }}>com </span>{comments}
+                  </span>
+                  <span className="mono text-[11px]" style={{ color: p.auto_run ? 'var(--c-green)' : 'var(--c-text-muted)' }}>
+                    {p.auto_run ? 'auto' : 'manual'}
+                  </span>
+                  <span className="shrink-0">
+                    {run ? <StatusBadge status={run.status} /> : <span className="mono text-[11px]" style={{ color: 'var(--c-text-muted)', opacity: 0.5 }}>idle</span>}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {status?.platforms.map((p, i) => {
             const run = lastRun[p.platform];
@@ -288,23 +330,62 @@ export function Dashboard() {
             );
           })}
         </div>
+        )}
       </div>
 
       {/* ── Recent Runs (compact, last 5) ──────────────────────── */}
       <div className="panel noise animate-fade-up stagger-3">
-        <div className="panel-header flex items-center justify-between">
+        <div className="panel-header flex items-center justify-between gap-3">
           <span>// Recent Runs</span>
-          {runsToday > 0 && (
-            <button
-              onClick={() => navigate('/activity')}
-              className="mono text-[13px] normal-case tracking-normal transition-colors hover:underline"
-              style={{ color: 'var(--c-teal-dim)' }}
-            >
-              {runsToday > 5 ? `View all ${runsToday} runs →` : `${runsToday} today`}
-            </button>
-          )}
+          <div className="flex items-center gap-3 normal-case tracking-normal">
+            {runsToday > 0 && (
+              <button
+                onClick={() => navigate('/activity')}
+                className="mono text-[13px] transition-colors hover:underline"
+                style={{ color: 'var(--c-teal-dim)' }}
+              >
+                {runsToday > 5 ? `View all ${runsToday} runs →` : `${runsToday} today`}
+              </button>
+            )}
+            <CompactToggle compact={recentRunsCompact} onToggle={() => setRecentRunsCompact((v) => !v)} />
+          </div>
         </div>
         {status?.recentRuns && status.recentRuns.length > 0 ? (
+          recentRunsCompact ? (
+            <div>
+              {status.recentRuns.slice(0, 5).map((run, i, arr) => {
+                const day = run.started_at?.split('T')[0] || today();
+                const statusColor =
+                  run.status === 'completed' ? 'var(--c-green)' :
+                  run.status === 'running'   ? 'var(--c-blue)'  :
+                  run.status === 'failed'    ? 'var(--c-red)'   :
+                                               'var(--c-text-muted)';
+                return (
+                  <button
+                    key={run.id}
+                    type="button"
+                    onClick={() => navigate(`/activity?date=${day}&platform=${run.agent_name}&session=${run.id}`)}
+                    className="w-full text-left grid items-center gap-x-3 px-4 py-1.5 transition-colors hover:bg-white/[0.03]"
+                    style={{
+                      borderBottom: i === arr.length - 1 ? 'none' : '1px solid var(--c-border-dim)',
+                      gridTemplateColumns: '12px minmax(80px, max-content) minmax(0, 1fr) max-content max-content',
+                    }}
+                    title="Open in Activity Log"
+                  >
+                    <span className="w-2 h-2 rounded-full" style={{ background: PLATFORM_COLORS[run.agent_name] || '#888' }} />
+                    <span className="capitalize text-[13px] font-medium truncate" style={{ color: 'var(--c-text)' }}>{run.agent_name}</span>
+                    <span className="mono text-[11.5px] uppercase tracking-wider" style={{ color: statusColor }}>{run.status}</span>
+                    <span className="mono text-[12px] tabular-nums" style={{ color: 'var(--c-text-dim)' }}>
+                      {run.started_at ? new Date(run.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
+                    </span>
+                    <span className="mono text-[12px] tabular-nums text-right" style={{ color: 'var(--c-text-muted)', minWidth: 60 }}>
+                      {run.duration_ms ? `${Math.floor(run.duration_ms / 60000)}m ${Math.floor((run.duration_ms % 60000) / 1000)}s` : '—'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -345,6 +426,7 @@ export function Dashboard() {
               </tbody>
             </table>
           </div>
+          )
         ) : (
           <div className="p-8 text-center">
             <div className="text-sm mb-1" style={{ color: 'var(--c-text-dim)' }}>No runs today</div>
@@ -374,26 +456,7 @@ export function Dashboard() {
                   next <span style={{ color: 'var(--c-teal)' }}>{new Date(status.nextPipelineRun).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
                 </span>
               )}
-              <button
-                type="button"
-                onClick={() => setPipelineCompact((v) => !v)}
-                className="ml-1 inline-flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-white/5 mono text-[11px] uppercase tracking-wider"
-                style={{ color: 'var(--c-text-muted)', border: '1px solid var(--c-border-dim)' }}
-                title={pipelineCompact ? 'Show full view' : 'Show compact view'}
-                aria-label={pipelineCompact ? 'Expand pipeline' : 'Collapse pipeline'}
-              >
-                {pipelineCompact ? (
-                  <>
-                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 5V2h3M10 5V2H7M2 7v3h3M10 7v3H7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                    expand
-                  </>
-                ) : (
-                  <>
-                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M5 2v3H2M7 2v3h3M5 10V7H2M7 10V7h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                    compact
-                  </>
-                )}
-              </button>
+              <CompactToggle compact={pipelineCompact} onToggle={() => setPipelineCompact((v) => !v)} />
             </div>
           </div>
           <div className={pipelineCompact ? 'px-4 py-3' : 'p-5'}>
@@ -715,6 +778,44 @@ function PipelineCompactStrip({ stages, nextRun, runCompletedAt, onStageClick }:
         </div>
       ))}
     </div>
+  );
+}
+
+// Per-section "compact view" preference, persisted to localStorage so the
+// user's choice survives reloads. Each section gets its own key.
+function useCompactPref(section: string): [boolean, React.Dispatch<React.SetStateAction<boolean>>] {
+  const key = `opentwins.${section}-compact`;
+  const [v, setV] = useState<boolean>(() => {
+    try { return localStorage.getItem(key) === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(key, v ? '1' : '0'); } catch { /* ignore */ }
+  }, [key, v]);
+  return [v, setV];
+}
+
+function CompactToggle({ compact, onToggle }: { compact: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="inline-flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-white/5 mono text-[11px] uppercase tracking-wider"
+      style={{ color: 'var(--c-text-muted)', border: '1px solid var(--c-border-dim)' }}
+      title={compact ? 'Show full view' : 'Show compact view'}
+      aria-label={compact ? 'Expand section' : 'Collapse section'}
+    >
+      {compact ? (
+        <>
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 5V2h3M10 5V2H7M2 7v3h3M10 7v3H7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          expand
+        </>
+      ) : (
+        <>
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M5 2v3H2M7 2v3h3M5 10V7H2M7 10V7h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          compact
+        </>
+      )}
+    </button>
   );
 }
 
