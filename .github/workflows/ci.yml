@@ -29,8 +29,13 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Install client dependencies
+        # `npm ci` here triggers the well-known "Exit handler never called!"
+        # hang on Ubuntu Node 22/24 (npm/cli #4769, #8074) — likely esbuild's
+        # postinstall + npm's exit cleanup interacting badly. `npm install`
+        # uses a different exit path and doesn't reproduce. Lockfile is still
+        # respected since it exists.
         working-directory: src/ui/client
-        run: npm ci --no-audit --no-fund
+        run: npm install --no-audit --no-fund --prefer-offline
 
       - name: Build
         run: npm run build
