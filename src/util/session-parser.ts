@@ -98,6 +98,7 @@ export function extractEventsFromSession(sessionFile: string): FeedEvent[] {
 
   const lines = content.split('\n').filter(Boolean);
   const events: FeedEvent[] = [];
+  let lastDone: FeedEvent | null = null;
 
   for (const line of lines) {
     let entry: Record<string, unknown>;
@@ -158,15 +159,20 @@ export function extractEventsFromSession(sessionFile: string): FeedEvent[] {
         }
       }
     } else if (typ === 'result' || typ === 'last-prompt') {
-      events.push({
+      // Track the latest done marker but don't push yet — see the dedupe
+      // pass after the loop. `last-prompt` fires at every prompt boundary
+      // in a multi-turn session, so emitting per-event would produce N
+      // "Session complete" entries per run.
+      lastDone = {
         ts,
         kind: 'done',
         summary: `✅ Session complete`,
         detail: typ === 'result' ? String(entry.result || '').slice(0, 500) : undefined,
-      });
+      };
     }
   }
 
+  if (lastDone) events.push(lastDone);
   return events;
 }
 
