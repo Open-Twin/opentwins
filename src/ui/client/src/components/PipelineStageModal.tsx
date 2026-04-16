@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import ReactMarkdown from 'react-markdown';
 
 interface StageFile {
   name: string;
@@ -22,6 +23,10 @@ function fmtBytes(n: number): string {
 
 function isJson(name: string): boolean {
   return name.endsWith('.json');
+}
+
+function isMarkdown(name: string): boolean {
+  return name.endsWith('.md');
 }
 
 function prettyJson(content: string): string {
@@ -163,17 +168,30 @@ export function PipelineStageModal({ stageId, stageLabel, date, onClose }: Props
                   ⚠ truncated to first 200 KB
                 </div>
               )}
-              <pre
-                className="mono text-[12.5px] p-4 rounded-lg whitespace-pre-wrap break-words leading-relaxed"
-                style={{
-                  color: 'var(--c-text-dim)',
-                  background: 'var(--c-void)',
-                  border: '1px solid var(--c-border-dim)',
-                  margin: 0,
-                }}
-              >
-                {isJson(active.name) ? prettyJson(active.content) : active.content}
-              </pre>
+              {isMarkdown(active.name) ? (
+                <div
+                  className="md-body p-5 rounded-lg"
+                  style={{
+                    color: 'var(--c-text)',
+                    background: 'var(--c-void)',
+                    border: '1px solid var(--c-border-dim)',
+                  }}
+                >
+                  <ReactMarkdown>{active.content}</ReactMarkdown>
+                </div>
+              ) : (
+                <pre
+                  className="mono text-[12.5px] p-4 rounded-lg whitespace-pre-wrap break-words leading-relaxed"
+                  style={{
+                    color: 'var(--c-text-dim)',
+                    background: 'var(--c-void)',
+                    border: '1px solid var(--c-border-dim)',
+                    margin: 0,
+                  }}
+                >
+                  {isJson(active.name) ? prettyJson(active.content) : active.content}
+                </pre>
+              )}
             </>
           )}
         </div>
