@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface DatePickerProps {
   value: string;            // YYYY-MM-DD
@@ -36,7 +37,26 @@ export function DatePicker({ value, onChange, max = todayStr() }: DatePickerProp
   const [open, setOpen] = useState(false);
   const [viewYear, setViewYear] = useState(() => parse(value || todayStr()).getFullYear());
   const [viewMonth, setViewMonth] = useState(() => parse(value || todayStr()).getMonth());
-  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const [popupPos, setPopupPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+  // Position the popup just below the trigger using viewport coords. Re-runs
+  // on open + window resize/scroll so the calendar tracks the trigger.
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const update = () => {
+      const r = triggerRef.current!.getBoundingClientRect();
+      setPopupPos({ top: r.bottom + 8, left: r.left });
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [open]);
 
   // Keep view month/year in sync when external value changes
   useEffect(() => {
@@ -46,13 +66,14 @@ export function DatePicker({ value, onChange, max = todayStr() }: DatePickerProp
     setViewMonth(d.getMonth());
   }, [value]);
 
-  // Close on outside click + Escape
+  // Close on outside click + Escape — check both trigger and portal popup.
   useEffect(() => {
     if (!open) return;
     const onDocDown = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (popupRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
@@ -109,8 +130,9 @@ export function DatePicker({ value, onChange, max = todayStr() }: DatePickerProp
   };
 
   return (
-    <div ref={containerRef} className="relative inline-block">
+    <div className="relative inline-block">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="mono px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors"
@@ -128,10 +150,15 @@ export function DatePicker({ value, onChange, max = todayStr() }: DatePickerProp
         </svg>
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
-          className="absolute z-50 mt-2 rounded-lg shadow-2xl"
+          ref={popupRef}
+          className="rounded-lg shadow-2xl"
           style={{
+            position: 'fixed',
+            top: popupPos.top,
+            left: popupPos.left,
+            zIndex: 1000,
             background: 'var(--c-panel)',
             border: '1px solid var(--c-border-dim)',
             padding: 12,
@@ -233,7 +260,8 @@ export function DatePicker({ value, onChange, max = todayStr() }: DatePickerProp
               Close
             </button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
