@@ -396,19 +396,21 @@ export function Dashboard() {
               </button>
             </div>
           </div>
-          <div className="p-5">
+          <div className={pipelineCompact ? 'px-4 py-3' : 'p-5'}>
+            {pipelineCompact ? (
+              <PipelineCompactStrip
+                stages={status?.pipelineStages}
+                nextRun={status?.nextPipelineRun}
+                runCompletedAt={status?.pipelineRunCompletedAt}
+                onStageClick={(id, label) => setOpenStage({ id, label })}
+              />
+            ) : (
+            <>
             <PipelineHealthBanner
               stages={status?.pipelineStages}
               nextRun={status?.nextPipelineRun}
               runCompletedAt={status?.pipelineRunCompletedAt}
             />
-            {pipelineCompact ? (
-              <PipelineCompactStrip
-                stages={status?.pipelineStages}
-                onStageClick={(id, label) => setOpenStage({ id, label })}
-              />
-            ) : (
-            <>
             <div className="flex flex-col gap-3 mt-4">
               {PIPELINE_GROUPS.map((group) => {
                 const stages = stagesByGroup(group.name);
@@ -639,15 +641,45 @@ function PipelineHealthBanner({ stages, nextRun, runCompletedAt }: { stages?: Re
   );
 }
 
-function PipelineCompactStrip({ stages, onStageClick }: { stages?: Record<string, StageRun>; onStageClick: (id: string, label: string) => void }) {
+function PipelineCompactStrip({ stages, nextRun, runCompletedAt, onStageClick }: { stages?: Record<string, StageRun>; nextRun?: string | null; runCompletedAt?: string | null; onStageClick: (id: string, label: string) => void }) {
+  const total = 7;
+  const entries = Object.values(stages || {});
+  const done = entries.filter((s) => s.status === 'completed').length;
+  const running = entries.filter((s) => s.status === 'running').length;
+  const failed = entries.filter((s) => s.status === 'failed').length;
+
+  let summaryDot = 'var(--c-text-muted)';
+  let summaryText = '';
+  if (failed > 0) {
+    summaryDot = 'var(--c-red)';
+    summaryText = `${failed} of ${total} failed today`;
+  } else if (running > 0) {
+    summaryDot = 'var(--c-blue)';
+    summaryText = `running · ${done}/${total} done`;
+  } else if (done === total && runCompletedAt) {
+    summaryDot = 'var(--c-green)';
+    summaryText = `all ${total} done · ${fmtStageTime(runCompletedAt)}`;
+  } else if (done > 0) {
+    summaryDot = 'var(--c-amber)';
+    summaryText = `${done}/${total} done`;
+  } else {
+    summaryDot = 'var(--c-text-muted)';
+    summaryText = nextRun ? `scheduled ${fmtStageTime(nextRun)}` : 'idle';
+  }
+
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px]">
+      <span className="flex items-center gap-2 shrink-0" style={{ color: 'var(--c-text)' }}>
+        <span className="w-2 h-2 rounded-full" style={{ background: summaryDot, boxShadow: running > 0 ? '0 0 6px var(--c-blue)' : undefined }} />
+        <span className="mono text-[11.5px]" style={{ color: 'var(--c-text-dim)' }}>{summaryText}</span>
+      </span>
+      <span className="hidden md:inline" style={{ color: 'var(--c-border)' }}>|</span>
       {PIPELINE_GROUPS.map((group, gi) => (
-        <div key={group.name} className="flex items-center gap-3">
-          <span className="mono text-[10.5px] uppercase tracking-[0.1em] font-semibold" style={{ color: 'var(--c-teal)' }}>
+        <div key={group.name} className="flex items-center gap-2.5">
+          <span className="mono text-[10px] uppercase tracking-[0.1em] font-semibold" style={{ color: 'var(--c-teal)' }}>
             {group.step} {group.name}
           </span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             {stagesByGroup(group.name).map((stage) => {
               const run = stages?.[stage.id];
               const status = run?.status || 'idle';
@@ -666,23 +698,22 @@ function PipelineCompactStrip({ stages, onStageClick }: { stages?: Record<string
                   key={stage.id}
                   type="button"
                   onClick={() => onStageClick(stage.id, stage.label)}
-                  className="inline-flex items-center justify-center w-5 h-5 rounded-full transition-transform hover:scale-110 cursor-pointer"
+                  className="inline-flex items-center justify-center w-4 h-4 rounded-full transition-transform hover:scale-125 cursor-pointer"
                   title={tooltip}
                   aria-label={tooltip}
                 >
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: dotColor, boxShadow: status === 'running' ? '0 0 6px var(--c-blue)' : undefined }} />
+                  <span className="w-2 h-2 rounded-full" style={{ background: dotColor, boxShadow: status === 'running' ? '0 0 5px var(--c-blue)' : undefined }} />
                 </button>
               );
             })}
           </div>
           {gi < PIPELINE_GROUPS.length - 1 && (
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="opacity-40">
-              <path d="M2 6h6M5.5 3.5L8 6l-2.5 2.5" stroke="var(--c-text-muted)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="opacity-40">
+              <path d="M2 5h5M4.5 2.5L7 5l-2.5 2.5" stroke="var(--c-text-muted)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}
         </div>
       ))}
-      <span className="ml-auto mono text-[11px] opacity-60" style={{ color: 'var(--c-text-muted)' }}>click any dot to view outputs</span>
     </div>
   );
 }
