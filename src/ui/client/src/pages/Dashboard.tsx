@@ -1,5 +1,5 @@
 import { useState, useEffect, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApi, today } from '../hooks/useApi.ts';
 import { useAgentsEnabled, HealthBanner } from '../contexts/HealthContext.tsx';
 import { PipelineStageModal } from '../components/PipelineStageModal.tsx';
@@ -98,7 +98,21 @@ export function Dashboard() {
   const { data: status, loading, refetch } = useApi<StatusData>('/api/status');
   const { data: activityResp, refetch: refetchActivity } = useApi<{ sessions: Array<{ platform: string; toolCount: number; eventCount: number }> }>(`/api/activity?date=${today()}`);
   const { data: agents, refetch: refetchAgents } = useApi<Array<{ platform: string; limits: { daily: Record<string, { limit: number; current: number }>; weekly?: Record<string, { limit: number; current: number }> } | null }>>('/api/agents');
-  const autoRunCount = status?.platforms.filter((p) => p.auto_run).length || 0;
+  // Debug: ?previewAgents=N slices the platforms array to the first N before
+  // rendering, so the Agents section can be visually inspected at any agent
+  // count without editing config. URL is non-destructive — refresh without
+  // the param to see the real list.
+  const [searchParams] = useSearchParams();
+  const previewAgents = (() => {
+    const raw = searchParams.get('previewAgents');
+    if (!raw) return null;
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  })();
+  const platforms = previewAgents != null
+    ? (status?.platforms.slice(0, previewAgents) || [])
+    : (status?.platforms || []);
+  const autoRunCount = platforms.filter((p) => p.auto_run).length;
   const [openStage, setOpenStage] = useState<{ id: string; label: string } | null>(null);
   const [pipelineCompact, setPipelineCompact] = useCompactPref('pipeline');
   const [agentsCompact, setAgentsCompact] = useCompactPref('agents');
@@ -133,8 +147,8 @@ export function Dashboard() {
   status?.recentRuns?.forEach((r) => { if (!lastRun[r.agent_name]) lastRun[r.agent_name] = r; });
 
   const totalActions = Object.values(actionsByPlatform).reduce((a, b) => a + b, 0);
-  const totalAgents = status?.platforms.length || 0;
-  const enabledAgents = status?.platforms.filter((p) => p.enabled).length || 0;
+  const totalAgents = platforms.length;
+  const enabledAgents = platforms.filter((p) => p.enabled).length;
   const runsToday = status?.recentRuns?.length || 0;
   const completedToday = status?.recentRuns?.filter((r) => r.status === 'completed').length || 0;
 
@@ -213,7 +227,7 @@ export function Dashboard() {
           </div>
         </div>
         {agentsCompact ? (() => {
-          const total = status?.platforms.length || 0;
+          const total = platforms.length;
           // Adaptive column count: 1 col for 1–3 agents, 2 cols for 4+. Avoids
           // an empty second column when only a couple of agents are configured.
           const cols = total >= 4 ? 2 : 1;
@@ -243,7 +257,7 @@ export function Dashboard() {
               ))}
             </div>
             <div style={bodyGrid}>
-              {status?.platforms.map((p, i) => {
+              {platforms.map((p, i) => {
                 const run = lastRun[p.platform];
                 const acts = actionsByPlatform[p.platform] || 0;
                 const agentData = agents?.find((a) => a.platform === p.platform);
@@ -289,7 +303,7 @@ export function Dashboard() {
           );
         })() : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {status?.platforms.map((p, i) => {
+          {platforms.map((p, i) => {
             const run = lastRun[p.platform];
             const acts = actionsByPlatform[p.platform] || 0;
             const agentData = agents?.find((a) => a.platform === p.platform);
