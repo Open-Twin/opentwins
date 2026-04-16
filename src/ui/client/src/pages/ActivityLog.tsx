@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApi, today } from '../hooks/useApi.ts';
+import { DatePicker } from '../components/DatePicker.tsx';
 
 interface FeedEvent {
   ts: string;
@@ -183,17 +184,7 @@ export function ActivityLog() {
         {/* Date picker */}
         <div className="flex items-center gap-2">
           <span className="mono text-[12px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Date</span>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="mono px-3 py-2 rounded-lg text-sm outline-none transition-colors"
-            style={{
-              background: 'var(--c-panel)',
-              border: '1px solid var(--c-border-dim)',
-              color: 'var(--c-text)',
-            }}
-          />
+          <DatePicker value={date} onChange={setDate} />
           {!isToday && (
             <button
               onClick={() => setDate(today())}

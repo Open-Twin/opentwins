@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { DatePicker } from '../components/DatePicker.tsx';
 
 interface LogEntry {
   ts: string;
@@ -114,13 +115,7 @@ export function Logs() {
       <div className="panel noise animate-fade-up" style={{ overflow: 'visible' }}>
         <div className="px-4 py-3 flex items-center gap-3 flex-wrap">
           {/* Date picker */}
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="mono text-[13px] bg-transparent outline-none px-2 py-1.5 rounded"
-            style={{ color: 'var(--c-text-dim)', border: '1px solid var(--c-border-dim)' }}
-          />
+          <DatePicker value={date} onChange={setDate} />
 
           {/* Level filter chips */}
           <div className="flex items-center gap-1">
