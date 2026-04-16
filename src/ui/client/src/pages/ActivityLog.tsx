@@ -51,6 +51,18 @@ function formatTime(iso: string): string {
   }
 }
 
+// Stable key for an error event within a session, used by the per-error
+// "acknowledge" feature. Includes sessionId so the same error in a different
+// session is still visible after acknowledgment.
+function quickHash(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+function errorKey(sessionId: string, ev: FeedEvent): string {
+  return `${sessionId}::${ev.ts}::${quickHash(ev.summary + (ev.detail || ''))}`;
+}
+
 function statusMeta(status: SessionSummary['status']) {
   switch (status) {
     case 'running':
@@ -85,6 +97,28 @@ export function ActivityLog() {
   const [platform, setPlatform] = useState(initialPlatform);
   const [kindFilter, setKindFilter] = useState<EventKindFilter>('all');
   const [errorsOnly, setErrorsOnly] = useState(false);
+  const [ackedErrors, setAckedErrors] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('opentwins.acked-errors');
+      if (raw) return new Set(JSON.parse(raw) as string[]);
+    } catch { /* corrupted, ignore */ }
+    return new Set();
+  });
+
+  // Persist ackedErrors whenever it changes.
+  useEffect(() => {
+    try {
+      localStorage.setItem('opentwins.acked-errors', JSON.stringify(Array.from(ackedErrors)));
+    } catch { /* quota / private mode, ignore */ }
+  }, [ackedErrors]);
+
+  const ackError = (key: string) => {
+    setAckedErrors((prev) => {
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+  };
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(
     focusSession ? new Set([focusSession]) : new Set()
   );
@@ -290,10 +324,19 @@ export function ActivityLog() {
             const color = PLATFORM_COLORS[s.platform] || '#888';
             const st = statusMeta(s.status);
 
-            // Filter events by kind
-            const filteredEvents = kindFilter === 'all'
+            // Filter events by kind, then drop acknowledged errors. Per-error
+            // ack state lives in localStorage and is keyed on
+            // sessionId+ts+content-hash so the same error in a future session
+            // is still visible by default.
+            const kindFiltered = kindFilter === 'all'
               ? s.events
               : s.events.filter((e) => e.kind === kindFilter);
+            let ackedHere = 0;
+            const filteredEvents = kindFiltered.filter((e) => {
+              if (e.kind !== 'error') return true;
+              if (ackedErrors.has(errorKey(s.sessionId, e))) { ackedHere++; return false; }
+              return true;
+            });
 
             return (
               <div
@@ -397,6 +440,27 @@ export function ActivityLog() {
                         </div>
                       ) : (
                         <div className="space-y-0.5">
+                          {ackedHere > 0 && (
+                            <div className="mono text-[11px] mb-2 flex items-center gap-2" style={{ color: 'var(--c-text-muted)' }}>
+                              <span>{ackedHere} acknowledged error{ackedHere === 1 ? '' : 's'} hidden</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAckedErrors((prev) => {
+                                    const next = new Set(prev);
+                                    for (const ev of s.events) {
+                                      if (ev.kind === 'error') next.delete(errorKey(s.sessionId, ev));
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                className="underline hover:text-white transition-colors"
+                                style={{ color: 'var(--c-teal-dim)' }}
+                              >
+                                Unhide
+                              </button>
+                            </div>
+                          )}
                           {filteredEvents.map((ev, i) => {
                             const evId = `${s.sessionId}:${i}`;
                             const isEvExpanded = expandedEvents.has(evId);
@@ -434,6 +498,27 @@ export function ActivityLog() {
                                     </div>
                                   )}
                                 </div>
+
+                                {/* Per-error acknowledge action (hides this
+                                    error in this session only; future
+                                    sessions still show identical errors). */}
+                                {ev.kind === 'error' && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); ackError(errorKey(s.sessionId, ev)); }}
+                                    title="Acknowledge — hide this error in this session"
+                                    className="mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 mt-1 transition-colors"
+                                    style={{
+                                      color: 'var(--c-text-muted)',
+                                      background: 'rgba(255,255,255,0.03)',
+                                      border: '1px solid var(--c-border-dim)',
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--c-teal)'; e.currentTarget.style.borderColor = 'var(--c-teal-dim)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--c-text-muted)'; e.currentTarget.style.borderColor = 'var(--c-border-dim)'; }}
+                                  >
+                                    ✓ ack
+                                  </button>
+                                )}
 
                                 {/* Kind label (tiny) */}
                                 <span className="mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 mt-1" style={{
