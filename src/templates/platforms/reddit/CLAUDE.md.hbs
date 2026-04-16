@@ -26,6 +26,13 @@ Read on-demand (only when needed):
 - `PLAYBOOK.md` — for schedule generation
 - `INSIGHTS.md` — for strategy context
 
+## Tool Selection
+
+- **Read** for known file paths (e.g. `Read('memory/today_summary.json')`). Always prefer Read over Glob when you know the exact path.
+- **Glob** ONLY for patterns (e.g. `**/*.json`, `content-ready/*/devto-article.md`). Do not Glob a single specific path — that's a wasted roundtrip.
+- **Bash** for shell commands and `curl` to the browser API.
+- **Edit** for in-place file modifications. **Write** only for new files or full rewrites.
+
 ## Memory Rules
 
 - `memory/YYYY-MM-DD.md` = append-only during heartbeats. Do NOT read.
