@@ -23,14 +23,14 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
-      - name: Install dependencies
-        # --no-audit and --no-fund avoid a recurring npm bug where the
-        # process hangs after install and dies with "Exit handler never
-        # called!" (see npm/cli issues #4769, #8074). Audit still runs
-        # against the lockfile via `npm audit signatures` if needed.
-        run: |
-          npm ci --no-audit --no-fund
-          cd src/ui/client && npm ci --no-audit --no-fund
+      # Split into two named steps so we can tell which install is hanging
+      # in the recurring "Exit handler never called!" npm bug (#4769, #8074).
+      - name: Install root dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install client dependencies
+        working-directory: src/ui/client
+        run: npm ci --no-audit --no-fund
 
       - name: Build
         run: npm run build
