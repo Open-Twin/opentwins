@@ -233,12 +233,22 @@ export function Dashboard() {
           const cols = total >= 4 ? 2 : 1;
           const rowsPerCol = Math.ceil(total / cols);
 
-          // Single-column mode: render as a real HTML table so the column
-          // widths line up with the Recent Runs table immediately below.
+          // Single-column mode: render as a real HTML table with fixed column
+          // widths matching Recent Runs so columns line up vertically.
+          // Widths: AGENT 18% · STATUS 20% · MODE/STARTED 30% · then 32%
+          // split into ACTIONS+COMMENTS (16%+16%) here, taken whole as
+          // DURATION on Recent Runs.
           if (cols === 1) {
             return (
               <div className="panel noise overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full" style={{ tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: '18%' }} />
+                    <col style={{ width: '20%' }} />
+                    <col style={{ width: '30%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '16%' }} />
+                  </colgroup>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
                       <th className="text-left px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Agent</th>
@@ -451,7 +461,16 @@ export function Dashboard() {
         </div>
         {status?.recentRuns && status.recentRuns.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full" style={{ tableLayout: 'fixed' }}>
+              {/* Fixed column widths so this table aligns with the
+                  Platform Agents 1-col compact table above (5 cols). The
+                  rightmost 32% holds DURATION here, ACTIONS+COMMENTS there. */}
+              <colgroup>
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '30%' }} />
+                <col style={{ width: '32%' }} />
+              </colgroup>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
                   <th className="text-left px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Agent</th>
