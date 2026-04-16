@@ -221,10 +221,10 @@ export function Dashboard() {
           const gridColsClass = cols === 2 ? 'grid grid-cols-1 md:grid-cols-2' : 'grid grid-cols-1';
           return (
           <div className="panel noise overflow-hidden">
-            {/* Header strip with column labels — printed once per visible column */}
-            <div className={gridColsClass} style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--c-border-dim)' }}>
+            {/* Header strip — matches Recent Runs sizing/typography */}
+            <div className={gridColsClass} style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
               {Array.from({ length: cols }).map((_, c) => (
-                <div key={c} className="grid items-center gap-x-3 px-3.5 py-1.5 mono text-[10px] uppercase tracking-[0.1em]" style={{ color: 'var(--c-text-muted)', borderLeft: c > 0 ? '1px solid var(--c-border-dim)' : 'none', gridTemplateColumns: '2px 8px minmax(0, 1fr) 32px 32px 44px' }}>
+                <div key={c} className="grid items-center gap-3 px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)', borderLeft: c > 0 ? '1px solid var(--c-border-dim)' : 'none', gridTemplateColumns: '2px 6px minmax(0, 1fr) 40px 40px 56px' }}>
                   <span /><span /><span>Agent</span>
                   <span className="text-right">Act</span>
                   <span className="text-right">Com</span>
@@ -253,25 +253,25 @@ export function Dashboard() {
                     key={p.platform}
                     type="button"
                     onClick={() => navigate('/agents')}
-                    className="w-full text-left grid items-center gap-x-3 pl-2.5 pr-3.5 py-1.5 transition-colors hover:bg-white/[0.03]"
+                    className="w-full text-left grid items-center gap-3 px-5 py-2.5 transition-colors hover:bg-white/[0.03]"
                     style={{
                       borderBottom: isLastInCol ? 'none' : '1px solid var(--c-border-dim)',
                       borderLeft: colIdx > 0 ? '1px solid var(--c-border-dim)' : 'none',
                       opacity: p.enabled ? 1 : 0.5,
-                      gridTemplateColumns: '2px 8px minmax(0, 1fr) 32px 32px 44px',
+                      gridTemplateColumns: '2px 6px minmax(0, 1fr) 40px 40px 56px',
                     }}
                     title={`${p.platform} — ${status_}`}
                   >
                     <span className="h-4 rounded-sm" style={{ background: accentBar }} />
-                    <span className="w-2 h-2 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}50` }} />
-                    <span className="text-[13px] font-semibold capitalize truncate" style={{ color: 'var(--c-text)' }}>{p.platform}</span>
-                    <span className="mono text-[12px] tabular-nums text-right" style={{ color: acts > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)', opacity: acts > 0 ? 1 : 0.4 }}>{acts}</span>
-                    <span className="mono text-[12px] tabular-nums text-right" style={{ color: comments > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)', opacity: comments > 0 ? 1 : 0.4 }}>{comments}</span>
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+                    <span className="capitalize text-sm font-medium truncate" style={{ color: 'var(--c-text)' }}>{p.platform}</span>
+                    <span className="mono text-[13px] tabular-nums text-right" style={{ color: acts > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)', opacity: acts > 0 ? 1 : 0.4 }}>{acts}</span>
+                    <span className="mono text-[13px] tabular-nums text-right" style={{ color: comments > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)', opacity: comments > 0 ? 1 : 0.4 }}>{comments}</span>
                     <span className="text-right">
                       {p.auto_run ? (
-                        <span className="mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: 'var(--c-green)', background: 'rgba(52, 211, 153, 0.1)', border: '1px solid rgba(52, 211, 153, 0.25)' }}>auto</span>
+                        <span className="mono text-[11px] uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: 'var(--c-green)', background: 'rgba(52, 211, 153, 0.1)', border: '1px solid rgba(52, 211, 153, 0.25)' }}>auto</span>
                       ) : (
-                        <span className="mono text-[11px]" style={{ color: 'var(--c-text-muted)', opacity: 0.4 }}>—</span>
+                        <span className="mono text-[12px]" style={{ color: 'var(--c-text-muted)', opacity: 0.4 }}>—</span>
                       )}
                     </span>
                   </button>
