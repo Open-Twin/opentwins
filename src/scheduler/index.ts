@@ -213,7 +213,14 @@ export function createScheduler(config: OpenTwinsConfig): SchedulerHandle {
         clearInterval(tickInterval);
         tickInterval = null;
       }
-      return bree.stop(name);
+      // Bree.stop() clears cron/interval timers synchronously before it
+      // awaits worker termination via pWaitFor. The wait can block for the
+      // full duration of any running heartbeat (up to 30 min) because our
+      // agent-runner worker doesn't listen for Bree's 'cancel' message and
+      // just keeps running its Claude SDK call. We don't need that wait —
+      // old workers can finish naturally and still write their heartbeat
+      // files correctly. Fire-and-forget keeps reloads snappy.
+      bree.stop(name).catch(() => { /* ignore late termination errors */ });
     },
   };
 }
