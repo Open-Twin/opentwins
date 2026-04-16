@@ -115,7 +115,6 @@ export function Dashboard() {
   const autoRunCount = platforms.filter((p) => p.auto_run).length;
   const [openStage, setOpenStage] = useState<{ id: string; label: string } | null>(null);
   const [pipelineCompact, setPipelineCompact] = useCompactPref('pipeline');
-  const [agentsCompact, setAgentsCompact] = useCompactPref('agents');
 
   // Auto-refresh dashboard every 10 seconds
   useEffect(() => {
@@ -215,18 +214,15 @@ export function Dashboard() {
       <div className="animate-fade-up stagger-2">
         <div className="flex items-center justify-between mb-4">
           <div className="section-title">Platform Agents</div>
-          <div className="flex items-center gap-2">
-            <CompactToggle compact={agentsCompact} onToggle={() => setAgentsCompact((v) => !v)} />
-            <button
-              onClick={() => navigate('/agents')}
-              className="mono text-[13px] px-2.5 py-1 rounded-md transition-colors hover:bg-white/[0.03]"
-              style={{ color: 'var(--c-teal-dim)' }}
-            >
-              manage →
-            </button>
-          </div>
+          <button
+            onClick={() => navigate('/agents')}
+            className="mono text-[13px] px-2.5 py-1 rounded-md transition-colors hover:bg-white/[0.03]"
+            style={{ color: 'var(--c-teal-dim)' }}
+          >
+            manage →
+          </button>
         </div>
-        {agentsCompact ? (() => {
+        {(() => {
           const total = platforms.length;
           // Adaptive column count: 1 col for 1–3 agents, 2 cols for 4+. Avoids
           // an empty second column when only a couple of agents are configured.
@@ -366,83 +362,7 @@ export function Dashboard() {
             </div>
           </div>
           );
-        })() : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {platforms.map((p, i) => {
-            const run = lastRun[p.platform];
-            const acts = actionsByPlatform[p.platform] || 0;
-            const agentData = agents?.find((a) => a.platform === p.platform);
-            const comments = agentData?.limits?.daily?.comments?.current || agentData?.limits?.daily?.responses?.current || 0;
-            const color = PLATFORM_COLORS[p.platform] || '#888';
-            const sched = status.platformSchedules?.find((s) => s.platform === p.platform);
-
-            return (
-              <div
-                key={p.platform}
-                className={`panel noise animate-fade-up stagger-${Math.min(i + 1, 5)} cursor-pointer transition-all duration-200 hover:border-white/10`}
-                style={{ opacity: p.enabled ? 1 : 0.5 }}
-                onClick={() => navigate('/agents')}
-              >
-                <div className="p-5">
-                  {/* Card header */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ background: color, boxShadow: `0 0 12px ${color}50` }}
-                      />
-                      <div className="min-w-0">
-                        <div className="text-base font-semibold capitalize leading-tight" style={{ color: 'var(--c-text)' }}>
-                          {p.platform}
-                        </div>
-                        <div className="mono text-[12px] truncate" style={{ color: 'var(--c-text-muted)' }}>
-                          {cleanHandle(p.handle)}
-                        </div>
-                      </div>
-                    </div>
-                    {run && <StatusBadge status={run.status} />}
-                  </div>
-
-                  {/* Stats */}
-                  <div className="grid grid-cols-2 gap-3 mb-3 pt-3" style={{ borderTop: '1px solid var(--c-border-dim)' }}>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wider mb-1" style={{ color: 'var(--c-text-muted)' }}>Actions</div>
-                      <div className="text-2xl font-semibold tabular-nums leading-none" style={{ color: acts > 0 ? 'var(--c-text)' : 'var(--c-text-muted)' }}>
-                        {acts}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wider mb-1" style={{ color: 'var(--c-text-muted)' }}>Comments</div>
-                      <div className="text-2xl font-semibold tabular-nums leading-none" style={{ color: comments > 0 ? 'var(--c-text)' : 'var(--c-text-muted)' }}>
-                        {comments}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Footer: schedule or last run */}
-                  <div className="flex items-center justify-between mono text-[12px] pt-2" style={{ borderTop: '1px solid var(--c-border-dim)', color: 'var(--c-text-muted)' }}>
-                    {run?.status === 'running' ? (
-                      <span className="flex items-center gap-1.5" style={{ color: 'var(--c-blue)' }}>
-                        <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--c-blue)' }}></span>
-                        running now
-                      </span>
-                    ) : sched && sched.nextRun ? (
-                      <Countdown target={sched.nextRun} />
-                    ) : p.auto_run ? (
-                      <span style={{ color: 'var(--c-green)' }}>auto-run</span>
-                    ) : (
-                      <span>manual only</span>
-                    )}
-                    {run?.duration_ms && (
-                      <span>{(run.duration_ms / 1000).toFixed(0)}s</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        )}
+        })()}
       </div>
 
       {/* ── Recent Runs (compact, last 5) ──────────────────────── */}
