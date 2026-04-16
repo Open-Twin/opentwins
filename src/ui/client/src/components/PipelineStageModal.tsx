@@ -109,29 +109,31 @@ export function PipelineStageModal({ stageId, stageLabel, date, onClose }: Props
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between px-5 py-4 gap-4" style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
-          <div className="min-w-0">
-            <div className="text-lg font-semibold" style={{ color: 'var(--c-text)' }}>{stageLabel}</div>
-            <div className="mono text-[12px] mt-0.5" style={{ color: 'var(--c-text-muted)' }}>
-              outputs for <span style={{ color: 'var(--c-teal-dim)' }}>{date}</span>
-            </div>
-            {STAGE_DESCRIPTIONS[stageId] && (
-              <div className="text-[13.5px] mt-2.5 leading-relaxed" style={{ color: 'var(--c-text-dim)', maxWidth: '70ch' }}>
-                {STAGE_DESCRIPTIONS[stageId]}
+        <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
+          <div className="flex items-center justify-between gap-4">
+            <div className="text-lg font-semibold truncate" style={{ color: 'var(--c-text)' }}>{stageLabel}</div>
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="mono text-[12px]" style={{ color: 'var(--c-text-muted)' }}>
+                outputs for <span style={{ color: 'var(--c-teal-dim)' }}>{date}</span>
               </div>
-            )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 rounded-md flex items-center justify-center transition-colors hover:bg-white/5"
+                style={{ color: 'var(--c-text-muted)' }}
+                aria-label="Close"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M6 6l12 12M18 6l-12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-md flex items-center justify-center transition-colors hover:bg-white/5"
-            style={{ color: 'var(--c-text-muted)' }}
-            aria-label="Close"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M6 6l12 12M18 6l-12 12" />
-            </svg>
-          </button>
+          {STAGE_DESCRIPTIONS[stageId] && (
+            <div className="text-[13.5px] mt-2 leading-relaxed" style={{ color: 'var(--c-text-dim)' }}>
+              {STAGE_DESCRIPTIONS[stageId]}
+            </div>
+          )}
         </div>
 
         {/* Tabs (only if more than one file) */}
