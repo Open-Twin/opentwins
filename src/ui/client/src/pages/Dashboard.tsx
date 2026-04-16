@@ -224,8 +224,9 @@ export function Dashboard() {
             {/* Header strip — matches Recent Runs sizing/typography */}
             <div className={gridColsClass} style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
               {Array.from({ length: cols }).map((_, c) => (
-                <div key={c} className="grid items-center gap-3 px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)', borderLeft: c > 0 ? '1px solid var(--c-border-dim)' : 'none', gridTemplateColumns: '2px 6px minmax(0, 1fr) 40px 40px 56px' }}>
-                  <span /><span /><span>Agent</span>
+                <div key={c} className="grid items-center gap-3 px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)', borderLeft: c > 0 ? '1px solid var(--c-border-dim)' : 'none', gridTemplateColumns: '6px minmax(0, 1fr) 116px 40px 40px 56px' }}>
+                  <span /><span>Agent</span>
+                  <span>Status</span>
                   <span className="text-right">Act</span>
                   <span className="text-right">Com</span>
                   <span className="text-right">Mode</span>
@@ -243,11 +244,6 @@ export function Dashboard() {
                 const rowIdx = i % rowsPerCol;
                 const isLastInCol = rowIdx === rowsPerCol - 1 || i === total - 1;
                 const status_ = run?.status || 'idle';
-                const accentBar =
-                  status_ === 'completed' ? 'var(--c-green)' :
-                  status_ === 'running'   ? 'var(--c-blue)'  :
-                  status_ === 'failed'    ? 'var(--c-red)'   :
-                                            'transparent';
                 return (
                   <button
                     key={p.platform}
@@ -258,13 +254,15 @@ export function Dashboard() {
                       borderBottom: isLastInCol ? 'none' : '1px solid var(--c-border-dim)',
                       borderLeft: colIdx > 0 ? '1px solid var(--c-border-dim)' : 'none',
                       opacity: p.enabled ? 1 : 0.5,
-                      gridTemplateColumns: '2px 6px minmax(0, 1fr) 40px 40px 56px',
+                      gridTemplateColumns: '6px minmax(0, 1fr) 116px 40px 40px 56px',
                     }}
                     title={`${p.platform} — ${status_}`}
                   >
-                    <span className="h-4 rounded-sm" style={{ background: accentBar }} />
                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
                     <span className="capitalize text-sm font-medium truncate" style={{ color: 'var(--c-text)' }}>{p.platform}</span>
+                    <span>
+                      {run ? <StatusBadge status={run.status} /> : <span className="mono text-[12px]" style={{ color: 'var(--c-text-muted)', opacity: 0.5 }}>idle</span>}
+                    </span>
                     <span className="mono text-[13px] tabular-nums text-right" style={{ color: acts > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)', opacity: acts > 0 ? 1 : 0.4 }}>{acts}</span>
                     <span className="mono text-[13px] tabular-nums text-right" style={{ color: comments > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)', opacity: comments > 0 ? 1 : 0.4 }}>{comments}</span>
                     <span className="text-right">
