@@ -96,7 +96,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { enabled: agentsEnabled, reason: agentsDisabledReason } = useAgentsEnabled();
   const { data: status, loading, refetch } = useApi<StatusData>('/api/status');
-  const { data: activityResp, refetch: refetchActivity } = useApi<{ sessions: Array<{ platform: string; toolCount: number; eventCount: number }> }>(`/api/activity?date=${today()}`);
+  const { data: activityResp, refetch: refetchActivity } = useApi<{ sessions: Array<{ sessionId: string; platform: string; toolCount: number; eventCount: number }> }>(`/api/activity?date=${today()}`);
   const { data: agents, refetch: refetchAgents } = useApi<Array<{ platform: string; limits: { daily: Record<string, { limit: number; current: number }>; weekly?: Record<string, { limit: number; current: number }> } | null }>>('/api/agents');
   const autoRunCount = status?.platforms.filter((p) => p.auto_run).length || 0;
   const [openStage, setOpenStage] = useState<{ id: string; label: string } | null>(null);
@@ -375,57 +375,57 @@ export function Dashboard() {
         {status?.recentRuns && status.recentRuns.length > 0 ? (
           recentRunsCompact ? (() => {
             const runs = status.recentRuns.slice(0, 6);
-            const cols = 2;
-            const rowsPerCol = Math.ceil(runs.length / cols);
+            const sessionByid = new Map((activityResp?.sessions || []).map((s) => [s.sessionId, s]));
+            // Single grid template — applied to header strip and every row so columns line up.
+            const colTemplate = '2px 8px minmax(120px, 1.5fr) 56px 64px 72px minmax(0, 2fr)';
             return (
               <div>
-                {/* Header strip — same column rhythm as Agents compact */}
-                <div className="grid grid-cols-1 md:grid-cols-2" style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--c-border-dim)' }}>
-                  {[0, 1].map((c) => (
-                    <div key={c} className="grid items-center gap-x-3 pl-2.5 pr-3.5 py-1.5 mono text-[10px] uppercase tracking-[0.1em]" style={{ color: 'var(--c-text-muted)', borderLeft: c > 0 ? '1px solid var(--c-border-dim)' : 'none', gridTemplateColumns: '2px 8px minmax(0, 1fr) 56px 64px' }}>
-                      <span /><span /><span>Agent</span>
-                      <span className="text-right">Started</span>
-                      <span className="text-right">Duration</span>
-                    </div>
-                  ))}
+                <div className="grid items-center gap-x-3 pl-2.5 pr-3.5 py-1.5 mono text-[10px] uppercase tracking-[0.1em]" style={{ background: 'rgba(255,255,255,0.02)', color: 'var(--c-text-muted)', borderBottom: '1px solid var(--c-border-dim)', gridTemplateColumns: colTemplate }}>
+                  <span /><span /><span>Agent</span>
+                  <span className="text-right">Started</span>
+                  <span className="text-right">Duration</span>
+                  <span className="text-right">Actions</span>
+                  <span />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2">
-                  {runs.map((run, i) => {
-                    const day = run.started_at?.split('T')[0] || today();
-                    const accentBar =
-                      run.status === 'completed' ? 'var(--c-green)' :
-                      run.status === 'running'   ? 'var(--c-blue)'  :
-                      run.status === 'failed'    ? 'var(--c-red)'   :
-                                                   'transparent';
-                    const colIdx = Math.floor(i / rowsPerCol);
-                    const rowIdx = i % rowsPerCol;
-                    const isLastInCol = rowIdx === rowsPerCol - 1 || i === runs.length - 1;
-                    return (
-                      <button
-                        key={run.id}
-                        type="button"
-                        onClick={() => navigate(`/activity?date=${day}&platform=${run.agent_name}&session=${run.id}`)}
-                        className="w-full text-left grid items-center gap-x-3 pl-2.5 pr-3.5 py-1.5 transition-colors hover:bg-white/[0.03]"
-                        style={{
-                          borderBottom: isLastInCol ? 'none' : '1px solid var(--c-border-dim)',
-                          borderLeft: colIdx > 0 ? '1px solid var(--c-border-dim)' : 'none',
-                          gridTemplateColumns: '2px 8px minmax(0, 1fr) 56px 64px',
-                        }}
-                        title={`${run.agent_name} — ${run.status}`}
-                      >
-                        <span className="h-4 rounded-sm" style={{ background: accentBar }} />
-                        <span className="w-2 h-2 rounded-full" style={{ background: PLATFORM_COLORS[run.agent_name] || '#888' }} />
-                        <span className="capitalize text-[13px] font-medium truncate" style={{ color: 'var(--c-text)' }}>{run.agent_name}</span>
-                        <span className="mono text-[12px] tabular-nums text-right" style={{ color: 'var(--c-text-dim)' }}>
-                          {run.started_at ? new Date(run.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
-                        </span>
-                        <span className="mono text-[12px] tabular-nums text-right" style={{ color: 'var(--c-text-muted)' }}>
-                          {run.duration_ms ? `${Math.floor(run.duration_ms / 60000)}m ${Math.floor((run.duration_ms % 60000) / 1000)}s` : '—'}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                {runs.map((run, i) => {
+                  const day = run.started_at?.split('T')[0] || today();
+                  const accentBar =
+                    run.status === 'completed' ? 'var(--c-green)' :
+                    run.status === 'running'   ? 'var(--c-blue)'  :
+                    run.status === 'failed'    ? 'var(--c-red)'   :
+                                                 'transparent';
+                  const session = sessionByid.get(run.id);
+                  const actions = session?.toolCount;
+                  return (
+                    <button
+                      key={run.id}
+                      type="button"
+                      onClick={() => navigate(`/activity?date=${day}&platform=${run.agent_name}&session=${run.id}`)}
+                      className="w-full text-left grid items-center gap-x-3 pl-2.5 pr-3.5 py-1.5 transition-colors hover:bg-white/[0.03]"
+                      style={{
+                        borderBottom: i === runs.length - 1 ? 'none' : '1px solid var(--c-border-dim)',
+                        gridTemplateColumns: colTemplate,
+                      }}
+                      title={run.error ? `Failed: ${run.error}` : `${run.agent_name} — ${run.status}`}
+                    >
+                      <span className="h-4 rounded-sm" style={{ background: accentBar }} />
+                      <span className="w-2 h-2 rounded-full" style={{ background: PLATFORM_COLORS[run.agent_name] || '#888' }} />
+                      <span className="capitalize text-[13px] font-medium truncate" style={{ color: 'var(--c-text)' }}>{run.agent_name}</span>
+                      <span className="mono text-[12px] tabular-nums text-right" style={{ color: 'var(--c-text-dim)' }}>
+                        {run.started_at ? new Date(run.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
+                      </span>
+                      <span className="mono text-[12px] tabular-nums text-right" style={{ color: 'var(--c-text-muted)' }}>
+                        {run.duration_ms ? `${Math.floor(run.duration_ms / 60000)}m ${Math.floor((run.duration_ms % 60000) / 1000)}s` : '—'}
+                      </span>
+                      <span className="mono text-[12px] tabular-nums text-right" style={{ color: actions != null && actions > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)', opacity: actions ? 1 : 0.4 }}>
+                        {actions != null ? actions : '—'}
+                      </span>
+                      <span className="mono text-[11.5px] truncate" style={{ color: run.error ? 'var(--c-red)' : 'var(--c-text-muted)', opacity: run.error ? 0.85 : 0.5 }}>
+                        {run.error ? `⚠ ${run.error}` : ''}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             );
           })() : (
