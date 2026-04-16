@@ -214,34 +214,39 @@ export function Dashboard() {
           </div>
         </div>
         {agentsCompact ? (
-          <div className="panel noise overflow-hidden">
+          <div className="panel noise overflow-hidden grid grid-cols-1 md:grid-cols-2" style={{ columnGap: 0 }}>
             {status?.platforms.map((p, i) => {
               const run = lastRun[p.platform];
               const acts = actionsByPlatform[p.platform] || 0;
               const agentData = agents?.find((a) => a.platform === p.platform);
               const comments = agentData?.limits?.daily?.comments?.current || agentData?.limits?.daily?.responses?.current || 0;
               const color = PLATFORM_COLORS[p.platform] || '#888';
-              const isLast = i === (status?.platforms.length || 0) - 1;
+              const total = status?.platforms.length || 0;
+              const cols = 2;
+              const rowsPerCol = Math.ceil(total / cols);
+              const colIdx = Math.floor(i / rowsPerCol);
+              const rowIdx = i % rowsPerCol;
+              const isLastInCol = rowIdx === rowsPerCol - 1 || i === total - 1;
               return (
                 <button
                   key={p.platform}
                   type="button"
                   onClick={() => navigate('/agents')}
-                  className="w-full text-left grid items-center gap-x-3 px-4 py-2 transition-colors hover:bg-white/[0.03]"
+                  className="w-full text-left grid items-center gap-x-3 px-3.5 py-1.5 transition-colors hover:bg-white/[0.03]"
                   style={{
-                    borderBottom: isLast ? 'none' : '1px solid var(--c-border-dim)',
+                    borderBottom: isLastInCol ? 'none' : '1px solid var(--c-border-dim)',
+                    borderLeft: colIdx > 0 ? '1px solid var(--c-border-dim)' : 'none',
                     opacity: p.enabled ? 1 : 0.5,
-                    gridTemplateColumns: '12px minmax(90px, max-content) minmax(0, 1fr) 64px 64px max-content max-content',
+                    gridTemplateColumns: '10px minmax(0, 1fr) max-content max-content max-content max-content',
                   }}
-                  title={`${p.platform} — ${cleanHandle(p.handle)}`}
+                  title={p.platform}
                 >
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color, boxShadow: `0 0 8px ${color}50` }} />
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color, boxShadow: `0 0 6px ${color}50` }} />
                   <span className="text-[13px] font-semibold capitalize truncate" style={{ color: 'var(--c-text)' }}>{p.platform}</span>
-                  <span className="mono text-[12px] truncate" style={{ color: 'var(--c-text-muted)' }}>{cleanHandle(p.handle)}</span>
-                  <span className="mono text-[12px] tabular-nums text-right" style={{ color: acts > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)' }}>
+                  <span className="mono text-[12px] tabular-nums" style={{ color: acts > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)' }}>
                     <span style={{ opacity: 0.5 }}>act </span>{acts}
                   </span>
-                  <span className="mono text-[12px] tabular-nums text-right" style={{ color: comments > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)' }}>
+                  <span className="mono text-[12px] tabular-nums" style={{ color: comments > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)' }}>
                     <span style={{ opacity: 0.5 }}>com </span>{comments}
                   </span>
                   <span className="mono text-[11px]" style={{ color: p.auto_run ? 'var(--c-green)' : 'var(--c-text-muted)' }}>
