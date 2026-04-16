@@ -374,58 +374,84 @@ export function Dashboard() {
         </div>
         {status?.recentRuns && status.recentRuns.length > 0 ? (
           recentRunsCompact ? (() => {
-            const runs = status.recentRuns.slice(0, 6);
+            const allRuns = status.recentRuns;
             const sessionByid = new Map((activityResp?.sessions || []).map((s) => [s.sessionId, s]));
-            // Single grid template — applied to header strip and every row so columns line up.
-            const colTemplate = '2px 8px minmax(120px, 1.5fr) 56px 64px 72px minmax(0, 2fr)';
+            const stripRuns = allRuns.slice(0, 20); // show up to 20 dots in the strip
+            const totalCompleted = allRuns.filter((r) => r.status === 'completed').length;
+            const totalFailed = allRuns.filter((r) => r.status === 'failed').length;
+            const totalRunning = allRuns.filter((r) => r.status === 'running').length;
+            const last = allRuns[0];
+            const lastSession = last ? sessionByid.get(last.id) : undefined;
+            const fmtDur = (ms?: number | null) =>
+              ms == null ? '—' :
+              ms < 60_000 ? `${Math.round(ms / 1000)}s` :
+              `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
             return (
-              <div>
-                <div className="grid items-center gap-x-3 pl-2.5 pr-3.5 py-1.5 mono text-[10px] uppercase tracking-[0.1em]" style={{ background: 'rgba(255,255,255,0.02)', color: 'var(--c-text-muted)', borderBottom: '1px solid var(--c-border-dim)', gridTemplateColumns: colTemplate }}>
-                  <span /><span /><span>Agent</span>
-                  <span className="text-right">Started</span>
-                  <span className="text-right">Duration</span>
-                  <span className="text-right">Actions</span>
-                  <span />
+              <div className="px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+                {/* Tally */}
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <span className="mono text-[11px] uppercase tracking-[0.1em] font-semibold" style={{ color: 'var(--c-teal)' }}>
+                    {allRuns.length} runs
+                  </span>
+                  <span className="mono text-[11.5px] flex items-center gap-2.5" style={{ color: 'var(--c-text-muted)' }}>
+                    <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-green)' }} />{totalCompleted}</span>
+                    {totalRunning > 0 && <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-blue)' }} />{totalRunning}</span>}
+                    {totalFailed > 0 && <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-red)' }} />{totalFailed}</span>}
+                  </span>
                 </div>
-                {runs.map((run, i) => {
-                  const day = run.started_at?.split('T')[0] || today();
-                  const accentBar =
-                    run.status === 'completed' ? 'var(--c-green)' :
-                    run.status === 'running'   ? 'var(--c-blue)'  :
-                    run.status === 'failed'    ? 'var(--c-red)'   :
-                                                 'transparent';
-                  const session = sessionByid.get(run.id);
-                  const actions = session?.toolCount;
-                  return (
-                    <button
-                      key={run.id}
-                      type="button"
-                      onClick={() => navigate(`/activity?date=${day}&platform=${run.agent_name}&session=${run.id}`)}
-                      className="w-full text-left grid items-center gap-x-3 pl-2.5 pr-3.5 py-1.5 transition-colors hover:bg-white/[0.03]"
-                      style={{
-                        borderBottom: i === runs.length - 1 ? 'none' : '1px solid var(--c-border-dim)',
-                        gridTemplateColumns: colTemplate,
-                      }}
-                      title={run.error ? `Failed: ${run.error}` : `${run.agent_name} — ${run.status}`}
-                    >
-                      <span className="h-4 rounded-sm" style={{ background: accentBar }} />
-                      <span className="w-2 h-2 rounded-full" style={{ background: PLATFORM_COLORS[run.agent_name] || '#888' }} />
-                      <span className="capitalize text-[13px] font-medium truncate" style={{ color: 'var(--c-text)' }}>{run.agent_name}</span>
-                      <span className="mono text-[12px] tabular-nums text-right" style={{ color: 'var(--c-text-dim)' }}>
-                        {run.started_at ? new Date(run.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
-                      </span>
-                      <span className="mono text-[12px] tabular-nums text-right" style={{ color: 'var(--c-text-muted)' }}>
-                        {run.duration_ms ? `${Math.floor(run.duration_ms / 60000)}m ${Math.floor((run.duration_ms % 60000) / 1000)}s` : '—'}
-                      </span>
-                      <span className="mono text-[12px] tabular-nums text-right" style={{ color: actions != null && actions > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)', opacity: actions ? 1 : 0.4 }}>
-                        {actions != null ? actions : '—'}
-                      </span>
-                      <span className="mono text-[11.5px] truncate" style={{ color: run.error ? 'var(--c-red)' : 'var(--c-text-muted)', opacity: run.error ? 0.85 : 0.5 }}>
-                        {run.error ? `⚠ ${run.error}` : ''}
-                      </span>
-                    </button>
-                  );
-                })}
+                {/* Run-by-run dot strip — newest on left, oldest on right */}
+                <div className="flex items-center gap-1 shrink-0">
+                  {stripRuns.map((run) => {
+                    const day = run.started_at?.split('T')[0] || today();
+                    const dotColor =
+                      run.status === 'completed' ? 'var(--c-green)' :
+                      run.status === 'running'   ? 'var(--c-blue)'  :
+                      run.status === 'failed'    ? 'var(--c-red)'   :
+                                                   'var(--c-text-muted)';
+                    const platformColor = PLATFORM_COLORS[run.agent_name] || '#888';
+                    const session = sessionByid.get(run.id);
+                    const actions = session?.toolCount;
+                    const time = run.started_at ? new Date(run.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—';
+                    const tip = `${run.agent_name} · ${time} · ${fmtDur(run.duration_ms)}` +
+                      (actions != null ? ` · ${actions} actions` : '') +
+                      (run.error ? ` · failed: ${run.error}` : '');
+                    return (
+                      <button
+                        key={run.id}
+                        type="button"
+                        onClick={() => navigate(`/activity?date=${day}&platform=${run.agent_name}&session=${run.id}`)}
+                        className="inline-flex items-center justify-center w-5 h-5 rounded-full transition-transform hover:scale-125 cursor-pointer"
+                        title={tip}
+                        aria-label={tip}
+                      >
+                        <span className="block rounded-full" style={{ width: 10, height: 10, background: platformColor, border: `2px solid ${dotColor}`, boxShadow: run.status === 'running' ? '0 0 6px var(--c-blue)' : undefined }} />
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Last-run summary on the right */}
+                {last && (
+                  <div className="ml-auto flex items-center gap-2 mono text-[11.5px] min-w-0" style={{ color: 'var(--c-text-muted)' }}>
+                    <span className="opacity-60">last:</span>
+                    <span className="capitalize font-medium truncate" style={{ color: 'var(--c-text-dim)' }}>{last.agent_name}</span>
+                    <span className="opacity-60">·</span>
+                    <span className="tabular-nums" style={{ color: 'var(--c-text-dim)' }}>{last.started_at ? new Date(last.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}</span>
+                    <span className="opacity-60">·</span>
+                    <span className="tabular-nums">{fmtDur(last.duration_ms)}</span>
+                    {lastSession?.toolCount != null && (
+                      <>
+                        <span className="opacity-60">·</span>
+                        <span className="tabular-nums">{lastSession.toolCount} actions</span>
+                      </>
+                    )}
+                    {last.error && (
+                      <>
+                        <span className="opacity-60">·</span>
+                        <span className="truncate" style={{ color: 'var(--c-red)' }} title={last.error}>⚠ failed</span>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })() : (
