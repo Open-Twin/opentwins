@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026.4.17
+
+### Scheduler & CLI
+
+**Improved**
+- Serialize `reloadActiveScheduler` so concurrent platform toggles no longer get stuck mid-reload
+- Reload no longer blocks on Bree's worker-termination wait (responsive even with long-running workers)
+
+### Dashboard
+
+**New**
+- Content Pipeline section: clickable stages with outputs modal, plain-language stage descriptions, markdown rendering for `.md` outputs
+- Compact view toggle for Content Pipeline (persists to localStorage)
+- Errors KPI card is now click-to-filter
+- Activity Log: per-error acknowledge (keeps error visible but dimmed, drops from counts)
+- Custom themed DatePicker (replaces native input, opens via portal so it sits above session cards)
+- `?previewAgents=N` debug query param for visual checks at any agent count
+
+**Improved**
+- Content Pipeline section redesigned: health banner + grouped stage list + uniform rows (was an undifferentiated badge row)
+- Platform Agents section: dense table layout aligned to Recent Runs (1 col for ≤3 agents, 2 col for 4+)
+- Pipeline modal: text size + width tuned for readability
+- Agents KPI label clarified: "configured" / "disabled" instead of misleading "enabled" / "paused"
+
+**Fixed**
+- Activity Feed: dropped repeating synthetic "Session complete" events (multi-turn sessions no longer flood the feed)
+
+**Removed**
+- Platform Agents expanded card-grid view — the dense list is now the only view
+
+### Templates
+
+**New**
+- Tool Selection guidance added to all 10 platform `CLAUDE.md.hbs` files
+
+**Improved**
+- Threads: per-author daily comment cap + extended spam-keyword filter
+- LinkedIn content writer: hashtags now mandatory + Engagement Targets mention rule
+- IH: simplified cookie-banner handling (dropped dedicated dismiss steps)
+
+### Build & Tests
+
+**Fixed**
+- Pipeline-runner test no longer pollutes real `~/.opentwins/locks/pipeline-state.json` (was showing fake "Trend Scout failed" in production dashboard)
+- Client lockfile regenerated against public npm registry (was pointing at private Artifactory, broke CI)
+- Swapped `react-markdown` for `marked` (smaller dep tree, faster CI install)
+
 ## 2026.4.16
 
 ### Scheduler & CLI
