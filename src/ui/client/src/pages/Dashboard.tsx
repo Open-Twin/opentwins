@@ -212,11 +212,18 @@ export function Dashboard() {
             </button>
           </div>
         </div>
-        {agentsCompact ? (
+        {agentsCompact ? (() => {
+          const total = status?.platforms.length || 0;
+          // Adaptive column count: 1 col for 1–3 agents, 2 cols for 4+. Avoids
+          // an empty second column when only a couple of agents are configured.
+          const cols = total >= 4 ? 2 : 1;
+          const rowsPerCol = Math.ceil(total / cols);
+          const gridColsClass = cols === 2 ? 'grid grid-cols-1 md:grid-cols-2' : 'grid grid-cols-1';
+          return (
           <div className="panel noise overflow-hidden">
-            {/* Header strip with column labels — printed once, removes need for per-row labels */}
-            <div className="grid grid-cols-1 md:grid-cols-2" style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--c-border-dim)' }}>
-              {[0, 1].map((c) => (
+            {/* Header strip with column labels — printed once per visible column */}
+            <div className={gridColsClass} style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--c-border-dim)' }}>
+              {Array.from({ length: cols }).map((_, c) => (
                 <div key={c} className="grid items-center gap-x-3 px-3.5 py-1.5 mono text-[10px] uppercase tracking-[0.1em]" style={{ color: 'var(--c-text-muted)', borderLeft: c > 0 ? '1px solid var(--c-border-dim)' : 'none', gridTemplateColumns: '2px 8px minmax(0, 1fr) 32px 32px 44px' }}>
                   <span /><span /><span>Agent</span>
                   <span className="text-right">Act</span>
@@ -225,16 +232,13 @@ export function Dashboard() {
                 </div>
               ))}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2">
+            <div className={gridColsClass}>
               {status?.platforms.map((p, i) => {
                 const run = lastRun[p.platform];
                 const acts = actionsByPlatform[p.platform] || 0;
                 const agentData = agents?.find((a) => a.platform === p.platform);
                 const comments = agentData?.limits?.daily?.comments?.current || agentData?.limits?.daily?.responses?.current || 0;
                 const color = PLATFORM_COLORS[p.platform] || '#888';
-                const total = status?.platforms.length || 0;
-                const cols = 2;
-                const rowsPerCol = Math.ceil(total / cols);
                 const colIdx = Math.floor(i / rowsPerCol);
                 const rowIdx = i % rowsPerCol;
                 const isLastInCol = rowIdx === rowsPerCol - 1 || i === total - 1;
@@ -275,7 +279,8 @@ export function Dashboard() {
               })}
             </div>
           </div>
-        ) : (
+          );
+        })() : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {status?.platforms.map((p, i) => {
             const run = lastRun[p.platform];
