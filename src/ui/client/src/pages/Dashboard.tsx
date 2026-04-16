@@ -232,24 +232,71 @@ export function Dashboard() {
           // an empty second column when only a couple of agents are configured.
           const cols = total >= 4 ? 2 : 1;
           const rowsPerCol = Math.ceil(total / cols);
-          // CSS grid defaults to row-major fill, but we want column-major
-          // (items 0..rowsPerCol-1 fill the left column, then continue to the
-          // right). Forcing grid-auto-flow:column + explicit row count lines
-          // the visual layout up with our colIdx/rowIdx math below.
-          const headerGrid: React.CSSProperties = cols === 2
-            ? { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }
-            : { display: 'grid', gridTemplateColumns: '1fr' };
-          const bodyGrid: React.CSSProperties = cols === 2
-            ? { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridTemplateRows: `repeat(${rowsPerCol}, auto)`, gridAutoFlow: 'column' }
-            : { display: 'grid', gridTemplateColumns: '1fr' };
-          // Per-row column template. In 2-col mode each column is half the
-          // panel width, so we jam the data to the right with content-sized
-          // columns. In 1-col mode the row spans full width — distribute the
-          // columns with fr weights so they spread out like the Recent Runs
-          // table instead of all clustering on the right.
-          const rowGridTemplate = cols === 2
-            ? '6px minmax(0, 1fr) 116px 40px 40px 56px'
-            : '6px minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)';
+
+          // Single-column mode: render as a real HTML table so the column
+          // widths line up with the Recent Runs table immediately below.
+          if (cols === 1) {
+            return (
+              <div className="panel noise overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--c-border-dim)' }}>
+                      <th className="text-left px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Agent</th>
+                      <th className="text-left px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Status</th>
+                      <th className="text-left px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Mode</th>
+                      <th className="text-right px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Actions</th>
+                      <th className="text-right px-5 py-2.5 mono text-[12px] font-medium uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>Comments</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {platforms.map((p, i) => {
+                      const run = lastRun[p.platform];
+                      const acts = actionsByPlatform[p.platform] || 0;
+                      const agentData = agents?.find((a) => a.platform === p.platform);
+                      const comments = agentData?.limits?.daily?.comments?.current || agentData?.limits?.daily?.responses?.current || 0;
+                      const color = PLATFORM_COLORS[p.platform] || '#888';
+                      const isLast = i === platforms.length - 1;
+                      return (
+                        <tr
+                          key={p.platform}
+                          className="transition-colors hover:bg-white/[0.03] cursor-pointer"
+                          style={{ borderBottom: isLast ? 'none' : '1px solid var(--c-border-dim)', opacity: p.enabled ? 1 : 0.5 }}
+                          onClick={() => navigate('/agents')}
+                          title={`${p.platform} — ${run?.status || 'idle'}`}
+                        >
+                          <td className="px-5 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+                              <span className="capitalize text-sm font-medium" style={{ color: 'var(--c-text)' }}>{p.platform}</span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-2.5">
+                            {run ? <StatusBadge status={run.status} /> : <span className="mono text-[12px]" style={{ color: 'var(--c-text-muted)', opacity: 0.5 }}>idle</span>}
+                          </td>
+                          <td className="px-5 py-2.5">
+                            {p.auto_run ? (
+                              <span className="mono text-[11px] uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: 'var(--c-green)', background: 'rgba(52, 211, 153, 0.1)', border: '1px solid rgba(52, 211, 153, 0.25)' }}>auto</span>
+                            ) : (
+                              <span className="mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>manual</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-2.5 text-right mono text-[13px] tabular-nums" style={{ color: acts > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)', opacity: acts > 0 ? 1 : 0.4 }}>{acts}</td>
+                          <td className="px-5 py-2.5 text-right mono text-[13px] tabular-nums" style={{ color: comments > 0 ? 'var(--c-text-dim)' : 'var(--c-text-muted)', opacity: comments > 0 ? 1 : 0.4 }}>{comments}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          }
+
+          // 2-column mode: CSS grid with column-major fill. Forcing
+          // grid-auto-flow:column + explicit row count lines the visual layout
+          // up with our colIdx/rowIdx math.
+          const headerGrid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' };
+          const bodyGrid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridTemplateRows: `repeat(${rowsPerCol}, auto)`, gridAutoFlow: 'column' };
+          const rowGridTemplate = '6px minmax(0, 1fr) 116px 40px 40px 56px';
           return (
           <div className="panel noise overflow-hidden">
             {/* Header strip — matches Recent Runs sizing/typography */}
