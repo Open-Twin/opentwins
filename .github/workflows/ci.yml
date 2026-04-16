@@ -22,22 +22,11 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
-          cache-dependency-path: |
-            package-lock.json
-            src/ui/client/package-lock.json
 
-      - name: Pin npm
-        # npm bundled with Node 22/24 hangs in the client install step with
-        # "Exit handler never called!" (npm/cli #4769, #8074). 10.8.2 ships
-        # the fix for the specific lifecycle-exit code path.
-        run: npm install -g npm@10.8.2
-
-      - name: Install root dependencies
-        run: npm ci --no-audit --no-fund
-
-      - name: Install client dependencies
-        working-directory: src/ui/client
-        run: npm ci --no-audit --no-fund
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd src/ui/client && npm ci
 
       - name: Build
         run: npm run build
