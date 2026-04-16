@@ -191,26 +191,27 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 /* Markdown body — used in pipeline stage modal and anywhere we render .md */
 .md-body {
-  font-size: 13.5px;
-  line-height: 1.65;
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--c-text);
 }
 .md-body > *:first-child { margin-top: 0; }
 .md-body > *:last-child { margin-bottom: 0; }
 .md-body h1, .md-body h2, .md-body h3, .md-body h4 {
   color: var(--c-text);
   font-weight: 600;
-  margin: 1.4em 0 0.6em;
+  margin: 1.5em 0 0.7em;
   line-height: 1.3;
 }
-.md-body h1 { font-size: 1.45em; padding-bottom: 0.3em; border-bottom: 1px solid var(--c-border-dim); }
-.md-body h2 { font-size: 1.25em; padding-bottom: 0.25em; border-bottom: 1px solid var(--c-border-dim); }
-.md-body h3 { font-size: 1.1em; color: var(--c-teal); }
-.md-body h4 { font-size: 1em; color: var(--c-teal-dim); }
-.md-body p { margin: 0.6em 0; color: var(--c-text-dim); }
-.md-body ul, .md-body ol { margin: 0.6em 0; padding-left: 1.6em; color: var(--c-text-dim); }
-.md-body li { margin: 0.25em 0; }
-.md-body li > p { margin: 0.2em 0; }
-.md-body strong { color: var(--c-text); font-weight: 600; }
+.md-body h1 { font-size: 1.55em; padding-bottom: 0.3em; border-bottom: 1px solid var(--c-border-dim); }
+.md-body h2 { font-size: 1.3em; padding-bottom: 0.25em; border-bottom: 1px solid var(--c-border-dim); }
+.md-body h3 { font-size: 1.15em; color: var(--c-teal); }
+.md-body h4 { font-size: 1.02em; color: var(--c-teal-dim); }
+.md-body p { margin: 0.7em 0; color: var(--c-text); }
+.md-body ul, .md-body ol { margin: 0.7em 0; padding-left: 1.7em; color: var(--c-text); }
+.md-body li { margin: 0.35em 0; }
+.md-body li > p { margin: 0.25em 0; }
+.md-body strong { color: var(--c-text); font-weight: 700; }
 .md-body em { color: var(--c-text); font-style: italic; }
 .md-body a { color: var(--c-teal); text-decoration: underline; text-underline-offset: 2px; }
 .md-body a:hover { color: var(--c-teal-dim); }

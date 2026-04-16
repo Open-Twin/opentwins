@@ -84,8 +84,8 @@ export function PipelineStageModal({ stageId, stageLabel, date, onClose }: Props
         style={{
           background: 'var(--c-panel)',
           border: '1px solid var(--c-border-dim)',
-          width: 'min(960px, 95vw)',
-          height: 'min(720px, 90vh)',
+          width: 'min(1080px, 95vw)',
+          height: 'min(800px, 92vh)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
