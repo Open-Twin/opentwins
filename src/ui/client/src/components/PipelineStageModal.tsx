@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
+import { getStageMeta } from '../lib/pipeline-stages.ts';
 
 interface StageFile {
   name: string;
@@ -14,25 +15,6 @@ interface Props {
   date: string;
   onClose: () => void;
 }
-
-// One-line, non-technical purpose for each pipeline stage. Shown in the modal
-// header so a regular user understands what they're looking at.
-const STAGE_DESCRIPTIONS: Record<string, string> = {
-  'trend-scout':
-    'Scans the web for emerging trends and news in your niche, then predicts which topics are about to break out.',
-  'competitive-intel':
-    'Watches what your top competitors are saying, posting, and shipping — and summarises the moves worth reacting to.',
-  'engagement-tracker':
-    'Measures how your recent posts performed (likes, comments, replies) and tracks which platforms are trending up or down.',
-  'network-mapper':
-    'Builds a list of the people you should stay close to — active commenters, mutuals, and rising voices in your space.',
-  'amplification':
-    'Picks your best-performing content from yesterday and decides what should be reshared, quoted, or boosted today.',
-  'content-planner':
-    'Plans the day\'s content: which topics to cover, which platforms to post on, and how each piece fits your strategy.',
-  'content-writer':
-    'Writes the actual posts, threads, and articles for each platform — ready for the platform agents to publish.',
-};
 
 function fmtBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -129,9 +111,9 @@ export function PipelineStageModal({ stageId, stageLabel, date, onClose }: Props
               </button>
             </div>
           </div>
-          {STAGE_DESCRIPTIONS[stageId] && (
+          {getStageMeta(stageId)?.description && (
             <div className="text-[13.5px] mt-2 leading-relaxed" style={{ color: 'var(--c-text-dim)' }}>
-              {STAGE_DESCRIPTIONS[stageId]}
+              {getStageMeta(stageId)!.description}
             </div>
           )}
         </div>
