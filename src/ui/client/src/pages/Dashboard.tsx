@@ -269,7 +269,7 @@ export function Dashboard() {
                       {p.auto_run ? (
                         <span className="mono text-[11px] uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: 'var(--c-green)', background: 'rgba(52, 211, 153, 0.1)', border: '1px solid rgba(52, 211, 153, 0.25)' }}>auto</span>
                       ) : (
-                        <span className="mono text-[12px]" style={{ color: 'var(--c-text-muted)', opacity: 0.4 }}>—</span>
+                        <span className="mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--c-text-muted)' }}>manual</span>
                       )}
                     </span>
                   </button>
