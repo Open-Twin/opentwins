@@ -84,6 +84,7 @@ export function ActivityLog() {
   const [date, setDate] = useState(initialDate);
   const [platform, setPlatform] = useState(initialPlatform);
   const [kindFilter, setKindFilter] = useState<EventKindFilter>('all');
+  const [errorsOnly, setErrorsOnly] = useState(false);
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(
     focusSession ? new Set([focusSession]) : new Set()
   );
@@ -113,21 +114,25 @@ export function ActivityLog() {
     : `/api/activity?date=${date}&platform=${platform}`;
 
   const { data, loading } = useApi<{ sessions: SessionSummary[] }>(url, [date, platform]);
-  const sessions = data?.sessions || [];
+  const allSessions = data?.sessions || [];
+  const sessions = errorsOnly ? allSessions.filter((s) => s.errorCount > 0) : allSessions;
 
-  // Summary stats across visible sessions
+  // Summary stats across the unfiltered set so the cards remain a stable
+  // overview of the date+platform selection (clicking the Errors card to
+  // narrow the list shouldn't make the cards' own numbers change).
   const stats = useMemo(() => {
-    let events = 0, tools = 0, errors = 0, running = 0, completed = 0, incomplete = 0;
-    for (const s of sessions) {
+    let events = 0, tools = 0, errors = 0, running = 0, completed = 0, incomplete = 0, erroredSessions = 0;
+    for (const s of allSessions) {
       events += s.eventCount;
       tools += s.toolCount;
       errors += s.errorCount;
+      if (s.errorCount > 0) erroredSessions++;
       if (s.status === 'running') running++;
       else if (s.status === 'completed') completed++;
       else incomplete++;
     }
-    return { events, tools, errors, running, completed, incomplete };
-  }, [sessions]);
+    return { events, tools, errors, running, completed, incomplete, erroredSessions };
+  }, [allSessions]);
 
   const toggleSession = (id: string) => {
     const next = new Set(expandedSessions);
@@ -174,8 +179,10 @@ export function ActivityLog() {
         <StatCard
           label="Errors"
           value={stats.errors}
-          sub={stats.errors > 0 ? 'tool failures' : 'clean'}
+          sub={stats.errors > 0 ? `${stats.erroredSessions} session${stats.erroredSessions === 1 ? '' : 's'} affected — click to filter` : 'clean'}
           accent={stats.errors > 0 ? 'red' : undefined}
+          onClick={stats.erroredSessions > 0 ? () => setErrorsOnly((v) => !v) : undefined}
+          active={errorsOnly}
         />
       </div>
 
@@ -258,9 +265,19 @@ export function ActivityLog() {
         </div>
       ) : sessions.length === 0 ? (
         <div className="panel noise py-16 text-center">
-          <div className="text-base" style={{ color: 'var(--c-text-dim)' }}>No sessions found</div>
+          <div className="text-base" style={{ color: 'var(--c-text-dim)' }}>
+            {errorsOnly ? 'No errored sessions for this date / platform' : 'No sessions found'}
+          </div>
           <div className="mono text-[13px] mt-2" style={{ color: 'var(--c-text-muted)' }}>
-            {isToday
+            {errorsOnly ? (
+              <button
+                onClick={() => setErrorsOnly(false)}
+                className="underline hover:text-white transition-colors"
+                style={{ color: 'var(--c-teal-dim)' }}
+              >
+                Clear errors filter
+              </button>
+            ) : isToday
               ? 'Trigger a run from the Agents tab to see activity here'
               : `Try selecting a different date or platform`}
           </div>
@@ -444,15 +461,26 @@ export function ActivityLog() {
 
 // ── Helpers ─────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: 'teal' | 'green' | 'blue' | 'red' }) {
+function StatCard({ label, value, sub, accent, onClick, active }: { label: string; value: string | number; sub?: string; accent?: 'teal' | 'green' | 'blue' | 'red'; onClick?: () => void; active?: boolean }) {
   const color = accent === 'teal'  ? 'var(--c-teal)'
               : accent === 'green' ? 'var(--c-green)'
               : accent === 'blue'  ? 'var(--c-blue)'
               : accent === 'red'   ? 'var(--c-red)'
               : 'var(--c-text)';
+  const clickable = !!onClick;
   return (
-    <div className="panel noise p-5">
-      <div className="text-[12px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: 'var(--c-text-muted)' }}>{label}</div>
+    <div
+      className={`panel noise p-5 ${clickable ? 'cursor-pointer transition-all hover:brightness-110' : ''}`}
+      onClick={onClick}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+      style={active ? { borderColor: color, boxShadow: `0 0 0 1px ${color}, 0 0 12px -4px ${color}` } : undefined}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[12px] uppercase tracking-[0.12em] font-medium" style={{ color: 'var(--c-text-muted)' }}>{label}</div>
+        {active && <span className="mono text-[10px] uppercase tracking-wider" style={{ color }}>● filter</span>}
+      </div>
       <div className="text-3xl font-semibold tabular-nums leading-none" style={{ color }}>{value}</div>
       {sub && <div className="mono text-[12px] mt-2" style={{ color: 'var(--c-text-muted)' }}>{sub}</div>}
     </div>
