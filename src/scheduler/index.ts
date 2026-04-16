@@ -3,6 +3,7 @@ import { resolve, dirname } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { getLastHeartbeatFile } from '../util/paths.js';
+import { fileLog, fileError } from '../util/logger.js';
 import type { OpenTwinsConfig } from '../config/schema.js';
 
 function findWorker(name: string): string {
@@ -44,13 +45,38 @@ export function getActiveScheduler(): SchedulerHandle | null {
   return activeScheduler;
 }
 
+// Serialize reload calls. Two concurrent reloads (e.g. user toggles auto_run
+// on two platforms within the same second) used to race: both read the same
+// `activeScheduler`, both stop it (second was a no-op), both create their
+// own next instance, both reassign — leaving one orphaned with its tick
+// interval still firing forever, and (worse) the "wrong" one winning the
+// assignment so the second config change was effectively dropped.
+let reloadChain: Promise<unknown> = Promise.resolve();
+
 export async function reloadActiveScheduler(config: OpenTwinsConfig): Promise<boolean> {
-  if (!activeScheduler) return false;
-  await activeScheduler.stop();
-  const next = createScheduler(config);
-  await next.start();
-  activeScheduler = next;
-  return true;
+  const work = reloadChain.then(async () => {
+    if (!activeScheduler) {
+      fileLog('scheduler', 'reload skipped: no active scheduler');
+      return false;
+    }
+    const autoRun = config.platforms.filter((p) => p.enabled && p.auto_run).map((p) => p.platform);
+    fileLog('scheduler', 'reloading', { autoRun });
+    try {
+      await activeScheduler.stop();
+      const next = createScheduler(config);
+      await next.start();
+      activeScheduler = next;
+      fileLog('scheduler', 'reload complete', { autoRun });
+      return true;
+    } catch (err) {
+      fileError('scheduler', 'reload failed', { error: err instanceof Error ? err.message : String(err) });
+      throw err;
+    }
+  });
+  // Keep the chain unbroken even if one reload throws — the next caller
+  // shouldn't inherit the rejection.
+  reloadChain = work.catch(() => undefined);
+  return work;
 }
 
 // How often the main-thread tick runs a pre-check across all platforms.
@@ -162,8 +188,14 @@ export function createScheduler(config: OpenTwinsConfig): SchedulerHandle {
       const intervalMs = (platform.heartbeat_interval_minutes || 60) * 60 * 1000;
       if (lastCompleted > 0 && Date.now() - lastCompleted < intervalMs) continue;
       // Fire — bree.run will log "already running" (filtered) if worker is
-      // still alive from a previous tick; not our problem here.
-      bree.run(platform.platform).catch(() => { /* best effort */ });
+      // still alive from a previous tick. Don't swallow other errors —
+      // silently catching here hid a class of bree-level failures (e.g.
+      // worker module path resolution, internal state drift) that left
+      // certain platforms permanently stuck.
+      bree.run(platform.platform).catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[${platform.platform}] tick: bree.run failed —`, msg);
+      });
     }
   }
 
