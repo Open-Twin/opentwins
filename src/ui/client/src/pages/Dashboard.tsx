@@ -100,6 +100,12 @@ export function Dashboard() {
   const { data: agents, refetch: refetchAgents } = useApi<Array<{ platform: string; limits: { daily: Record<string, { limit: number; current: number }>; weekly?: Record<string, { limit: number; current: number }> } | null }>>('/api/agents');
   const autoRunCount = status?.platforms.filter((p) => p.auto_run).length || 0;
   const [openStage, setOpenStage] = useState<{ id: string; label: string } | null>(null);
+  const [pipelineCompact, setPipelineCompact] = useState<boolean>(() => {
+    try { return localStorage.getItem('opentwins.pipeline-compact') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('opentwins.pipeline-compact', pipelineCompact ? '1' : '0'); } catch { /* ignore */ }
+  }, [pipelineCompact]);
 
   // Auto-refresh dashboard every 10 seconds
   useEffect(() => {
@@ -354,7 +360,7 @@ export function Dashboard() {
         <div className="panel noise animate-fade-up stagger-4">
           <div className="panel-header flex items-center justify-between gap-4">
             <span>// Content Pipeline</span>
-            <div className="flex items-center gap-2 mono text-[13px] normal-case tracking-normal">
+            <div className="flex items-center gap-3 mono text-[13px] normal-case tracking-normal">
               {status?.pipelineRunCompletedAt && (
                 <span style={{ color: 'var(--c-text-muted)' }}>
                   last <span style={{ color: 'var(--c-text-dim)' }}>{new Date(status.pipelineRunCompletedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
@@ -368,6 +374,26 @@ export function Dashboard() {
                   next <span style={{ color: 'var(--c-teal)' }}>{new Date(status.nextPipelineRun).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
                 </span>
               )}
+              <button
+                type="button"
+                onClick={() => setPipelineCompact((v) => !v)}
+                className="ml-1 inline-flex items-center gap-1.5 px-2 py-1 rounded transition-colors hover:bg-white/5 mono text-[11px] uppercase tracking-wider"
+                style={{ color: 'var(--c-text-muted)', border: '1px solid var(--c-border-dim)' }}
+                title={pipelineCompact ? 'Show full view' : 'Show compact view'}
+                aria-label={pipelineCompact ? 'Expand pipeline' : 'Collapse pipeline'}
+              >
+                {pipelineCompact ? (
+                  <>
+                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 5V2h3M10 5V2H7M2 7v3h3M10 7v3H7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                    expand
+                  </>
+                ) : (
+                  <>
+                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M5 2v3H2M7 2v3h3M5 10V7H2M7 10V7h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                    compact
+                  </>
+                )}
+              </button>
             </div>
           </div>
           <div className="p-5">
@@ -376,6 +402,13 @@ export function Dashboard() {
               nextRun={status?.nextPipelineRun}
               runCompletedAt={status?.pipelineRunCompletedAt}
             />
+            {pipelineCompact ? (
+              <PipelineCompactStrip
+                stages={status?.pipelineStages}
+                onStageClick={(id, label) => setOpenStage({ id, label })}
+              />
+            ) : (
+            <>
             <div className="flex flex-col gap-3 mt-4">
               {PIPELINE_GROUPS.map((group) => {
                 const stages = stagesByGroup(group.name);
@@ -415,6 +448,8 @@ export function Dashboard() {
               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-text-muted)' }} /> not yet today</span>
               <span className="ml-auto opacity-60">click any stage to view its outputs</span>
             </div>
+            </>
+            )}
           </div>
         </div>
       )}
@@ -600,6 +635,54 @@ function PipelineHealthBanner({ stages, nextRun, runCompletedAt }: { stages?: Re
         <div className="text-[13.5px] font-medium" style={{ color: 'var(--c-text)' }}>{main}</div>
         {sub && <div className="text-[12px] mt-0.5" style={{ color: 'var(--c-text-muted)' }}>{sub}</div>}
       </div>
+    </div>
+  );
+}
+
+function PipelineCompactStrip({ stages, onStageClick }: { stages?: Record<string, StageRun>; onStageClick: (id: string, label: string) => void }) {
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+      {PIPELINE_GROUPS.map((group, gi) => (
+        <div key={group.name} className="flex items-center gap-3">
+          <span className="mono text-[10.5px] uppercase tracking-[0.1em] font-semibold" style={{ color: 'var(--c-teal)' }}>
+            {group.step} {group.name}
+          </span>
+          <div className="flex items-center gap-1.5">
+            {stagesByGroup(group.name).map((stage) => {
+              const run = stages?.[stage.id];
+              const status = run?.status || 'idle';
+              const dotColor =
+                status === 'completed' ? 'var(--c-green)' :
+                status === 'running'   ? 'var(--c-blue)'  :
+                status === 'failed'    ? 'var(--c-red)'   :
+                                         'var(--c-text-muted)';
+              const tooltip = `${stage.label} — ${stage.tagline}` +
+                (status === 'completed' && run?.completedAt ? ` (${fmtStageTime(run.completedAt)}${run.durationMs != null ? ', ' + fmtStageDuration(run.durationMs) : ''})` :
+                 status === 'running' ? ' (running)' :
+                 status === 'failed' ? ` (failed${run?.error ? ': ' + run.error : ''})` :
+                 ' (not yet today)');
+              return (
+                <button
+                  key={stage.id}
+                  type="button"
+                  onClick={() => onStageClick(stage.id, stage.label)}
+                  className="inline-flex items-center justify-center w-5 h-5 rounded-full transition-transform hover:scale-110 cursor-pointer"
+                  title={tooltip}
+                  aria-label={tooltip}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: dotColor, boxShadow: status === 'running' ? '0 0 6px var(--c-blue)' : undefined }} />
+                </button>
+              );
+            })}
+          </div>
+          {gi < PIPELINE_GROUPS.length - 1 && (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="opacity-40">
+              <path d="M2 6h6M5.5 3.5L8 6l-2.5 2.5" stroke="var(--c-text-muted)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </div>
+      ))}
+      <span className="ml-auto mono text-[11px] opacity-60" style={{ color: 'var(--c-text-muted)' }}>click any dot to view outputs</span>
     </div>
   );
 }
