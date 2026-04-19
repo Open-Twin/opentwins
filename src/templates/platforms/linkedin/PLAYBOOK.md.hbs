@@ -11,6 +11,11 @@ End-of-day and on-demand tasks. **Do NOT load on routine heartbeats.** Only read
 1. Read `memory/{today}.md`, `memory/{yesterday}.md` (skip {yesterday} if doesn't exist - first day)
 2. Extract learnings: what worked, what didn't, patterns, key relationships, content insights, strategy adjustments
 3. Update `INSIGHTS.md` with new learnings. Keep < 100 lines. Remove outdated entries.
+3a. 🚨 **Priority target pruning pass (MANDATORY).** Walk the `## Priority Targets` section in INSIGHTS.md and apply the rules below. This prevents the engagement target list from accumulating silent or broken entries:
+   - **Silent for 7+ consecutive days** (no new post observed in daily navigations): move the entry from `## Priority Targets (active/recent)` to a separate `## Priority Targets (watching — silent 7+d)` subsection. Watching-list entries are checked once per week, not daily — reference them in the weekly (not daily) schedule if they become relevant again.
+   - **URL appears in `memory/dead_urls.txt`**: remove the target entry from INSIGHTS.md entirely (not just demote). The URL is known-broken.
+   - **Connection request state conflicts with posting target**: if the entry is "CONNECTION SENT, pending accept" AND no new posts seen in 14+ days, demote to watching list — a pending connection is not a live engagement surface.
+   - **Already-commented / reply-cap-hit states**: keep the entry but annotate `status: monitor-new-posts-only` so schedule generation knows not to include this target for "comment on their existing posts" tasks.
 4. Log completion
 
 ---
@@ -29,31 +34,34 @@ End-of-day and on-demand tasks. **Do NOT load on routine heartbeats.** Only read
 3. Load base template (TOOLS.md § Schedule Base Templates)
 4. **Capacity matching (MANDATORY):**
    - Sum `max_comments` across all tasks = `daily.comments.limit` (limits.json)
-   - Sum `max_likes` across all tasks = `daily.reactions.limit` (limits.json)
-   - 4 engagement windows: ~10:00, ~13:00, ~15:00, ~19:00
+   - 4 engagement windows: ~10:00, ~13:00, ~16:00, ~19:30 (15:00 reserved for publish — step 5).
    - Read `ramp_plan` fields in limits.json and adjust limits weekly
-   - Distribute comments to peak windows (15:00 and 10:00 first)
-   - Midday window can be likes-only when comment budget is tight
+   - Distribute comments to peak windows (16:00 and 10:00 first)
    Adjust to match exactly.
-5. 🚨 **Articles: MANDATORY per `weekly.articles.limit` from limits.json.** Tuesday + Friday. Always include `publish_article` task at 10:00 on those days — do NOT skip. If `weekly.articles.current >= weekly.articles.limit` → skip the task but keep other tasks.
+5. 🚨 **Tue + Fri primary content (MANDATORY — do NOT skip):**
+   - If `weekly.carousels.limit > 0`: `publish_carousel` at 15:30 both days.
+   - Else: `publish_article` at 15:00 both days.
+   - If current >= limit → skip that task, keep others.
+   - NO `publish_post` on Tue/Fri (primary-only).
+   - NO fallback-to-post if carousel spec missing or `skipped:` marker present — agent fires an Alert (see BROWSER-carousel.md preflight).
 
-🚨 **Article days = article-only.** On Tuesday and Friday, do NOT include a `publish_post` task. One article is the day's primary content — publishing both an article and a post on the same day floods the feed, duplicates the theme, and reads as automation. Post cadence is Mon/Wed/Thu/Sat/Sun only (up to 5 posts/week). If `content-ready/{today_date}/linkedin-post.md` exists on a Tue/Fri, ignore it — the post will be used on the next non-article day via amplification if still relevant.
-   - 🚨 MUST include `content_source` in `publish_post` config:
-     ```json
-     "config": {
-       "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/linkedin-post.md",
-       ...
-     }
-     ```
-   - 🚨 MUST include `content_source` in `publish_article` config:
-     ```json
-     "config": {
-       "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/linkedin-article.md",
-       ...
-     }
-     ```
+   🚨 `publish_post` at 15:00 Kyiv on post-days (Mon/Wed/Thu/Sat/Sun). Never morning. Engagement burst at 16:00.
+
+   Config sources (MANDATORY):
+   - `publish_post`: `content_source: "{{pipeline_workspace}}/content-ready/{today_date}/linkedin-post.md"`
+   - `publish_article`: `content_source: "{{pipeline_workspace}}/content-ready/{today_date}/linkedin-article.md"`
+   - `publish_carousel`: `content_source` (linkedin-carousel.md), `spec_source` (linkedin-carousel.spec.json), `pdf_path: "/tmp/opentwins-uploads/{today_date}-linkedin-carousel.pdf"`, `peak_hour: true`
 6. Apply adjustments (only if pattern seen 2+ times)
 7. Apply jitter (±30min), anti-collision (10min spacing), active hours (08:00-23:00)
-8. **Write:** `schedule.json` with metadata.for_date = target date (TODAY), all tasks
+8. 🚨 **Priority target URL sourcing (MANDATORY).** When building a `priority_targets[]` entry for any task, the `url` field MUST come from exactly one of these sources — in priority order — and NEVER be constructed from the name:
+   a. `{{pipeline_workspace}}/network-mapper/contacts-active.json` — look up the contact by name, read `platforms.linkedin` verbatim, format as `https://www.linkedin.com/in/{slug}/recent-activity/all/` (where `{slug}` is the portion after `linkedin.com/in/` in the contacts-active entry). Do NOT add suffixes, job-role acronyms, or company identifiers to the slug.
+   b. `INSIGHTS.md` Priority Targets section — only if the entry already contains a full URL from a prior verified navigation.
+   c. If neither source has the URL: DO NOT include the target as a `priority_target`. List the name in the task's `config.note` instead as a "watch if they appear in search" hint. The task will rely on search queries.
+   🚨 **Pre-write dead-URL grep:** before writing schedule.json, for every URL you are about to include, check `memory/dead_urls.txt`:
+     ```bash
+     grep -qF "{url}" memory/dead_urls.txt && echo "DEAD — DO NOT INCLUDE" || echo "OK"
+     ```
+     If DEAD → drop the target entirely. Dead URLs have already 404'd or returned "Something went wrong" and MUST NOT be re-navigated.
+9. **Write:** `schedule.json` with metadata.for_date = target date (TODAY), all tasks
 
 **Note:** `update_memory` at 22:00 is MANDATORY in every schedule — never skip it.

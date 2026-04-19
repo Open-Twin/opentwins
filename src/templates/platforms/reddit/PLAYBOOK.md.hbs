@@ -28,7 +28,7 @@
      - Afternoon (14:00): browse_and_engage, target: r/ExperiencedDevs + r/agile
      - Evening (17:00): browse_and_engage, target: r/ProductManagement + r/MachineLearning
      - Night (20:00): karma_building, target: r/AskReddit + r/mildlyinteresting
-     - 🚨 **Wednesday**: add post_original_content at 10:00 (before late morning engage)
+     - 🚨 **Mon, Wed, Thu**: add post_original_content at 10:00 (before late morning engage)
      - **Total:** `daily.comments.limit` from limits.json. Distribute max_comments across sessions proportionally (~40% karma, ~60% brand). Do NOT change daily.comments.limit — respect the user's configured value.
    - **Saturday**: Post original content + brand-heavy (high weekend traffic)
      - Morning (10:00): 🚨 post_original_content (MANDATORY)
@@ -46,7 +46,9 @@
      - Late (21:30): karma_building, target: r/AskReddit + r/technology
      - **Total:** `daily.comments.limit` from limits.json. Distribute across sessions proportionally.
 
-   🚨 **Original posts: MANDATORY per `weekly.posts.limit` from limits.json.** Wednesday + Saturday. Always include in schedule — do NOT skip. If `weekly.posts.current >= weekly.posts.limit` → skip the task but keep other tasks.
+   🚨 **Hot AI sub targeting:** when the user has configured AI-focused subreddits, use rising sort, posts <30 min old, substantive (not one-liners).
+
+   🚨 **Original posts: MANDATORY per `weekly.posts.limit` from limits.json.** Mon + Wed + Thu + Sat at 10:00. Always include in schedule — do NOT skip. If `weekly.posts.current >= weekly.posts.limit` → skip the task but keep other tasks.
    - 🚨 MUST include `content_source` in `post_original_content` config:
      ```json
      "config": {

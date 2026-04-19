@@ -1,0 +1,136 @@
+{
+  "cover": {
+    "file_label": "AGENTS.md",
+    "file_sub": "# The PM Spec",
+    "headline": ["The PM Artifact", "Just Got", "a Filename."],
+    "subline": ["Reading OpenAI's new spec", "as a product brief."],
+    "read_promise": "10 slides · 60 sec read"
+  },
+  "hook": {
+    "eyebrow": "Why Now",
+    "headline_lines": [
+      { "text": "Two weeks ago,", "accent": false },
+      { "text": "a job description.", "accent": false },
+      { "text": "This week, a filename.", "accent": true }
+    ],
+    "support_html": "The CIA published the PM job description of 2035. Then OpenAI shipped <b>AGENTS.md</b> — scope, permissions, memory, escalation. Same artifact, different format.",
+    "swipe": "See what shipped &rarr;"
+  },
+  "code": {
+    "eyebrow": "The File",
+    "title": "What the spec actually looks like.",
+    "filename": "AGENTS.md",
+    "body_lines": [
+      "<span class=\"c1\"># support-triage-bot</span>",
+      "",
+      "<span class=\"c1\">## Scope</span>",
+      "Triage inbound support from enterprise accounts.",
+      "Escalate tickets flagged as billing-urgent.",
+      "Everything else &rarr; resolve or queue.",
+      "",
+      "<span class=\"c1\">## Permissions</span>",
+      "<span class=\"c2\">read&nbsp;&nbsp;:</span> <span class=\"c3\">salesforce</span> <span class=\"c2\">(tickets, tier)</span>",
+      "<span class=\"c2\">write :</span> <span class=\"c3\">internal_queue</span>",
+      "<span class=\"c2\">deny&nbsp;&nbsp;:</span> <span class=\"c4\">customer_billing</span>",
+      "",
+      "<span class=\"c1\">## Escalation</span>",
+      "<span class=\"c5\">-</span> dollar_value <span class=\"c2\">&gt;</span> <span class=\"c3\">500</span>",
+      "<span class=\"c5\">-</span> tier <span class=\"c2\">==</span> <span class=\"c3\">\"enterprise\"</span>",
+      "<span class=\"c5\">-</span> mentions: legal <span class=\"c2\">|</span> compliance <span class=\"c2\">|</span> renewal"
+    ],
+    "swipe": "Scope, field by field &rarr;"
+  },
+  "fields": [
+    {
+      "name": "Scope",
+      "icon": "target",
+      "definition": "What this agent is FOR. Not what it can do.",
+      "eng": "Routes tickets via classifier v3.2 at 94% accuracy.",
+      "pm": "Triages enterprise support. Escalates billing-urgent only.",
+      "takeaway_html": "Confuse capability with scope and you ship an agent that <b>technically works and commercially fails</b>.",
+      "swipe": "Permissions next &rarr;"
+    },
+    {
+      "name": "Permissions",
+      "icon": "lock",
+      "definition": "Which systems. Whose credentials. Under what conditions.",
+      "eng": "Service account with R/W on Postgres, OAuth read on Salesforce.",
+      "pm": "Reads tickets. Writes internal queue. Never touches billing.",
+      "takeaway_html": "The engineer describes what is <b>possible</b>. The PM describes what is <b>permitted</b>. The second doc is what ships.",
+      "swipe": "Memory next &rarr;"
+    },
+    {
+      "name": "Memory",
+      "icon": "notebook",
+      "definition": "What the agent remembers. And what it must forget.",
+      "eng": "Context window 128K. Vector store with 30-day TTL.",
+      "pm": "Per-session only. No cross-customer context. Forget at session end.",
+      "takeaway_html": "One team I know shipped unscoped memory. Three weeks later a <b>Fortune-100 pricing conversation leaked into a support reply</b>. Memory scope is a product decision.",
+      "swipe": "Escalation next &rarr;"
+    },
+    {
+      "name": "Escalation",
+      "icon": "alarm",
+      "definition": "An enumerated trip-wire list. Not a mood.",
+      "eng": "Escalate when confidence &lt; 0.7 or intent is ambiguous.",
+      "pm": "Any action &gt; $500. Every enterprise tier. Legal, compliance, renewal.",
+      "takeaway_html": "Confidence scores protect the <b>model</b>. An enumerated list protects the <b>business</b>.",
+      "swipe": "The pattern &rarr;"
+    }
+  ],
+  "pattern": {
+    "eyebrow": "The Pattern",
+    "title": "Both labs shipped the same discipline in 48 hours.",
+    "card_left": {
+      "date": "APR 15 · OPENAI",
+      "lab": "AGENTS.md",
+      "feature": "Platform-level spec",
+      "desc": "Scope, permissions, memory, escalation — configured at the root of every deployment."
+    },
+    "connector": "+",
+    "card_right": {
+      "date": "APR 16 · ANTHROPIC",
+      "lab": "Task Budgets",
+      "feature": "Model-level discipline",
+      "desc": "A configurable limit on effort before the agent hands back. \"Try this hard. Then check in.\""
+    },
+    "closer_html": "Two labs. 48 hours. Same pattern: <b>configurable discipline for agents</b>. It's no longer one lab's opinion &mdash; it's the default.",
+    "swipe": "Your turn &rarr;"
+  },
+  "cta": {
+    "eyebrow": "Your Team",
+    "question": "What's in the first line of YOUR team's AGENTS.md?",
+    "options": [
+      "A scope sentence.",
+      "A blank placeholder.",
+      "Nothing yet."
+    ],
+    "closer": "Curious where teams are landing — reply with the first line you'd ship.",
+    "swipe": "One more thing &rarr;"
+  },
+  "bonus": {
+    "eyebrow": "P.S. &middot; Starter Template",
+    "title": "Screenshot. Fill in. Ship by Friday.",
+    "intro": "The 4-field starter. Paste it at the root of your next agent deployment and fill the blanks before any tool-call code gets written.",
+    "template_lines": [
+      "<span class=\"c1\"># AGENTS.md</span>",
+      "<span class=\"c2\"># &lt;agent-name&gt;</span>",
+      "",
+      "<span class=\"c1\">## Scope</span>",
+      "<span class=\"blank\"></span>",
+      "",
+      "<span class=\"c1\">## Permissions</span>",
+      "<span class=\"c2\">read&nbsp;&nbsp;:</span> <span class=\"blank\"></span>",
+      "<span class=\"c2\">write :</span> <span class=\"blank\"></span>",
+      "<span class=\"c2\">deny&nbsp;&nbsp;:</span> <span class=\"blank\"></span>",
+      "",
+      "<span class=\"c1\">## Memory</span>",
+      "<span class=\"blank\"></span>",
+      "",
+      "<span class=\"c1\">## Escalation</span>",
+      "- <span class=\"blank\" style=\"width:340px\"></span>",
+      "- <span class=\"blank\" style=\"width:340px\"></span>"
+    ],
+    "outro_html": "If this was useful &mdash; <b>follow for more PM &times; AI frameworks</b>. More AGENTS.md-style specs every week."
+  }
+}

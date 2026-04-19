@@ -76,15 +76,17 @@ ENDJSON
 
 ## Tracking
 
+**Search strategy:** Pass the bare handle (no `@`) as `publicationName` in SS 2 Step 2. If autocomplete returns no match, retry with the writer's full name from INSIGHTS.md. If still no match, log `Type=Recommend Skipped, Reason=publication_not_in_autocomplete` and move on.
+
 After each successful recommendation, append to tracking file:
 
 ```bash
-printf '%s\n' '{publication_name}|{publication_url}|{reason_snippet_30chars}|{ISO_TIMESTAMP}' >> memory/recommended_publications.txt
+printf '%s\n' '@{handle}|{publication_name}|{publication_url}|{reason_snippet_30chars}|{ISO_TIMESTAMP}' >> memory/recommended_publications.txt
 ```
 
-**Dedup check before recommending:**
+**Dedup check** (trailing `|` anchors against `@handle|name|...` row format so `@karo` won't falsely match `@karozieminski`):
 ```bash
-grep -qF "{publication_name}" memory/recommended_publications.txt && echo "SKIP" || echo "OK"
+grep -qF "@{handle}|" memory/recommended_publications.txt && echo "SKIP" || echo "OK"
 ```
 
 ---

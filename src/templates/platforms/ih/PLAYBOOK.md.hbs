@@ -29,6 +29,7 @@ Read these two sources:
   - Content Insights (trending topics, engagement patterns)
   - Strategy Adjustments (approach changes worth remembering)
 - [ ] Keep `INSIGHTS.md` <100 lines (replace outdated insights)
+- [ ] 🚨 **Stale target pruning (MANDATORY).** Walk the `## Key Relationships` section. For each handle with no activity observed in the last 7 days (grep the handle across `memory/*.md` for this week): demote it to a `## Key Relationships (watching — silent 7+d)` subsection. Watching entries are referenced weekly, not daily — do not treat them as priority for daily scheduling. Remove handles with 14+ days silence entirely. Context: IH has the smallest discovery pool in the fleet — navigation cycles spent on silent accounts are high-cost. This is the single most impactful rule for IH.
 - [ ] If NO new learnings → skip update, proceed to schedule
 
 ### Step 3: Generate Schedule
@@ -40,12 +41,13 @@ Read these two sources:
 | Day | Tasks |
 |-----|-------|
 | Mon-Sat | 10:00 + 15:00 Kyiv (browse/engage) |
-| 🚨 **Wed 15:00** | **+ publish_post (MANDATORY)** |
-| 🚨 **Sat 15:00** | **+ publish_post (MANDATORY)** |
+| 🚨 **Wed 15:00** | **+ publish_post** |
+| 🚨 **Thu 15:00** | **+ publish_post** |
+| 🚨 **Sat 15:00** | **+ publish_post (only if even ISO week)** |
 | Sun | 14:00 only |
 | 🚨 **Every day** | **22:00 update_memory** |
 
-🚨 **Posts: MANDATORY per `weekly.posts.limit` from limits.json.** Wednesday + Saturday. Always include `publish_post` task — do NOT skip. If `weekly.posts.current >= weekly.posts.limit` → skip the task but keep other tasks.
+🚨 **Posts.** Wed + Thu MANDATORY every week. Sat publish only if `iso_week % 2 == 0` (alternating). If `weekly.posts.current >= weekly.posts.limit` → skip but keep other tasks.
    - 🚨 MUST include `content_source` in `publish_post` config:
      ```json
      "config": {

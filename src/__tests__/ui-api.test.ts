@@ -52,6 +52,7 @@ vi.mock('../browser/cdp.js', () => ({
   clickElement: vi.fn(async () => JSON.stringify({ ok: true })),
   snapshot: vi.fn(async () => JSON.stringify({ ok: true })),
   getTabInfo: vi.fn(async () => JSON.stringify([])),
+  uploadFile: vi.fn(async (_profile: string, filePath: string) => JSON.stringify({ ok: true, filePath, backendNodeId: 1 })),
 }));
 
 // Minimal Express-ish req/res helpers that capture status/body.
@@ -524,5 +525,41 @@ describe('ui/api/browser', () => {
     const res = mockRes();
     await handleBrowserTabs(mockReq({ params: { profile: 'ot-linkedin' } }) as any, res as any);
     expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  it('handleBrowserUpload 400s without a filePath', async () => {
+    const { handleBrowserUpload } = await import('../ui/api/browser.js');
+    const res = mockRes();
+    await handleBrowserUpload(
+      mockReq({ params: { profile: 'ot-linkedin' }, body: {} }) as any,
+      res as any,
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as { error: string }).error).toMatch(/filePath/);
+  });
+
+  it('handleBrowserUpload 400s when file does not exist', async () => {
+    const { handleBrowserUpload } = await import('../ui/api/browser.js');
+    const res = mockRes();
+    await handleBrowserUpload(
+      mockReq({ params: { profile: 'ot-linkedin' }, body: { filePath: '/nonexistent/missing.pdf' } }) as any,
+      res as any,
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as { error: string }).error).toMatch(/not found/);
+  });
+
+  it('handleBrowserUpload returns JSON from cdp.uploadFile on success', async () => {
+    const filePath = resolve(tmpDir, 'doc.pdf');
+    writeFileSync(filePath, 'PDF-bytes');
+    const { handleBrowserUpload } = await import('../ui/api/browser.js');
+    const res = mockRes();
+    await handleBrowserUpload(
+      mockReq({ params: { profile: 'ot-linkedin' }, body: { filePath, timeoutMs: 10000 } }) as any,
+      res as any,
+    );
+    expect(res.statusCode ?? 200).toBe(200);
+    expect((res.body as { ok: boolean; filePath: string }).ok).toBe(true);
+    expect((res.body as { filePath: string }).filePath).toBe(filePath);
   });
 });

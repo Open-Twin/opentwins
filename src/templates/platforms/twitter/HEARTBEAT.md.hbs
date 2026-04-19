@@ -100,7 +100,7 @@ Promo pre-check: `current >= limit` → mark done.
    🚨 **Always use `f=top` with `since:{2_days_ago}`** (e.g. `?q=query+since%3A2026-03-20&f=top`). Compute date from current time. `f=live` returns tweets with 0-5 likes — unusable with a 20+ filter. `f=top` alone returns month-old posts. Combined = fresh tweets with proven engagement.
    🚨 **MAX 5 search queries per promo task.** If no qualifying target after 5 searches → mark task "failed" with note "No targets found in 5 searches". Do NOT keep searching — each search costs 3 steps (~$0.06). 11 searches = $0.65 wasted.
    **Query order:** Try broadest queries first (broad topic before niche subtopic). Broad queries surface more qualifying targets within the 5-search cap.
-4. Filter: **20+ likes MINIMUM** (prefer 50+, but 20+ OK if no better targets). Prioritize viral.
+4. Pick the FRESHEST qualifying tweet. Qualifying = `ageMin < 120` with 2+ likes, OR `ageMin < 60` with any likes. Fall back to 20+ likes + any age only if no fresh candidates after 5 searches.
 5. 🚨 **MANDATORY: Grep pre-check** — extract tweet ID from URL (the numeric string after `/status/`, e.g. `2023716964955550168`):
    ```bash
    grep -q "^{tweet_id}$" memory/commented_posts.txt && echo "SKIP" || echo "OK"
@@ -158,10 +158,10 @@ Before executing any `original_tweet` or `article` task:
 ### original_tweet
 1. Read INSIGHTS.md for content ideas
 2. Write multi-line tweet, time-of-day voice (SOUL.md). **Format: hook line first, body lines with text bullets (-, →, •), hashtags last.** No emojis as bullets (Draft.js strips them on submit).
-3. Add 2-3 hashtags at END (read from `queries.json → hashtags` array — refreshed daily by content planner)
-4. Compose + post: open compose dialog, then use **clipboard paste approach** from BROWSER-core.md § 1 (ONE evaluate: clear + paste as HTML + submit). Do NOT use `execCommand("insertText")` for body lines — Draft.js drops them on submit.
+3. Add 0-1 hashtag at END (read from `queries.json → hashtags` array — refreshed daily). Zero is default; one only if it genuinely routes discovery.
+4. Image rule: attach ONLY when posting `## Post 1` from twitter-thread.md AND `{{pipeline_workspace}}/content-ready/{today_date}/twitter-post-image.spec.json` exists → use **BROWSER-engage.md § 7b**. Post 2/3 always text-only (§ 7) — image is tied to the day's flagship framing, reusing it dilutes the visual. On image-stage failure, fall through to § 7 text-only.
 5. Update: `weekly.original_tweets.current += 1`
-6. Log: `Type: "Original Tweet", Hashtags: [list]`. Done.
+6. Log: `Type: "Original Tweet", Image: <true|false>, Hashtags: [list]`. Done.
 
 ### quote_tweet
 1. Check `weekly.quote_tweets.current < weekly.quote_tweets.limit`
@@ -173,11 +173,11 @@ Before executing any `original_tweet` or `article` task:
 ### thread
 1. Check `weekly.original_tweets.current < weekly.original_tweets.limit`
 2. Plan thread: hook tweet (curiosity + numbers + promise value) + 3 body tweets + CTA tweet. Max 280 chars each.
-3. Add 2-3 hashtags to hook tweet ONLY (read from `queries.json → hashtags` array)
+3. Add 0-1 hashtag to hook tweet ONLY (read from `queries.json → hashtags` array)
 4. 🚨 **Use BROWSER-engage.md § 10 (hook-then-reply pattern).** NEVER use the multi-textarea thread composer — the multi-textarea approach is broken.
-5. Post hook via compose dialog (§ 7), get URL from profile, then reply sequentially for each body/CTA tweet.
+5. Post hook: attach image ONLY when posting `## Post 1` from twitter-thread.md AND `{{pipeline_workspace}}/content-ready/{today_date}/twitter-post-image.spec.json` exists → § 7b. Post 2/3 hooks: § 7 text-only. Image on hook tweet only — body/CTA replies always text. Get URL from profile, then reply sequentially.
 6. Update: `weekly.original_tweets.current += 1`
-7. Log: `Type: "Thread", Hook: status/ID, Tweets: N`. Done.
+7. Log: `Type: "Thread", Image: <true|false>, Hook: status/ID, Tweets: N`. Done.
 
 ### article
 1. Check `weekly.articles.current < weekly.articles.limit`
@@ -186,7 +186,7 @@ Before executing any `original_tweet` or `article` task:
 4. **Build rich HTML** — use `<h2>` for section headings, `<p>` for paragraphs, `<strong>` for bold key terms, `<em>` for italic, `<ul><li>` for lists, `<blockquote>` for quotes. See BROWSER-engage.md § 11 for supported tags.
 5. **Add mentions and hashtags for visibility:**
    - **@mentions:** Wrap in `<a href="https://x.com/{handle}">@handle</a>`. Mention 2-3 relevant accounts per article - people/companies referenced in the content.{{#if behavior.target_accounts}} Prioritize configured target accounts: {{#each behavior.target_accounts}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}.{{/if}} Mentioned users get notified → drives engagement.
-   - **#hashtags:** Write as plain text (`#AIAgents`), the editor auto-links them. Add 3-5 relevant hashtags in a closing paragraph. Use hashtag pools from SOUL.md — mix 1-2 niche + 1-2 broad.
+   - **#hashtags:** Write as plain text (`#AIAgents`), the editor auto-links them. Add 0-1 hashtag in a closing paragraph. Zero is default; one only if it genuinely routes discovery.
    - **External links:** `<a href="https://...">link text</a>` for sources referenced in the article. Adds credibility.
    - 🚨 **Do NOT over-mention.** Only mention accounts genuinely referenced in the article. Do NOT tag random big accounts for visibility - that is spam.
 6. Self-review (SOUL.md § Self-Review) - article format allows more depth but keep it punchy, not corporate

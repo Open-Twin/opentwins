@@ -18,6 +18,12 @@ Read these (skip gracefully if file is empty/missing):
 - `amplification/wins/{today}.md` — yesterday's best-performing content across platforms. If wins exist, include an **Amplification** section in the brief telling Content Writer to adapt the winning content for other platforms. Specify: source text, source platform, target platforms, suggested angle for each.
 - `engagement-tracker/metrics.json` — per-post performance and pillar breakdown. Use `pillar_performance` to see which pillar resonates most. Use top-performing posts to guide format and topic choices. If empty/null, skip.
 
+## Step 2.5: Anti-Repetition Check
+
+Read the last 3-5 content briefs in `content-briefs/`. Look for concepts, framings, or buzzwords that appear across them. If a word or angle has been emphasized in 3+ recent briefs, add a `## ROTATE OUT` section to today's brief listing those concepts with a one-line note: "used heavily this week — avoid in today's content."
+
+You are the only agent with a network-wide view. Use judgment: only rotate angle/concept words that make content feel templated — never basic domain terms (agent, model, prompt).
+
 ## Step 3: Decide Today's Focus
 
 **Pillar selection logic:**
@@ -29,9 +35,12 @@ Read these (skip gracefully if file is empty/missing):
 
 **Engagement target selection:**
 1. Read contacts-active.json (already filtered to last 7 days)
-2. Prioritize: Tier 1 contacts > Tier 2 > Tier 3
-3. Prioritize: contacts with activity matching today's pillar/theme
-4. Select top 3-5 targets with specific engagement angles
+2. 🚨 **LinkedIn follower-band bias.** Prefer 10K-50K-follower creators. Down-rank 1M+ (saturated comments) and <10K (low-reach). Unknown follower count = neutral.
+3. Prioritize: Tier 1 contacts > Tier 2 > Tier 3
+4. Prioritize: contacts with activity matching today's pillar/theme
+5. 🚨 **Platform-verify each candidate BEFORE including them as a platform target.** For each candidate, inspect their `recent_activity[]` array. A contact qualifies for platform X's engagement-target list ONLY if at least one `recent_activity` entry has `platform == X` within the last 7 days. Having `platforms.{X} != null` (profile URL exists) is NOT enough. Do not recommend that LinkedIn agents engage with a contact whose only recent activity is `platform: "twitter"` or `platform: "podcast"` — that profile will be silent on LinkedIn and the navigation wastes a task slot.
+6. **Organize targets by platform in the brief** (per AGENT.md rule 2a). Each platform subsection includes ONLY contacts whose verified platform activity matches. If zero contacts qualify for a platform, write an explicit empty-state note directing platform agents to use search queries only.
+7. Select top 3-5 qualified targets per active platform, with specific engagement angles grounded in the verified activity entry.
 
 ## Step 4: Generate Brief
 
@@ -82,7 +91,7 @@ For each agent workspace, write `queries.json` with search queries derived from 
    - Substack: newsletter-friendly, **3-4 words max**
    - IH: builder-focused, **2-3 words max** — small community, simple search
 3. **Include engagement target handles** from the brief — agents will search for their posts
-4. **Include 3-5 hashtags** from the brief's Hashtags section
+4. **Include 4-5 hashtags** per platform's hashtags section. LinkedIn enforces 1 broad + 2-3 niche + 1 branded — see AGENT.md § 7. 🚨 **`hashtags[0]` MUST equal the brief's first Threads hashtag** — downstream consumers treat `[0]` as the primary topic tag.
 5. **All queries are fresh and relevant** — no rotation needed, agents use any/all of them
 6. **Category tags** help agents assign queries to the right task slots (pm, ai, career, dev, trending)
 

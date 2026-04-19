@@ -14,6 +14,7 @@
 - BROWSER-notifications.md → notification/reply tasks
 - BROWSER-engage.md → search/feed/comment/like/article tasks
 - BROWSER-post.md → poll/post/repost creation tasks (shadow DOM)
+- BROWSER-carousel.md → publish_carousel tasks only (HTML→PDF render + document upload)
 
 Steps in order: § 0 Morning Schedule Check → § 1 Limits → § 2 Browser → § 3 Notifications (FIRST) → § 4 Schedule → § 5 End-of-day → § 6 Log → § 7 Close → § 8 HEARTBEAT_OK. All mandatory.
 🚨 **ALL steps mandatory every heartbeat.** Browser + notifications MUST run even if no tasks are due.
@@ -102,6 +103,8 @@ Filter `schedule.json`: `status=pending` AND `time <= now`. Sort earliest first.
 
 **No spacing rule.** Execute tasks back-to-back when due.
 
+🚨 **Per-author daily cap: 1 comment/author/day.** Before commenting, skip candidates whose author is in today's `daily.comments.history`. Applies to search_and_comment and priority_targets.
+
 ### Content-Ready Override (publish tasks only)
 
 Before executing any `publish_post` or `publish_article` task:
@@ -125,7 +128,11 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
    ENDJSON
    ```
    If `tooOld` → skip immediately. If `alreadyCommented` → **backfill tracking** (`grep -qF "{trackId}" memory/commented_posts.txt || echo "{trackId}" >> memory/commented_posts.txt`), then skip.
-   If page shows "Something went wrong" → URL is invalid, skip immediately.
+   If page shows "Something went wrong" OR returns 404 → URL is invalid. 🚨 **MANDATORY: Append URL to `memory/dead_urls.txt`** so future schedule generations exclude it (PLAYBOOK.md § Generate Schedule):
+   ```bash
+   grep -qF "{url}" memory/dead_urls.txt || echo "{url}" >> memory/dead_urls.txt
+   ```
+   Then skip immediately.
 2. Pick query from `queries.json` — `high_engagement` first, then product-specific
 3. Navigate: `https://www.linkedin.com/search/results/content/?keywords={QUERY}&datePosted=%22past-week%22&sortBy=%22relevance%22`
 4. Extract using BROWSER-engage.md SS 2 (has embedded 3s wait — NO separate wait needed). SS 2 now returns `postUrl`, `trackId`, `username`, `isPulse` per result.
@@ -160,24 +167,8 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
      Then skip to next candidate.
      Otherwise use `title` + `content` to write a contextual comment. 🚨 **Pulse uses QUILL editor — MUST use BROWSER-engage.md SS 4b (Quill path). Do NOT use SS 4 (TipTap path) — it silently fails on Pulse.** SS 4b uses `quillInstance.setText()` to properly update Delta state, then verifies by searching for our comment in the rendered list (not by checking editor emptiness).
 9. **After each successful comment:** `echo "{post_id}" >> memory/commented_posts.txt`
-10. 🚨 **MANDATORY: Send connection request to post author** — use `username` from SS 2. Run BROWSER-notifications.md SS 7 (navigate to profile → safety checks → custom-invite → personalized note → send). Skip silently if: already connected, pending, recruiter headline, or `weekly.connection_requests.current >= limit`. 🚨 **Connection notes: NEVER mention company** — use individual framing only.
-11. If no qualifying posts, try up to 2 more queries from different categories
-12. **Task completion:** Mark "completed" only when `comments_done >= config.max_comments`. If 0 posted, stays "pending"
-
-### browse_and_engage
-
-1. Navigate `https://www.linkedin.com/feed/`
-2. Extract using BROWSER-engage.md SS 3 (has embedded 3s wait — NO separate wait needed)
-3. Like + verify using BROWSER-engage.md SS 6 (ONE evaluate: batch like + 2s wait + verify)
-4. **Get post URLs for comment candidates** — for each post with `postUrl: null`, run BROWSER-engage.md SS 3b (overflow menu → "Copy link to post" → clipboard → extract postId). This is 1 evaluate per post instead of 4-6 steps navigating to author profiles.
-5. 🚨 **MANDATORY: Batch grep pre-check** — check ALL postIds at once:
-   ```bash
-   printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/commented_posts.txt || true
-   ```
-   Only navigate to posts NOT in tracking file.
-6. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) before writing comment. 🚨 Use the `content` field from SS 3 extraction to inform your comment — your comment MUST directly address the post's topic.
-7. Navigate to unchecked post URL, 🚨 **MANDATORY: Read post content** (BROWSER-engage.md SS 3c), then use BROWSER-notifications.md SS 5 for comment. After success: `echo "{post_id}" >> memory/commented_posts.txt`
-8. 🚨 **MANDATORY: Send connection request to post author** after commenting — BROWSER-notifications.md SS 7 (safety checks + personalized note). Skip if already connected/pending/recruiter. 🚨 **Connection notes: NEVER mention company.**
+10. If no qualifying posts, try up to 2 more queries from different categories
+11. **Task completion:** Mark "completed" only when `comments_done >= config.max_comments`. If 0 posted, stays "pending"
 
 ### publish_article
 
@@ -227,11 +218,12 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
 
 ### Other task types
 
-- **publish_post:** Read BROWSER-post.md SS 10, POST-TEMPLATES.md, select unused template, self-review, peak hours, log template used
+- **publish_post:** Read BROWSER-post.md SS 10, POST-TEMPLATES.md, select unused template, self-review, peak hours, log template used. If `linkedin-post-image.spec.json` exists next to `linkedin-post.md`, use SS 10b instead. On any SS 10b failure, fall through to SS 10.
+- **publish_carousel:** Read BROWSER-carousel.md (SS-C1 render → SS-C7 log + limits). Skip silently if spec has `skipped:` marker.
 - **repost_with_commentary:** Read BROWSER-post.md SS 11. 🚨 **Browse the home feed** (`/feed/`) to find repostable posts — do NOT search (search returns Pulse articles). Click Repost directly on the feed post → "Repost with your thoughts" → type 2-4 sentences in shadow DOM editor → Post. Self-review before posting.
 - **publish_newsletter:** "Weekend Builder" digest
 
-**General rules:** Like before commenting (Type A buttons). Type -> submit -> verify appeared. Don't log until confirmed. Update `comments_done`, `likes_done`. Mark "done" when `>= config.max_*`, else "pending".
+**General rules:** Like before commenting (Type A buttons — per-post, no daily cap). Type -> submit -> verify appeared. Don't log until confirmed. Update `comments_done`. Mark "done" when `>= config.max_comments`, else "pending".
 🚨 **Comment Submit:** ALWAYS use `button[data-view-name="comment-post"]`. NEVER iterate buttons by text "Comment" — the toggle (`feed-comment-button`) matches first and does NOT submit!
 🚨 **Comment Verify:** ALWAYS check editor is EMPTY (`editor.textContent.trim().length === 0` AND `innerText.indexOf(snippet) > -1`). NEVER check only `innerText` — text in editor gives false positive!
 
@@ -253,11 +245,10 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
    EOF
    ```
    🚨 **Style field MANDATORY** for all Comment entries — track which style was used (insight|short|personal|disagree). Enables quality audits.
-   Types: Heartbeat, Comment, Reply, Reaction, Post Published, Article Published, Poll, Repost, Newsletter, Connection Request, Error, Alert
+   Types: Heartbeat, Comment, Reply, Post Published, Article Published, Poll, Repost, Newsletter, Connection Request, Error, Alert
 
 2. Update `limits.json` after each action:
    - Comment: `daily.comments.current += 1`, append history
-   - Reaction: `daily.reactions.current += 1`
    - Connection Request: `weekly.connection_requests.current += 1`, append history
    - Post/Article/Poll/Newsletter/Repost: weekly counter += 1
 
@@ -268,7 +259,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
    Output as text (gateway routes to Slack automatically). Do NOT use `message` tool with `target` parameter — it will error.
    ```
    LinkedIn HB{N}: {actions_summary}
-   Comments: {current}/{limit} | Reactions: {current}/{limit}
+   Comments: {current}/{limit}
    Replies: {count} (unlimited)
    Next: {next_task_time or "nothing scheduled"}
    ```

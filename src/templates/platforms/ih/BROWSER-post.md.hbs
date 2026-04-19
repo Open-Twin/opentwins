@@ -8,13 +8,36 @@
 | Body field | `textarea.edit-post__body-field` | maxlength=100000, Ember textarea, supports Markdown |
 | Group selector trigger | `.group-selector__trigger` | Click to open dropdown |
 | Group selector collapsed | `.group-selector--collapsed` | Check before clicking |
+| Group option list item | `li.group-selector__group` | Each joined group = one `<li>` |
+| Group option name | `span.group-selector__name` | Exact text match vs target group |
+| Group selected label | `.group-selector__label--selected` | Success signal after click |
 | Submit button | `.post-page__submit-button` | Disabled until title+body filled |
 | Save draft button | `.post-page__save-draft` | Always enabled |
 | Preview toggle | `.post-page__preview-toggle` | |
 
 ## Notes
 - Body is a plain `<textarea>` — use `.value` + input event
-- Skip group selector — post to general feed
+- Group selector is optional — skip on `'none'` or any error, fallback to general feed
+
+## S 7.5. Select Group (optional, runs between S 7 body set and submit)
+
+Skip if `postGroup` is `'none'` or empty → go straight to submit.
+
+```bash
+# Step 1: Click trigger to open dropdown
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"() => { var trigger = document.querySelector('.group-selector__trigger'); if (!trigger) return { error: 'group_selector_not_found' }; trigger.click(); return { success: true }; }"}
+ENDJSON
+```
+
+```bash
+# Step 2: Wait 1200ms, click matching <li>, verify --selected label (800ms)
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"() => new Promise(function(r) { setTimeout(function() { var g = window.__data.group; var opts = document.querySelectorAll('li.group-selector__group'); var target = Array.from(opts).find(function(o) { var n = o.querySelector('.group-selector__name'); return n && n.textContent.trim() === g; }); if (!target) return r({ error: 'group_not_joined', group: g, fallback: 'general_feed' }); target.click(); setTimeout(function() { var label = document.querySelector('.group-selector__label'); var ok = !!(label && label.className.indexOf('--selected') >= 0); r({ success: ok, group: g, labelVerified: ok }); }, 800); }, 1200); })", "data": {"group": "TARGET_GROUP_NAME"}}
+ENDJSON
+```
+
+Any `error:` → log warning, skip to submit (general feed fallback). Never block publish.
 
 ## S 7. Create and Submit Post
 

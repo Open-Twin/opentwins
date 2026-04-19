@@ -88,7 +88,7 @@ Re-read your text before submitting. Check these 4 things:
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); const tweets = Array.from(document.querySelectorAll('article[data-testid=\"tweet\"]')); const parseCount = (label) => { if (!label) return 0; const match = label.match(/^(\\d+)/); return match ? parseInt(match[1]) : 0; }; return tweets.slice(0, 10).map(t => { const user = t.querySelector('[data-testid=\"User-Name\"]'); const text = t.querySelector('[data-testid=\"tweetText\"]'); const link = t.querySelector('a[href*=\"/status/\"]'); const likeBtn = t.querySelector('[data-testid=\"like\"]'); const replyBtn = t.querySelector('[data-testid=\"reply\"]'); const retweetBtn = t.querySelector('[data-testid=\"retweet\"]'); const viewSpan = t.querySelector('a[href*=\"/analytics\"] span'); return { url: link ? 'https://x.com' + link.getAttribute('href') : '', author: user ? user.innerText.split(String.fromCharCode(10))[0] : '', handle: user ? (user.innerText.split(String.fromCharCode(10)).find(l => l.startsWith('@')) || '') : '', text: text ? text.innerText.slice(0, 200) : '', likes: parseCount(likeBtn?.getAttribute('aria-label')), replies: parseCount(replyBtn?.getAttribute('aria-label')), retweets: parseCount(retweetBtn?.getAttribute('aria-label')), views: viewSpan ? viewSpan.innerText : '0' }; }).filter(t => t.url && t.text); }"}
+{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); const tweets = Array.from(document.querySelectorAll('article[data-testid=\"tweet\"]')); const parseCount = (label) => { if (!label) return 0; const match = label.match(/^(\\d+)/); return match ? parseInt(match[1]) : 0; }; const now = Date.now(); return tweets.slice(0, 10).map(t => { const user = t.querySelector('[data-testid=\"User-Name\"]'); const text = t.querySelector('[data-testid=\"tweetText\"]'); const link = t.querySelector('a[href*=\"/status/\"]'); const likeBtn = t.querySelector('[data-testid=\"like\"]'); const replyBtn = t.querySelector('[data-testid=\"reply\"]'); const retweetBtn = t.querySelector('[data-testid=\"retweet\"]'); const viewSpan = t.querySelector('a[href*=\"/analytics\"] span'); const time = t.querySelector('time')?.getAttribute('datetime'); const ageMin = time ? Math.round((now - new Date(time).getTime()) / 60000) : 999; return { url: link ? 'https://x.com' + link.getAttribute('href') : '', author: user ? user.innerText.split(String.fromCharCode(10))[0] : '', handle: user ? (user.innerText.split(String.fromCharCode(10)).find(l => l.startsWith('@')) || '') : '', text: text ? text.innerText.slice(0, 200) : '', likes: parseCount(likeBtn?.getAttribute('aria-label')), replies: parseCount(replyBtn?.getAttribute('aria-label')), retweets: parseCount(retweetBtn?.getAttribute('aria-label')), views: viewSpan ? viewSpan.innerText : '0', ageMin: ageMin }; }).filter(t => t.url && t.text); }"}
 ENDJSON
 ```
 
@@ -115,6 +115,46 @@ ENDJSON
 # 🚨 MUST use dialog-scoped selectors: [role="dialog"] [data-testid="tweetTextarea_0"]
 # 🚨 NEVER use bare [data-testid="tweetTextarea_0"] — home page has TWO textareas (feed + dialog)
 ```
+
+## § 7b — Compose with Image
+
+Use when `content-ready/{today_date}/twitter-post-image.spec.json` exists. Inserts image upload between compose-open and Post click.
+
+### Step 0: Render spec to PNG
+
+```bash
+mkdir -p /tmp/opentwins-uploads
+node {{pipeline_workspace}}/content-writer/templates/render-post-image.mjs \
+  {{pipeline_workspace}}/content-ready/{today_date}/twitter-post-image.spec.json \
+  /tmp/opentwins-uploads/twitter-post-image.png
+```
+
+🚨 If render exits non-zero, skip image stage. Fall through to § 7 text-only. Never block the post.
+
+### Step 1: Open compose + type text (§ 7 flow: navigate /home → click compose button → wait 1s → CDP type into `[role="dialog"] [data-testid="tweetTextarea_0"]`). **Do NOT click Post yet.**
+
+### Step 2: Attach image via selector-mode upload
+
+```bash
+curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/upload -H 'Content-Type: application/json' \
+  -d '{"filePath":"/tmp/opentwins-uploads/twitter-post-image.png","selector":"[role=\"dialog\"] [data-testid=\"fileInput\"]","timeoutMs":10000}'
+```
+
+Wait 3s.
+
+### Step 3: Verify attach
+
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"() => !!document.querySelector('[role=\"dialog\"] [data-testid=\"attachments\"]')"}
+ENDJSON
+```
+
+If `false` → dismiss dialog (click close X, confirm Discard if prompted), fall through to § 7 text-only.
+
+### Step 4: Click Post — `[role="dialog"] [data-testid="tweetButton"]`, verify post landed + extract tweet ID from profile URL (same as § 7 closing pattern).
+
+🚨 **Failure recovery:** any failure in Step 0, 2, or 3 → fall through to § 7 text-only. Log as `Image: false, Reason: <why>`.
 
 ## § 8 — Quote Tweet
 

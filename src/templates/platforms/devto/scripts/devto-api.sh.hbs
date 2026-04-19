@@ -31,6 +31,43 @@ case "$1" in
         *) shift ;;
       esac
     done
+
+    # Hot-tag gate: rewrite article tags in-place if >=2 tags appear in INSIGHTS
+    # "Avoid on articles" line. Fail-open: any error logs to stderr and continues.
+    INSIGHTS="$(dirname "$0")/../INSIGHTS.md"
+    python3 - "$FILE" "$INSIGHTS" <<'PY'
+import re, sys
+art, ip = sys.argv[1], sys.argv[2]
+def log(m): print(m, file=sys.stderr)
+try:
+    ins = open(ip).read()
+    def parse(label):
+        m = re.search(r'\*\*'+re.escape(label)+r':\*\*\s*(.+)', ins)
+        return [t.strip().lstrip('#').lower() for t in m.group(1).split(',')] if m else []
+    hot, cold = parse('Use on articles'), set(parse('Avoid on articles'))
+    if not hot or not cold:
+        log('tag-gate: skip (insights missing)'); sys.exit(0)
+    src = open(art).read()
+    m = re.search(r'^tags:\s*(.+)$', src, re.M)
+    if not m:
+        log('tag-gate: skip (no tags line)'); sys.exit(0)
+    cur = [t.strip().lstrip('#').lower() for t in m.group(1).split(',') if t.strip()]
+    bad = [t for t in cur if t in cold]
+    if len(bad) < 2 and len(cur) <= 4:
+        log(f'tag-gate: ok ({len(bad)} cold, {len(cur)} tags)'); sys.exit(0)
+    kept = [t for t in cur if t not in cold]
+    kept.sort(key=lambda t: 0 if t in hot else 1)
+    for h in hot:
+        if len(kept) >= 4: break
+        if h not in kept: kept.append(h)
+    kept = kept[:4]
+    new = 'tags: ' + ', '.join(kept)
+    open(art, 'w').write(re.sub(r'^tags:\s*.+$', new, src, count=1, flags=re.M))
+    log(f'tag-gate: REWROTE cold={bad} count={len(cur)}->{len(kept)} new={kept}')
+except Exception as e:
+    log(f'tag-gate: skip ({e})')
+PY
+
     BODY=$(cat "$FILE")
     if [ -n "$SERIES" ]; then
       jq -n --arg body "$BODY" --argjson pub "$PUBLISHED" --arg series "$SERIES" \

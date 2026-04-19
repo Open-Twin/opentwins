@@ -118,7 +118,7 @@ Check `window.location.href` contains `/status/`. Extract article URL by replaci
 
 <p>If you work in {{pillars.[0].name}} and have not tried this approach yet, start small. Pick one area. Build the habit. Iterate from there.</p>
 
-<p>{{#each pillars}}#{{@key}}{{#unless @last}} {{/unless}}{{/each}} #BuildInPublic</p>
+<p>#{{pillars.[0].name}}</p>
 ```
 
 ---
@@ -126,6 +126,6 @@ Check `window.location.href` contains `/status/`. Extract article URL by replaci
 ## Mentions & Hashtags Strategy
 
 - **@mentions:** 2-3 per article. Only accounts genuinely referenced in the content. Wrap in `<a href="https://x.com/{handle}">@handle</a>`. Mentioned users get notified.
-- **#hashtags:** 3-5 in a closing paragraph as plain text (auto-linked by editor). Mix niche + broad from SOUL.md hashtag pools.
+- **#hashtags:** 0-1 in a closing paragraph as plain text (auto-linked by editor). Zero is default; one only if it genuinely routes discovery.
 - **External links:** `<a href="url">text</a>` for sources. Adds credibility.
 - 🚨 Do NOT tag random big accounts for visibility — that is spam.

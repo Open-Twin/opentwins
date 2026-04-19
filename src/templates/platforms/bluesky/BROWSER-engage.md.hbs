@@ -91,13 +91,13 @@ ENDJSON
 If `alreadyCommented: true` → backfill to `memory/commented_posts.txt`, skip to next candidate.
 If `tooDeep: true` (parentChainLen >= 4) → skip (deep thread, no visibility).
 
-## S 4b. Click Reply Button (for post pages)
+## S 4b. Like + Click Reply Button (for post pages)
 
-Use when commenting on posts. Clicks "Compose reply" which opens the reply dialog.
+Like the root post, then open compose reply. `aria-label^="Like ("` skips already-liked posts (label flips to `Unlike (...)` after click).
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { const composeBtn = document.querySelector('button[aria-label=\"Compose reply\"]'); if (!composeBtn) return { error: 'no_compose_button' }; composeBtn.click(); return { clicked: true }; }"}
+{"fn":"async () => { const likeBtn = document.querySelector('button[aria-label^=\"Like (\"]'); if (likeBtn) likeBtn.click(); const composeBtn = document.querySelector('button[aria-label=\"Compose reply\"]'); if (!composeBtn) return { error: 'no_compose_button' }; composeBtn.click(); return { clicked: true, liked: !!likeBtn }; }"}
 ENDJSON
 ```
 

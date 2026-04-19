@@ -213,3 +213,109 @@ export async function getTabInfo(profileName: string): Promise<string> {
   const pages = tabs.filter((t) => t.type === 'page');
   return JSON.stringify(pages.map((t) => ({ id: t.id, title: t.title, url: t.url })));
 }
+
+// Upload a file to the current page. Two modes:
+//   - No selector: arms Page.setInterceptFileChooserDialog and waits for the caller
+//     to trigger a file-chooser (e.g. by clicking <label for="fileInput">).
+//   - With selector: finds the <input type="file"> matching the selector and sets
+//     files directly via DOM.setFileInputFiles — no chooser, no caller click.
+export async function uploadFile(profileName: string, filePath: string, timeoutMs = 60000, selector?: string): Promise<string> {
+  const port = getProfilePort(profileName);
+  const tab = await getActivePage(port);
+  if (!tab.webSocketDebuggerUrl) throw new Error('No WebSocket URL for active tab');
+
+  const { WebSocket } = await import('ws');
+  const ws = new WebSocket(tab.webSocketDebuggerUrl);
+
+  // Outbound request/response tracking — share the module-level msgId counter
+  // so ids never collide with a concurrent cdpSend() on a different socket.
+  const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
+
+  function send(method: string, params: Record<string, unknown> = {}): Promise<unknown> {
+    const id = msgId++;
+    return new Promise((resolve, reject) => {
+      pending.set(id, { resolve, reject });
+      ws.send(JSON.stringify({ id, method, params }));
+    });
+  }
+
+  return new Promise<string>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error(selector
+        ? `Upload timeout after ${timeoutMs}ms: selector ${selector} not resolved`
+        : `Upload timeout after ${timeoutMs}ms: no file chooser opened`));
+    }, timeoutMs);
+
+    let resolved = false;
+    function cleanup(): void {
+      clearTimeout(timer);
+      try { ws.close(); } catch { /* ignore */ }
+    }
+
+    async function directSet(): Promise<void> {
+      // DOM.getDocument → querySelector → setFileInputFiles on the resolved nodeId.
+      const doc = await send('DOM.getDocument', { depth: 0 }) as { root: { nodeId: number } };
+      const node = await send('DOM.querySelector', { nodeId: doc.root.nodeId, selector }) as { nodeId: number };
+      if (!node.nodeId) throw new Error(`selector matched no element: ${selector}`);
+      await send('DOM.setFileInputFiles', { files: [filePath], nodeId: node.nodeId });
+      resolved = true;
+      cleanup();
+      resolve(JSON.stringify({ ok: true, filePath, selector, nodeId: node.nodeId }));
+    }
+
+    ws.on('open', async () => {
+      try {
+        if (selector) {
+          await directSet();
+        } else {
+          await send('Page.enable');
+          await send('Page.setInterceptFileChooserDialog', { enabled: true });
+        }
+      } catch (err) {
+        cleanup();
+        reject(err instanceof Error ? err : new Error(String(err)));
+      }
+    });
+
+    ws.on('message', async (data: Buffer) => {
+      let msg: CdpMessage & { method?: string; params?: { backendNodeId?: number; mode?: string } };
+      try { msg = JSON.parse(data.toString()); } catch { return; }
+
+      // Response to an outbound request
+      if (typeof msg.id === 'number' && pending.has(msg.id)) {
+        const handler = pending.get(msg.id)!;
+        pending.delete(msg.id);
+        if (msg.error) handler.reject(new Error(`CDP error: ${msg.error.message}`));
+        else handler.resolve(msg.result);
+        return;
+      }
+
+      // Async event (intercept mode only)
+      if (!selector && msg.method === 'Page.fileChooserOpened' && !resolved) {
+        resolved = true;
+        const backendNodeId = msg.params?.backendNodeId;
+        if (backendNodeId === undefined) {
+          cleanup();
+          reject(new Error('fileChooserOpened event missing backendNodeId'));
+          return;
+        }
+        try {
+          await send('DOM.setFileInputFiles', { files: [filePath], backendNodeId });
+          await send('Page.setInterceptFileChooserDialog', { enabled: false });
+          cleanup();
+          resolve(JSON.stringify({ ok: true, filePath, backendNodeId }));
+        } catch (err) {
+          cleanup();
+          reject(err instanceof Error ? err : new Error(String(err)));
+        }
+      }
+    });
+
+    ws.on('error', (err: Error) => {
+      if (resolved) return;
+      cleanup();
+      reject(err);
+    });
+  });
+}

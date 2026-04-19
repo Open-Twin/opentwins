@@ -79,6 +79,14 @@ Before selecting today's pillar, calculate each pillar's share of the week so fa
 
 Trend overrides (16+ score) do NOT exempt you from this guardrail. If an underrepresented pillar is at 0% and it's Thursday, find an angle on the trending topic for that pillar or pick a pillar theme entirely. Engagement metrics show underrepresented pillars often outperform dominant ones - the audience wants variety.
 
+### Structural-Theme Guardrail (Tue + Fri only)
+
+🚨 **Tue + Fri drive BOTH LinkedIn carousel AND Threads thread (`threads-thread.md`).** Skipping costs TWO originals, not one. Pick a structural theme that renders as 10 carousel slides AND as a 3-5 post thread: framework, fields, before/after, checklist, or multi-step breakdown. Themes with a concrete framework, 4-repeatable-field artifact, or news peg with visualizable structure qualify. Milestones, single-insight quips, and unstructured opinion pieces do NOT.
+
+If the strongest peg isn't eligible, either (a) pick a different eligible peg, or (b) reframe structurally ("5 things missed", "4 questions answered"). Only if both fail, add a `## ⚠ Structural Skipped` section — both LinkedIn carousel AND Threads thread skip that day (agents fire Alerts; no fallback posts).
+
+Other days: structural eligibility is a bonus, not required.
+
 ## Brief Sections
 
 The brief MUST include all of these sections:
@@ -94,7 +102,7 @@ The brief MUST include all of these sections:
    - If no wins report exists or report says "no wins" → omit this section entirely
    - Staleness check: If the same win has appeared in briefs for 2+ consecutive days, DROP it. Do not recycle the same win across 3+ days - audience fatigue kills amplification value. If no fresh wins exist, omit the Amplification section entirely rather than reusing stale ones.
 6. **Platform Notes** — any platform-specific advice for today
-7. **Hashtags & Keywords** — for discovery
+7. **Hashtags & Keywords** — per platform. **LinkedIn: 1 broad + 2-3 niche + 1 branded (if user has a brand tag), 4-5 total.** Pick broad by matching today's angle: `#FutureOfWork` (AI + work shifts), `#Leadership` (career / team / management), `#DigitalTransformation` (enterprise tooling / AI adoption), `#Innovation` (build-in-public / new-product). Niche = topic-specific to the pillar. Other platforms: niche-only OK. **Threads: FIRST entry MUST be the primary topic tag (single broad tag). Mirror the same FIRST tag into each platform's `queries.json → hashtags[0]`** — writer and downstream consumers treat `[0]` as the topic tag.
 
 ## Community Audience Profiles (MANDATORY for platform hooks)
 
@@ -120,6 +128,11 @@ When suggesting platform hooks in the brief, match the angle to the community's 
 ## Rules
 1. The brief must be ACTIONABLE — the Content Writer should produce ready-to-publish content from it without additional context
 2. Engagement targets must come from `contacts-active.json` with SPECIFIC angles, not generic "go engage"
+2a. 🚨 **Per-platform engagement targets require per-platform verified activity.** A contact qualifies for a platform's engagement-target list ONLY if their `recent_activity[]` contains an entry with `platform` matching that target platform within 7 days. Having a profile URL on a platform (`platforms.linkedin != null`) is NOT sufficient — they must have posted on that platform recently. Organize the brief's "Engagement Targets" as per-platform subsections:
+   - `### LinkedIn Engagement Targets` — contacts with `recent_activity[].platform == "linkedin"` in last 7 days
+   - `### Twitter Engagement Targets` — contacts with `recent_activity[].platform == "twitter"` in last 7 days
+   - `### Other Platform Engagement Targets` — contacts with activity on newsletter/podcast/news/product/etc., grouped by platform
+   If zero contacts qualify for a platform, write an explicit note: `### LinkedIn Engagement Targets\n- None verified this week. Platform agents: use search queries only.` Do NOT recycle cross-platform activity (e.g., a Twitter post by someone with a LinkedIn URL) as a LinkedIn engagement opportunity — that forces platform agents to navigate to silent profiles.
 3. Each brief should feel different — vary themes, formats, angles. No two consecutive days on the same sub-topic
 4. Write the brief file FIRST, then output the Slack summary. The file is the critical output
 5. The brief feeds BOTH the Content Writer (07:30) AND platform agents (08:00+). Include enough detail for both consumers.

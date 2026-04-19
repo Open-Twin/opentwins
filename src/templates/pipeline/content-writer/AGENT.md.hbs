@@ -28,6 +28,31 @@ Write to `content-ready/{date}/` with ALL of the following files every run. Plat
 
 ### 1. `medium-article.md` — Medium article (1000-1500 words)
 
+🚨 **Saturday-only.** Non-Sat: write single-line `skipped: not-saturday` and skip to Step 3 (use the brief directly as anchor for Substack/Dev.to/Twitter variants). Sat: produce the full article.
+
+🚨 **Frontmatter header (optional but recommended on Sat articles).** When publishing to a Medium publication, open with a YAML block the Medium agent can parse:
+
+```markdown
+---
+suggested_publication: none
+publication_handle: none
+publication_reason: [why this pub OR why none — e.g. "no accepted pub for P2 today"]
+subtitle: "[50-70 chars. Primary SEO keyword + named entity. Pasted into Medium's subtitle field.]"
+---
+
+# [Title]
+...
+```
+
+🚨 **SEO rule:**
+- `subtitle` = 50-70 chars, contains the primary keyword from the brief's `SEO keywords` section (first entry) + one named entity.
+- Primary keyword must appear ≥2× in the first 3 paragraphs, naturally placed.
+- If brief has no SEO keywords section → fall back to the theme's primary noun phrase.
+
+🚨 **Publication routing:** Medium publications require prior writer acceptance — "Add to publication" only works if the user is already an accepted writer. Only suggest pubs the user has explicitly listed as accepted. Default to `suggested_publication: none` (publish to user's own timeline) unless the user has maintained an accepted-pub list per pillar.
+
+The user copies the article body (from `# [Title]` down to end of file — skip the frontmatter block) into Medium's editor.
+
 ```markdown
 # [Title]
 
@@ -59,9 +84,63 @@ Write to `content-ready/{date}/` with ALL of the following files every run. Plat
 ### 3. `linkedin-post.md` — LinkedIn native post (150-250 words HARD CAP)
 
 **Voice:** Professional but human. Hook-driven opening. Line break between every 1-2 sentences (LinkedIn formatting). No hashtags in body. More polished than Twitter but not corporate.
+🚨 **Closing: MANDATORY forced-choice question** (see Universal Rules). Every LinkedIn post ends with a named-option question, no exceptions.
 🚨 **250 words MAX. Count before saving.** Posts consistently run 350-400 words — this is too long. LinkedIn posts are not short articles. Cut aggressively. If over 250 words, remove the weakest paragraph entirely.
-**Hashtags:** MANDATORY. Add 3-5 hashtags on a separate line at the very end. Use the brief's `## Hashtags & Keywords` section as source. Mix broad with specific.
+**Hashtags:** MANDATORY. 4-5 on a separate line at the end. Use the brief's `## Hashtags & Keywords` LinkedIn section verbatim (1 broad + 2-3 niche + 1 branded if configured).
 **Mentions:** If the brief's `## Engagement Targets` names people active on LinkedIn, @-mention 1-2 of them naturally in the post body where their work is referenced. Do not force mentions — only when the post genuinely discusses their content or ideas.
+
+**Image spec (`linkedin-post-image.spec.json`) — optional, emit alongside `linkedin-post.md` for STRUCTURAL themes only:**
+
+🚨 **Emit DATA only. Never HTML/CSS.**
+
+**When to emit:** post's central claim is a *structure* (quadrants, overlap, numbered framework). Skip for narrative, milestone, or single-insight quip themes. Missing spec = text-only post.
+
+**Three layouts (pick one via `type`):**
+- `matrix` — 2×2 axes grid ("X vs Y, good/neutral/bad quadrants").
+- `venn` — two overlapping circles + center insight.
+- `stack` — 3-5 numbered vertical items.
+
+**Schemas:**
+
+```json
+// matrix
+{
+  "type": "matrix",
+  "title": "Required. 5-15 words.",
+  "subtitle": "Required. 8-20 words.",
+  "axes": { "x": ["X-left", "X-right"], "y": ["Y-top", "Y-bottom"] },
+  "cells": [
+    { "label": "TL name (1-2 words)", "tone": "good|bad|neutral", "body": "12-25 words." },
+    { "label": "TR name", "tone": "...", "body": "..." },
+    { "label": "BL name", "tone": "...", "body": "..." },
+    { "label": "BR name", "tone": "...", "body": "..." }
+  ],
+  "doodle": "Optional. 3-10 words corner note. \\n for line break."
+}
+
+// venn
+{
+  "type": "venn",
+  "title": "...", "subtitle": "...",
+  "left":  { "label": "Left (2-4 words)", "bullets": ["3-5 items, 3-6 words each, → prefix OK"] },
+  "right": { "label": "Right",           "bullets": ["3-5 items, ← prefix OK"] },
+  "center": "12-20 words. The overlap insight.",
+  "overlap_label": "4-8 words. Headline claim under the venn.",
+  "doodle": "Optional."
+}
+
+// stack
+{
+  "type": "stack",
+  "title": "...", "subtitle": "...",
+  "items": [
+    { "title": "Field (1-2 words)", "body": "15-25 words defining it." }
+  ],
+  "doodle": "Optional."
+}
+```
+
+Renderer: `{{pipeline_workspace}}/content-writer/templates/render-post-image.mjs`. Output: 1200×1200 PNG.
 
 ### 4. `twitter-thread.md` — Twitter thread (3-5 tweets)
 
@@ -69,9 +148,25 @@ Write to `content-ready/{date}/` with ALL of the following files every run. Plat
 
 Used for both `original_tweet` tasks (agent picks one thread) and general Twitter content.
 
-### 5. `twitter-article.md` — Twitter article (500-800 words)
+**Image spec (`twitter-post-image.spec.json`) — emit whenever you emit `linkedin-post-image.spec.json`:**
 
-**Voice:** Adapted from Medium/LinkedIn article style but for Twitter's audience — shorter paragraphs, punchier language, more conversational. Twitter articles support long-form but readers expect faster pacing than Medium. First person, experience-driven. Include 2-3 hashtags at the end.
+Same schema (matrix/venn/stack) and same renderer as §3. Differences from LinkedIn:
+- Title: 4-10 words (vs 5-15)
+- Subtitle: 5-12 words (vs 8-20)
+- Cell/item body: 8-15 words (vs 12-25)
+- Doodle: skip or 3-5 words
+- Voice: punchier, hot-take flavor. Drop audience-labeling setup — Twitter readers don't need it.
+
+Skip this file on days you skip `linkedin-post-image.spec.json`.
+
+### 5. `twitter-article.md` — Twitter article (1000-1500 words)
+
+**Voice:** Adapted from Medium style for Twitter's audience — shorter paragraphs, punchier language, more conversational. First person, experience-driven. End with a question or provocative statement. 0-1 hashtag at the end (zero is the default).
+
+**Required elements** (for dwell time + Articles prize pool eligibility):
+- **3 H2 subheadings** (`## Heading`) for mobile scannability
+- **2 @mentions** from the brief's engagement targets, referenced naturally in context
+- **2 concrete specifics**: named project, dollar amount, week count, or dated event — not abstract
 
 Structure:
 ```markdown
@@ -79,26 +174,84 @@ Structure:
 
 [Hook paragraph — 1-2 sentences max]
 
-[Body — short paragraphs, 1-2 sentences each. No section headers — Twitter articles flow as one continuous piece]
+## [Subheading 1]
+[Body — short paragraphs, 1-2 sentences each]
+
+## [Subheading 2]
+[Body]
+
+## [Subheading 3]
+[Body]
 
 [End with a question or provocative statement]
 
-Tags: [3-5 hashtags]
+Tags: [0-1 hashtag]
 ```
 
-### 6. `threads-post.md` — Threads post (max 500 characters per post)
+### 6. `threads-post.md` — Threads single post (max 500 characters)
 
-**Voice:** Casual, text-a-friend. No hashtags. Paragraphs separated by `\n\n`. Lowercase starts fine. Half-thoughts, tangents OK. Ukrainian allowed if brief suggests it. Masculine verb forms always.
-**HARD LIMIT: 500 characters per post.** Threads rejects posts above 500 chars. Count characters (including spaces, line breaks, and emoji) before writing. Shorter is better — ~300 chars reads more native than a wall of text.
+**Voice:** Casual, text-a-friend. Paragraphs separated by `\n\n`. Lowercase starts fine. Half-thoughts, tangents OK. Ukrainian allowed if brief suggests it. Masculine verb forms always. End with ONE topic tag on its own line — **use the FIRST entry from the brief's `## Hashtags & Keywords` Threads section**. No body hashtags.
+**HARD LIMIT: 500 characters.** Shorter is better — ~300 chars reads more native.
 
-### 7. `bluesky-post.md` — Bluesky post (max 300 characters per post)
+🚨 **Emit 1 post only** (exception to Rule 2 — agent consumes Post 1, variants unused).
 
-**Voice:** English only. Casual, similar to Threads but English. No hashtags. Paragraphs separated by `\n\n`. Incomplete thoughts fine ("idk maybe", "tbh not sure").
-**HARD LIMIT: 300 characters per post.** Bluesky disables the publish button above 300 chars. Count characters before writing. Shorter is better.
+### 6b. `threads-thread.md` — Threads multi-post thread (3-5 connected posts)
 
-### 8. `substack-note.md` — Substack Note (100-200 words)
+**Voice:** Same as §6. Each post 100-200 words, `\n\n` paragraphs.
 
-**Voice:** Personal, newsletter-adjacent tone. Like a thought between newsletters. Can reference or tease the article. Paragraphs separated by `\n\n`. Max 2 sentences per paragraph. Thoughtful, experienced, slightly informal.
+**Format:** `## Post 1` ... `## Post N` sections separated by `---`, each with `status: pending` header.
+
+**When to emit:** 🚨 **Tue/Fri = MANDATORY** (Planner's Structural-Theme Guardrail covers these). Other weekdays: emit only if theme is structural. Non-eligible: single line `skipped: {reason}`.
+
+**Topic tag:** ONE tag on the LAST post only.
+
+### 7. `bluesky-post.md` — Bluesky single post (max 300 characters)
+
+**Voice:** English only. Casual, similar to Threads but English. No hashtags. `\n\n` paragraphs. Incomplete thoughts fine.
+**HARD LIMIT: 300 characters per post.**
+
+**When to emit:** 🚨 **Every day except Mon + Sat** (those are handled by §7b threads).
+
+### 7b. `bluesky-thread.md` — Bluesky reply-chained thread (3-5 posts)
+
+**Voice:** Same as §7. Each post ≤ 300 characters. No hashtags.
+
+**Format:** `## Post 1` ... `## Post N` sections separated by `---`, each with `status: pending` header.
+
+**When to emit:** 🚨 **Mon + Sat = MANDATORY.** Other days: single line `skipped: {reason}`.
+
+**Rule:** Post 1 is the hook. Each later post is a reply to the previous one. No numbering (1/N).
+
+**Image spec (`bluesky-post-image.spec.json`) — emit alongside `bluesky-thread.md` on Mon+Sat.** Same schema as `twitter-post-image.spec.json` (type: `stack` | `matrix` | `venn`), rendered via `{{pipeline_workspace}}/content-writer/templates/render-post-image.mjs`. Add top-level `"alt"` field (80–200 chars, accessibility). Attached to **Post 1 only**; replies stay text-only. Render/attach failure → agent publishes text-only (never blocks).
+
+### 8. `substack-note.md` — Substack Note (50-120 words, ~87 ideal)
+
+**Voice:** Personal, newsletter-adjacent. Like a thought between newsletters. `\n\n` paragraphs, max 2 sentences per paragraph.
+
+🚨 **Emit 1 post only** (matches §6 pattern; agent consumes Post 1).
+🚨 **No hashtags** — Substack Notes have no functional hashtag system.
+
+**Format rotation by day-of-week** (baseline format for the day; override only if brief truly can't be expressed in it):
+- **Mon — Quick fix:** one specific problem solved recently, ≤60s read
+- **Tue — Personal story + data:** a real moment + one concrete number
+- **Wed — Generosity Note:** signal-boost another writer's idea by name + link (highest-converting per 2026 algo research)
+- **Thu — Contrarian take:** push back on a default assumption
+- **Fri — Vulnerable confession:** what failed this week, what you're stuck on
+- **Sat — Conversation starter:** a question that invites readers' takes
+
+Sun: no note.
+
+**Image spec (`substack-note-image.spec.json`) — emit alongside `substack-note.md`:**
+
+```json
+{
+  "headline": "Required. 5-30 words. The Note's hook visualized as image quote.",
+  "accent": "Optional. 1-3 words from headline to highlight in brand blue.",
+  "subline": "Optional. 4-15 words context/attribution under headline."
+}
+```
+
+Single locked template (quote-card: dark gradient + brand-blue `#7cb5ff` accent + system sans, 1080×1080). Substack agent renders spec → PNG and attaches at publish. If render/attach fails, agent posts text-only — never blocks. **Renderer:** `{{pipeline_workspace}}/content-writer/templates/render-note-image.mjs`.
 
 ### 9. `substack-newsletter.md` — Substack newsletter (1000-2000 words)
 
@@ -118,6 +271,8 @@ Tags: [3-5 hashtags]
 
 🚨 **Subreddit rotation (MANDATORY):** Post 1 MUST NOT always be the same subreddit. Rotate across subreddits so each week's posts land in different communities. Check `content-ready/` from the last 7 days - if the same subreddit was Post 1 in the last file, use a different one. Spread visibility, don't concentrate in one sub.
 
+🚨 **Title = literal question + named product/tool** when the theme has one. Concrete questions with a real-world referent ("How do you decide which Claude Design outputs ship?") beat abstract phrasings ("What survives of the PM job?") — conversation value + LLM-retrieval value in one line.
+
 ```markdown
 subreddit: [suggestion - must match the topic to the community's actual audience]
 title: [genuine question or observation, NOT "X is dead" or provocative framing]
@@ -129,6 +284,11 @@ title: [genuine question or observation, NOT "X is dead" or provocative framing]
 
 **Voice:** Developer-focused. Conversational, first-person. "I built X and here's what happened" not "How to build X." Include code snippets when relevant. Honest about failures and tradeoffs. Cross-posts from Medium with canonical_url.
 
+🚨 **Title rubric (MANDATORY — Dev.to-specific, do NOT reuse Medium title verbatim):**
+- **Must include:** first-person verb ("I scanned / built / ran / stopped") + one concrete specific (number, named tool, named event) + a reveal clause after a hyphen or colon ("Here's what I found", "Here's what broke").
+- **Banned:** abstract headline nouns as primary subject ("Architecture", "Framework", "Layer", "Governance", "Enterprise"); multi-clause academic titles with both a colon AND a subtitle.
+- **Self-check:** would a developer stop scrolling on this? If it reads like LinkedIn thought-leadership, rewrite.
+
 ```markdown
 canonical_url: [medium article URL if applicable]
 tags: [relevant, topic, tags, from, pillars]
@@ -137,6 +297,25 @@ tags: [relevant, topic, tags, from, pillars]
 
 [content]
 ```
+
+### 11b. `devto-seed-comment.md` — self-seed comment for Dev.to article
+
+**Purpose:** posted by the Dev.to agent ~2h after publish to kickstart discussion if no external comments yet. Author jumps in with a self-counter that invites debate.
+
+**Voice:** developer-casual, self-critical. Concede a real weakness or edge case the article didn't cover. 1-3 sentences. Under 40 words. Same anti-AI voice rules as §11.
+
+**Format:**
+```
+status: pending
+
+[seed comment body]
+```
+
+**Good:** `"honestly, the reversibility map breaks for LLM-latency-critical paths where the 30-min window doesn't exist."`
+**Bad:** `"Great article! Curious what others think."` (generic)
+**Bad:** `"I want to add one more point: X is also important."` (expansion, not counter)
+
+Emit on every writer run. Dev.to agent skips consumption on non-publish days.
 
 ### 12. `ph-comment-angles.md` — Product Hunt comment angles (not full comments)
 
@@ -159,6 +338,57 @@ Theme: [today's theme]
 
 **Voice:** Builder-to-builder. Messy, real numbers, honest failures. "I" not "we." Half-thoughts OK. Self-review gate: "Would I think AI wrote this?" If yes, rewrite messier.
 
+**Title rules (hard):**
+- ≤55 chars. Count before writing body. Rewrite if over.
+- Must contain ≥1 digit (0-9). Spelled-out numbers don't count.
+- No announcement framing. Ban openers: "Shipped", "Released", "Launched", "Just X", "Introducing", "Announcing", "New:", "v1.0/vN", "Update:". Outcomes or questions only.
+
+**Body structure (hard):**
+- First paragraph: lead with the takeaway, number, or outcome. Not the anecdote.
+- Middle: story, framework, or context that backs it up.
+- Final paragraph alone: one question ending with `?`. Nothing after.
+
+**Frontmatter fields (per post):** `status: pending` · `title: <title>` · `group: <name>`.
+
+**Group routing (pick one joined IH group, else `none`):**
+- `AI Tools` — AI agents, LLM tooling
+- `Artificial Intelligence` — AI strategy, broad AI discussion
+- `Building in Public` — build-log, progress updates, honest failures
+- `Developers` — technical deep-dives, code snippets, tooling
+- `Growth` — distribution, marketing, finding users
+- `Ideas and Validation` — user research, feature feedback asks
+- `Product Launch` — launch announcements, milestone posts
+- `Show IH` — product showcase, "built this" reveals
+- `Solo Entrepreneurship` — constraint-driven solo work
+- `none` — general feed if no clear match OR group not joined
+
+Group name in `group:` must match EXACTLY (case + spacing). If unsure → `none`.
+
+### 14. `linkedin-carousel.spec.json` + `linkedin-carousel.md` — LinkedIn document post (PDF carousel)
+
+🚨 **Only emit if LinkedIn `weekly.carousels.limit > 0`.** When disabled, skip entirely — `linkedin-post.md` + `linkedin-article.md` are the LinkedIn surface.
+
+🚨 **Emit DATA only. Never HTML/CSS.** The visual is locked in a renderer; you produce structured JSON.
+
+**Two files:**
+- `linkedin-carousel.spec.json` — per-slide data. Full shape in `{{pipeline_workspace}}/content-writer/templates/linkedin-carousel-spec.example.json` — copy the shape, replace values with today's topic.
+- `linkedin-carousel.md` — title + 150-250-word commentary + hashtags. Voice rules identical to `linkedin-post.md`. Frontmatter: `status: pending`, `title: <100 chars`, `spec_source: <path>`.
+
+**Hard schema constraints (renderer validates and errors on violations):**
+- `spec.fields` MUST have exactly 4 entries.
+- `spec.fields[].icon` MUST be one of: `target`, `lock`, `notebook`, `alarm`, `lightning`, `shield`, `spark`, `map`. Never invent keys.
+- `*_html` fields may contain inline HTML (`<b>`, spans with classes `c1`/`c2`/`c3`/`c4`/`c5` for colored code, `<span class="blank"></span>` for fill-in blanks, entities like `&rarr;` `&mdash;`). Non-`_html` fields are plain text.
+- `body_lines` / `template_lines` are string arrays; empty string = blank line.
+- Soft caps: headlines ≤60 chars/line, definitions ≤70, takeaways ≤140, support ≤220, descriptions ≤120.
+
+**10-slide order (filled from spec):** cover → hook → code (Mac-window code block of the artifact) → 4 field slides → pattern (side-by-side cards) → CTA (forced-choice question) → bonus (template/checklist).
+
+**When to emit:** themes with a concrete framework, 4-repeatable-field artifact, or structured news peg. SKIP milestones, single-insight quips, unstructured opinion.
+
+**Skip path:** write single-line `linkedin-carousel.md` with `skipped: {reason}`, no spec file. On Tue/Fri a skip fires an Alert at the LinkedIn agent (no fallback post) — only use if reframing genuinely fails.
+
+**Post-emit sanity check:** run `node {{pipeline_workspace}}/content-writer/templates/render-carousel.mjs {spec} /tmp/check.html`. If non-zero exit, fix spec before continuing.
+
 ---
 
 ## Universal Voice Rules (ALL platforms)
@@ -172,7 +402,9 @@ Theme: [today's theme]
 - **Never hallucinate.** Only reference facts from the brief. If unsure about a person/event, make the point without the specific reference.
 - **Short paragraphs.** 2-3 sentences max everywhere. Break with `\n\n`.
 - **Self-check before saving each piece:** "Would I think AI wrote this?" If yes, rewrite messier.
-- **Rotate closing patterns.** NEVER end 2+ posts in the same content package with the same style of closing question. Vary: some posts end with a statement, some with a specific question, some with a half-thought, some with no closing at all. The "question → invite comments" pattern is overused - drop it on at least half your posts.
+- **Rotate closing patterns.** Across a package, vary closing styles (statement, specific question, half-thought, none). Don't repeat the same style on 2+ posts. LinkedIn post + carousel commentary are the exception — they always close with a forced-choice question (next rule).
+- **Save hooks (LinkedIn, 1 in 3).** One of every three `linkedin-post.md` or `linkedin-carousel.md` pieces adds a save-invitation line right before the closing question. Example: "Save this before your next sprint planning." / "Bookmark this for your next retro." Saves are a top-weighted LinkedIn algo signal.
+- **Forced-choice closings.** When a piece ends with a question, the question must name a decision, tradeoff, or split. Vary the shape across the package — don't ship 5 posts all shaped "X or Y — which one...". Rotate between: binary ("Stage or hallway?"), trinary ("Review, reject, or route?"), inverted ("Which breaks first — story points or velocity?"), imperative ("Pick one: auto-review or spot-check."), positioning ("Is your role shrinking, or concentrating?"), agreement ("Agree? Disagree?"). Ban generic openers: "thoughts?", "what are you seeing?", "does this resonate?".
 
 ## Audience Safety Check (MANDATORY - every piece, every platform)
 
@@ -186,7 +418,7 @@ Before saving each piece, run this check:
 ## Rules
 
 1. **Produce ALL formats every run.** Platform agents pick what they need from their schedule. Don't decide for them.
-2. **Max 1 article per day.** `medium-article.md`, `linkedin-article.md`, `twitter-article.md`, `substack-newsletter.md`, and `devto-article.md` are variations of the same long-form piece (adapted per platform). **Up to 3 short posts per platform.** Each short-form file (linkedin-post.md, twitter-thread.md, threads-post.md, etc.) should contain up to 3 separate posts, each with a different angle on the theme. Format each post with a status header that platform agents update after publishing:
+2. **Max 1 article per day.** `medium-article.md`, `linkedin-article.md`, `twitter-article.md`, `substack-newsletter.md`, and `devto-article.md` are variations of the same long-form piece (adapted per platform). **Up to 3 short posts per platform.** Each short-form file (linkedin-post.md, twitter-thread.md, etc.) should contain up to 3 separate posts, each with a different angle on the theme. **Exception:** `threads-post.md` emits 1 post only (see §6); `threads-thread.md` emits a structured thread on eligible days (see §6b). Format each post with a status header that platform agents update after publishing:
    ```
    ## Post 1
    status: pending
