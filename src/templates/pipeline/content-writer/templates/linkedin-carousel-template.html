@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@page { size: 1080px 1080px; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+html, body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; color: #1a1f2e; }
+body { background: white; }
+section {
+  width: 1080px; height: 1080px;
+  padding: 80px;
+  position: relative;
+  background: white;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+section + section { page-break-before: always; }
+.stretch { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.top { padding-top: 30px; }
+.foot { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-size: 19px; color: #6b7684; padding-top: 32px; border-top: 1px solid #e5e7eb; }
+.foot .swipe { justify-self: center; color: #0A66C2; font-weight: 700; font-size: 20px; letter-spacing: 0.3px; }
+.foot .pg { justify-self: end; font-weight: 700; font-size: 18px; color: #6b7684; }
+.eyebrow { display: inline-block; padding: 8px 18px; border-radius: 8px; background: #e8f1fa; color: #0A66C2; font-size: 18px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 28px; }
+h2 { font-size: 66px; font-weight: 800; line-height: 1.06; letter-spacing: -1.8px; color: #0a1a2b; }
+.cover { background: radial-gradient(circle at 25% 25%, #1e4a82 0%, #0A1A2B 70%); color: white; padding: 90px; }
+.cover-grid { display: grid; grid-template-columns: 320px 1fr; gap: 56px; align-items: center; flex: 1; }
+.file-icon { width: 300px; height: 360px; background: white; border-radius: 14px; position: relative; box-shadow: 0 40px 100px rgba(10,102,194,0.35); transform: rotate(-4deg); }
+.file-icon::before { content: ""; position: absolute; top: 0; right: 0; width: 82px; height: 82px; background: #e5e7eb; border-top-right-radius: 14px; clip-path: polygon(0 0, 100% 100%, 100% 0); }
+.file-icon::after { content: ""; position: absolute; top: 0; right: 0; width: 82px; height: 82px; background: linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.04) 50%); border-top-right-radius: 14px; }
+.fi-label { position: absolute; top: 130px; left: 0; right: 0; text-align: center; font-family: "SF Mono", Consolas, monospace; font-size: 40px; font-weight: 800; color: #0A66C2; }
+.fi-sub { position: absolute; top: 186px; left: 0; right: 0; text-align: center; font-family: "SF Mono", Consolas, monospace; font-size: 17px; color: #6b7684; letter-spacing: 0.3px; }
+.fi-dots { position: absolute; top: 230px; left: 30px; right: 30px; display: flex; flex-direction: column; gap: 12px; }
+.fi-dots span { height: 6px; background: #e5e7eb; border-radius: 3px; display: block; }
+.fi-dots span:nth-child(1) { width: 68%; } .fi-dots span:nth-child(2) { width: 84%; }
+.fi-dots span:nth-child(3) { width: 48%; } .fi-dots span:nth-child(4) { width: 72%; }
+.cover h1 { font-size: 86px; font-weight: 800; line-height: 1.02; letter-spacing: -3px; margin-bottom: 26px; color: white; }
+.cover .subline { font-size: 26px; opacity: 0.85; font-weight: 500; line-height: 1.45; }
+.cover-foot { display: flex; justify-content: flex-start; align-items: center; padding-top: 40px; }
+.cover-foot .pill { display: inline-block; background: rgba(255,255,255,0.14); padding: 12px 24px; border-radius: 999px; font-size: 19px; font-weight: 600; color: white; letter-spacing: 0.3px; }
+.hook h2 { font-size: 96px; line-height: 1.0; letter-spacing: -3px; margin-top: 12px; }
+.hook h2 .accent { color: #0A66C2; }
+.hook .support { margin-top: 46px; font-size: 26px; line-height: 1.45; color: #4a5568; max-width: 820px; }
+.hook .support b { color: #0A66C2; font-weight: 700; }
+.code-slide { background: #0a1a2b; color: white; }
+.code-slide .eyebrow { background: rgba(10,102,194,0.22); color: #7cb5ff; }
+.code-slide h2 { color: white; font-size: 48px; margin-bottom: 34px; letter-spacing: -1px; }
+.code-slide .foot { border-top: 1px solid rgba(255,255,255,0.12); }
+.code-slide .foot .pg { color: rgba(255,255,255,0.6); }
+.code-slide .foot .swipe { color: #7cb5ff; }
+.code-window { background: #0d2440; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.09); box-shadow: 0 30px 80px rgba(0,0,0,0.5); }
+.code-header { background: #15304f; padding: 14px 20px; display: flex; align-items: center; gap: 10px; }
+.code-header .dot { width: 13px; height: 13px; border-radius: 50%; }
+.code-header .d1 { background: #ff5f57; } .code-header .d2 { background: #febc2e; } .code-header .d3 { background: #28c840; }
+.code-header .filename { margin-left: 14px; color: #8da3c1; font-family: "SF Mono", Consolas, monospace; font-size: 17px; font-weight: 600; }
+.code-body { padding: 34px 40px; font-family: "SF Mono", Consolas, monospace; font-size: 20px; line-height: 1.75; color: #d1dfee; }
+.c1 { color: #7cb5ff; font-weight: 700; }
+.c2 { color: #8aa7c4; }
+.c3 { color: #6bcb77; }
+.c4 { color: #ffb86c; }
+.c5 { color: #ff79c6; }
+.field .icon-wrap { width: 92px; height: 92px; border-radius: 20px; background: #e8f1fa; display: flex; align-items: center; justify-content: center; margin-bottom: 28px; }
+.field .icon-wrap svg { width: 50px; height: 50px; stroke: #0A66C2; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.field h2 { font-size: 64px; margin-bottom: 18px; }
+.field .def { font-size: 30px; color: #4a5568; line-height: 1.35; max-width: 820px; margin-bottom: 40px; font-weight: 500; }
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 36px; }
+.compare .box { padding: 28px 30px; border-radius: 14px; background: #f6f8fa; border-left: 5px solid #9aa5b1; }
+.compare .box.pm { background: #eaf3fb; border-left-color: #0A66C2; }
+.compare .label { font-size: 13px; font-weight: 800; letter-spacing: 1.8px; text-transform: uppercase; color: #6b7684; margin-bottom: 10px; }
+.compare .pm .label { color: #0A66C2; }
+.compare .q { font-size: 22px; line-height: 1.4; color: #1a1f2e; font-weight: 500; }
+.takeaway { font-size: 23px; color: #4a5568; line-height: 1.45; max-width: 880px; }
+.takeaway b { color: #0A66C2; font-weight: 700; }
+.pattern .grid { display: grid; grid-template-columns: 1fr 80px 1fr; gap: 24px; align-items: stretch; margin: 28px 0 40px; }
+.pattern .card { padding: 34px 32px; border-radius: 16px; background: #f6f8fa; border-top: 6px solid #0A66C2; display: flex; flex-direction: column; }
+.pattern .date { font-family: "SF Mono", Consolas, monospace; font-size: 17px; color: #0A66C2; font-weight: 700; letter-spacing: 1px; margin-bottom: 14px; }
+.pattern .lab { font-size: 26px; font-weight: 800; color: #0a1a2b; margin-bottom: 4px; }
+.pattern .feat { font-size: 24px; color: #1a1f2e; margin-bottom: 14px; font-weight: 700; }
+.pattern .desc { font-size: 18px; color: #4a5568; line-height: 1.45; margin-top: auto; }
+.pattern .eq { display: flex; align-items: center; justify-content: center; font-size: 52px; color: #0A66C2; font-weight: 800; }
+.pattern .closer { font-size: 28px; line-height: 1.35; color: #1a1f2e; font-weight: 600; max-width: 900px; margin-top: 12px; }
+.pattern .closer b { color: #0A66C2; }
+.cta { background: linear-gradient(135deg, #0A66C2 0%, #003d82 100%); color: white; }
+.cta .stretch { align-items: flex-start; justify-content: center; text-align: left; }
+.cta .eyebrow { background: rgba(255,255,255,0.16); color: white; }
+.cta h2 { color: white; font-size: 72px; line-height: 1.08; max-width: 900px; letter-spacing: -2px; }
+.cta .options { font-size: 28px; opacity: 0.88; line-height: 1.5; margin-top: 36px; font-weight: 500; }
+.cta .closer { font-size: 24px; opacity: 0.75; font-style: italic; margin-top: 24px; }
+.cta .foot { border-top: 1px solid rgba(255,255,255,0.18); }
+.cta .foot .pg { color: rgba(255,255,255,0.7); }
+.bonus { background: #f6f8fa; }
+.bonus .eyebrow { background: #0A66C2; color: white; }
+.bonus h2 { font-size: 50px; margin-bottom: 10px; letter-spacing: -1.5px; }
+.bonus .intro { font-size: 22px; color: #4a5568; margin-bottom: 22px; max-width: 820px; line-height: 1.4; font-weight: 500; }
+.template { background: white; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px 34px; font-family: "SF Mono", Consolas, monospace; font-size: 19px; line-height: 1.55; color: #0a1a2b; box-shadow: 0 8px 24px rgba(0,0,0,0.04); margin-bottom: 22px; }
+.template .c1 { color: #0A66C2; font-weight: 700; }
+.template .c2 { color: #8aa7c4; }
+.template .blank { display: inline-block; border-bottom: 2px solid #9aa5b1; width: 320px; height: 4px; vertical-align: middle; margin-left: 4px; }
+.bonus .outro { font-size: 21px; color: #1a1f2e; font-weight: 500; line-height: 1.45; }
+.bonus .outro b { color: #0A66C2; font-weight: 700; }
+</style>
+</head>
+<body>
+<section class="cover">
+  <div class="cover-grid">
+    <div class="file-icon">
+      <div class="fi-label">AGENTS.md</div>
+      <div class="fi-sub"># The PM Spec</div>
+      <div class="fi-dots"><span></span><span></span><span></span><span></span></div>
+    </div>
+    <div>
+      <h1>The PM Artifact<br>Just Got<br>a Filename.</h1>
+      <div class="subline">Reading OpenAI's new spec<br>as a product brief.</div>
+    </div>
+  </div>
+  <div class="cover-foot">
+    <span class="pill">10 slides · 60 sec read</span>
+  </div>
+</section>
+<section class="hook">
+  <div class="top"><div class="eyebrow">Why Now</div></div>
+  <div class="stretch">
+    <h2>Two weeks ago,<br>a job description.<br><span class="accent">This week, a filename.</span></h2>
+    <div class="support">The CIA published the PM job description of 2035. Then OpenAI shipped <b>AGENTS.md</b> — scope, permissions, memory, escalation. Same artifact, different format.</div>
+  </div>
+  <div class="foot">
+    <span></span>
+    <span class="swipe">See what shipped &rarr;</span>
+    <span class="pg">2 / 10</span>
+  </div>
+</section>
+<section class="code-slide">
+  <div class="top"><div class="eyebrow">The File</div></div>
+  <div class="stretch">
+    <h2>What the spec actually looks like.</h2>
+    <div class="code-window">
+      <div class="code-header">
+        <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+        <span class="filename">AGENTS.md</span>
+      </div>
+      <div class="code-body"><span class="c1"># support-triage-bot</span><br><br><span class="c1">## Scope</span><br>Triage inbound support from enterprise accounts.<br>Escalate tickets flagged as billing-urgent.<br>Everything else &rarr; resolve or queue.<br><br><span class="c1">## Permissions</span><br><span class="c2">read&nbsp;&nbsp;:</span> <span class="c3">salesforce</span> <span class="c2">(tickets, tier)</span><br><span class="c2">write :</span> <span class="c3">internal_queue</span><br><span class="c2">deny&nbsp;&nbsp;:</span> <span class="c4">customer_billing</span><br><br><span class="c1">## Escalation</span><br><span class="c5">-</span> dollar_value <span class="c2">&gt;</span> <span class="c3">500</span><br><span class="c5">-</span> tier <span class="c2">==</span> <span class="c3">"enterprise"</span><br><span class="c5">-</span> mentions: legal <span class="c2">|</span> compliance <span class="c2">|</span> renewal<br></div>
+    </div>
+  </div>
+  <div class="foot">
+    <span></span>
+    <span class="swipe">Scope, field by field &rarr;</span>
+    <span class="pg">3 / 10</span>
+  </div>
+</section>
+<section class="field">
+  <div class="top"><div class="eyebrow">Field 1 · Scope</div></div>
+  <div class="stretch">
+    <div class="icon-wrap"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+    <h2>Scope</h2>
+    <div class="def">What this agent is FOR. Not what it can do.</div>
+    <div class="compare">
+      <div class="box"><div class="label">Engineering writes</div><div class="q">Routes tickets via classifier v3.2 at 94% accuracy.</div></div>
+      <div class="box pm"><div class="label">PM writes</div><div class="q">Triages enterprise support. Escalates billing-urgent only.</div></div>
+    </div>
+    <div class="takeaway">Confuse capability with scope and you ship an agent that <b>technically works and commercially fails</b>.</div>
+  </div>
+  <div class="foot">
+    <span></span>
+    <span class="swipe">Permissions next &rarr;</span>
+    <span class="pg">4 / 10</span>
+  </div>
+</section>
+<section class="field">
+  <div class="top"><div class="eyebrow">Field 2 · Permissions</div></div>
+  <div class="stretch">
+    <div class="icon-wrap"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11 V8 a4 4 0 0 1 8 0 V11"/></svg></div>
+    <h2>Permissions</h2>
+    <div class="def">Which systems. Whose credentials. Under what conditions.</div>
+    <div class="compare">
+      <div class="box"><div class="label">Engineering writes</div><div class="q">Service account with R/W on Postgres, OAuth read on Salesforce.</div></div>
+      <div class="box pm"><div class="label">PM writes</div><div class="q">Reads tickets. Writes internal queue. Never touches billing.</div></div>
+    </div>
+    <div class="takeaway">The engineer describes what is <b>possible</b>. The PM describes what is <b>permitted</b>. The second doc is what ships.</div>
+  </div>
+  <div class="foot">
+    <span></span>
+    <span class="swipe">Memory next &rarr;</span>
+    <span class="pg">5 / 10</span>
+  </div>
+</section>
+<section class="field">
+  <div class="top"><div class="eyebrow">Field 3 · Memory</div></div>
+  <div class="stretch">
+    <div class="icon-wrap"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="15" x2="13" y2="15"/></svg></div>
+    <h2>Memory</h2>
+    <div class="def">What the agent remembers. And what it must forget.</div>
+    <div class="compare">
+      <div class="box"><div class="label">Engineering writes</div><div class="q">Context window 128K. Vector store with 30-day TTL.</div></div>
+      <div class="box pm"><div class="label">PM writes</div><div class="q">Per-session only. No cross-customer context. Forget at session end.</div></div>
+    </div>
+    <div class="takeaway">One team I know shipped unscoped memory. Three weeks later a <b>Fortune-100 pricing conversation leaked into a support reply</b>. Memory scope is a product decision.</div>
+  </div>
+  <div class="foot">
+    <span></span>
+    <span class="swipe">Escalation next &rarr;</span>
+    <span class="pg">6 / 10</span>
+  </div>
+</section>
+<section class="field">
+  <div class="top"><div class="eyebrow">Field 4 · Escalation</div></div>
+  <div class="stretch">
+    <div class="icon-wrap"><svg viewBox="0 0 24 24"><path d="M12 3 C8 3 6 6 6 10 V14 L4 17 H20 L18 14 V10 C18 6 16 3 12 3 Z"/><path d="M10 20 a2 2 0 0 0 4 0"/></svg></div>
+    <h2>Escalation</h2>
+    <div class="def">An enumerated trip-wire list. Not a mood.</div>
+    <div class="compare">
+      <div class="box"><div class="label">Engineering writes</div><div class="q">Escalate when confidence &lt; 0.7 or intent is ambiguous.</div></div>
+      <div class="box pm"><div class="label">PM writes</div><div class="q">Any action &gt; $500. Every enterprise tier. Legal, compliance, renewal.</div></div>
+    </div>
+    <div class="takeaway">Confidence scores protect the <b>model</b>. An enumerated list protects the <b>business</b>.</div>
+  </div>
+  <div class="foot">
+    <span></span>
+    <span class="swipe">The pattern &rarr;</span>
+    <span class="pg">7 / 10</span>
+  </div>
+</section>
+<section class="pattern">
+  <div class="top"><div class="eyebrow">The Pattern</div></div>
+  <div class="stretch">
+    <h2>Both labs shipped the same discipline in 48 hours.</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="date">APR 15 · OPENAI</div>
+        <div class="lab">AGENTS.md</div>
+        <div class="feat">Platform-level spec</div>
+        <div class="desc">Scope, permissions, memory, escalation — configured at the root of every deployment.</div>
+      </div>
+      <div class="eq">+</div>
+      <div class="card">
+        <div class="date">APR 16 · ANTHROPIC</div>
+        <div class="lab">Task Budgets</div>
+        <div class="feat">Model-level discipline</div>
+        <div class="desc">A configurable limit on effort before the agent hands back. "Try this hard. Then check in."</div>
+      </div>
+    </div>
+    <div class="closer">Two labs. 48 hours. Same pattern: <b>configurable discipline for agents</b>. It's no longer one lab's opinion &mdash; it's the default.</div>
+  </div>
+  <div class="foot">
+    <span></span>
+    <span class="swipe">Your turn &rarr;</span>
+    <span class="pg">8 / 10</span>
+  </div>
+</section>
+<section class="cta">
+  <div class="top"><div class="eyebrow">Your Team</div></div>
+  <div class="stretch">
+    <h2>What's in the first line of YOUR team's AGENTS.md?</h2>
+    <div class="options">A scope sentence.<br>A blank placeholder.<br>Nothing yet.</div>
+    <div class="closer">Curious where teams are landing — reply with the first line you'd ship.</div>
+  </div>
+  <div class="foot">
+    <span></span>
+    <span class="swipe">One more thing &rarr;</span>
+    <span class="pg">9 / 10</span>
+  </div>
+</section>
+<section class="bonus">
+  <div class="top"><div class="eyebrow">P.S. &middot; Starter Template</div></div>
+  <div class="stretch">
+    <h2>Screenshot. Fill in. Ship by Friday.</h2>
+    <div class="intro">The 4-field starter. Paste it at the root of your next agent deployment and fill the blanks before any tool-call code gets written.</div>
+    <div class="template"><span class="c1"># AGENTS.md</span><br><span class="c2"># &lt;agent-name&gt;</span><br><br><span class="c1">## Scope</span><br><span class="blank"></span><br><br><span class="c1">## Permissions</span><br><span class="c2">read&nbsp;&nbsp;:</span> <span class="blank"></span><br><span class="c2">write :</span> <span class="blank"></span><br><span class="c2">deny&nbsp;&nbsp;:</span> <span class="blank"></span><br><br><span class="c1">## Memory</span><br><span class="blank"></span><br><br><span class="c1">## Escalation</span><br>- <span class="blank" style="width:340px"></span><br>- <span class="blank" style="width:340px"></span><br></div>
+    <div class="outro">If this was useful &mdash; <b>follow for more PM &times; AI frameworks</b>. More AGENTS.md-style specs every week.</div>
+  </div>
+  <div class="foot">
+    <span></span>
+    <span></span>
+    <span class="pg">10 / 10</span>
+  </div>
+</section>
+</body>
+</html>

@@ -40,23 +40,17 @@ End-of-day and on-demand tasks. **Do NOT load on routine heartbeats.** Only read
    - Distribute comments to peak windows (15:00 and 10:00 first)
    - Midday window can be likes-only when comment budget is tight
    Adjust to match exactly.
-5. 🚨 **Articles: MANDATORY per `weekly.articles.limit` from limits.json.** Tuesday + Friday. Always include `publish_article` task at 10:00 on those days — do NOT skip. If `weekly.articles.current >= weekly.articles.limit` → skip the task but keep other tasks.
+5. 🚨 **Tue + Fri primary content (MANDATORY — do NOT skip):**
+   - If `weekly.carousels.limit > 0`: `publish_carousel` at 15:30 both days.
+   - Else: `publish_article` at 10:00 both days.
+   - If current >= limit → skip that task, keep others.
+   - NO `publish_post` on Tue/Fri (primary-only).
+   - NO fallback-to-post if carousel spec missing or `skipped:` marker present — agent fires an Alert (see BROWSER-carousel.md preflight).
 
-🚨 **Article days = article-only.** On Tuesday and Friday, do NOT include a `publish_post` task. One article is the day's primary content — publishing both an article and a post on the same day floods the feed, duplicates the theme, and reads as automation. Post cadence is Mon/Wed/Thu/Sat/Sun only (up to 5 posts/week). If `content-ready/{today_date}/linkedin-post.md` exists on a Tue/Fri, ignore it — the post will be used on the next non-article day via amplification if still relevant.
-   - 🚨 MUST include `content_source` in `publish_post` config:
-     ```json
-     "config": {
-       "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/linkedin-post.md",
-       ...
-     }
-     ```
-   - 🚨 MUST include `content_source` in `publish_article` config:
-     ```json
-     "config": {
-       "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/linkedin-article.md",
-       ...
-     }
-     ```
+   Config sources (MANDATORY):
+   - `publish_post`: `content_source: "{{pipeline_workspace}}/content-ready/{today_date}/linkedin-post.md"`
+   - `publish_article`: `content_source: "{{pipeline_workspace}}/content-ready/{today_date}/linkedin-article.md"`
+   - `publish_carousel`: `content_source` (linkedin-carousel.md), `spec_source` (linkedin-carousel.spec.json), `pdf_path: "/tmp/opentwins-uploads/{today_date}-linkedin-carousel.pdf"`, `peak_hour: true`
 6. Apply adjustments (only if pattern seen 2+ times)
 7. Apply jitter (±30min), anti-collision (10min spacing), active hours (08:00-23:00)
 8. 🚨 **Priority target URL sourcing (MANDATORY).** When building a `priority_targets[]` entry for any task, the `url` field MUST come from exactly one of these sources — in priority order — and NEVER be constructed from the name:

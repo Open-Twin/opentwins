@@ -79,6 +79,10 @@ Write these files (follow per-platform voice rules in AGENT.md):
 8. **ih-post.md** — Builder-to-builder, messy, real numbers. Each post stands alone.
 9. **ph-comment-angles.md** — NOT posts. Angles and hooks for reacting to launches. No status headers needed for this file.
 
+## Step 4b: LinkedIn carousel (if enabled)
+
+Per AGENT.md section 14: if LinkedIn `weekly.carousels.limit > 0` and today's theme is carousel-eligible, emit `linkedin-carousel.spec.json` + `linkedin-carousel.md` into `content-ready/{today_date}/`. Universal voice rules apply to every string in the spec. If not eligible, emit only `linkedin-carousel.md` with a single line `skipped: {reason}`.
+
 ## Step 5: Handle Amplification (if in brief)
 
 If the brief includes an **Amplification** section:

@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
+import { existsSync } from 'node:fs';
 import { launchChrome, stopChrome, isPortInUse, getProfilePort } from '../../browser/chrome.js';
-import { openTab, navigateTo, closeTab, evaluate, clickElement, snapshot, getTabInfo } from '../../browser/cdp.js';
+import { openTab, navigateTo, closeTab, evaluate, clickElement, snapshot, getTabInfo, uploadFile } from '../../browser/cdp.js';
 import { fileLog, fileError } from '../../util/logger.js';
 
 // ── Browser control API ──────────────────────────────────────
@@ -147,5 +148,22 @@ export async function handleBrowserTabs(req: Request, res: Response): Promise<vo
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to list tabs' });
+  }
+}
+
+export async function handleBrowserUpload(req: Request, res: Response): Promise<void> {
+  const profile = req.params.profile as string;
+  const filePath = req.body?.filePath;
+  const timeoutMs = typeof req.body?.timeoutMs === 'number' ? req.body.timeoutMs : 60000;
+  if (!filePath) { res.status(400).json({ error: 'filePath is required' }); return; }
+  if (!existsSync(filePath)) { res.status(400).json({ error: `File not found: ${filePath}` }); return; }
+  try {
+    await ensureChrome(profile);
+    const result = JSON.parse(await uploadFile(profile, filePath, timeoutMs));
+    fileLog('browser', 'upload', { profile, filePath });
+    res.json(result);
+  } catch (err) {
+    fileError('browser', 'upload failed', { profile, filePath, error: err instanceof Error ? err.message : String(err) });
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to upload' });
   }
 }

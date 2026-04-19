@@ -222,6 +222,86 @@ describe('cdp closeTab', () => {
   });
 });
 
+describe('cdp uploadFile', () => {
+  // Wait for the next outbound message (index `n`), acking as needed.
+  async function waitForSend(n: number, timeoutMs = 500): Promise<{ id: number; method: string; params: unknown }> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      if (lastWs && lastWs.sent.length > n) return lastWs.sent[n];
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    throw new Error(`timed out waiting for send[${n}] (have ${lastWs?.sent.length ?? 0})`);
+  }
+  function ack(n: number): void {
+    lastWs!.emit('message', Buffer.from(JSON.stringify({ id: lastWs!.sent[n].id, result: {} })));
+  }
+
+  it('enables Page, arms file-chooser interception, delivers file on event, then disables', async () => {
+    (fetchMock as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(okResponse([
+      { id: 'a', type: 'page', title: 'Home', url: 'https://a', webSocketDebuggerUrl: 'ws://x' },
+    ]));
+    const { uploadFile } = await import('../browser/cdp.js');
+    const promise = uploadFile('ot-linkedin', '/tmp/doc.pdf', 5000);
+
+    // Arm: Page.enable, ack, then Page.setInterceptFileChooserDialog{enabled:true}
+    const enable = await waitForSend(0);
+    expect(enable.method).toBe('Page.enable');
+    ack(0);
+    const intercept = await waitForSend(1);
+    expect(intercept.method).toBe('Page.setInterceptFileChooserDialog');
+    expect(intercept.params).toMatchObject({ enabled: true });
+    ack(1);
+
+    // Chooser opens — driver sends setFileInputFiles + disable interception
+    lastWs!.emit('message', Buffer.from(JSON.stringify({
+      method: 'Page.fileChooserOpened',
+      params: { backendNodeId: 42, mode: 'selectSingle' },
+    })));
+    const setFiles = await waitForSend(2);
+    expect(setFiles.method).toBe('DOM.setFileInputFiles');
+    expect(setFiles.params).toMatchObject({ files: ['/tmp/doc.pdf'], backendNodeId: 42 });
+    ack(2);
+    const disable = await waitForSend(3);
+    expect(disable.method).toBe('Page.setInterceptFileChooserDialog');
+    expect(disable.params).toMatchObject({ enabled: false });
+    ack(3);
+
+    const result = JSON.parse(await promise);
+    expect(result).toEqual({ ok: true, filePath: '/tmp/doc.pdf', backendNodeId: 42 });
+    expect(lastWs!.closed).toBe(true);
+  });
+
+  it('rejects when no fileChooserOpened event arrives before timeout', async () => {
+    (fetchMock as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(okResponse([
+      { id: 'a', type: 'page', title: 'Home', url: 'https://a', webSocketDebuggerUrl: 'ws://x' },
+    ]));
+    const { uploadFile } = await import('../browser/cdp.js');
+    const promise = uploadFile('ot-linkedin', '/tmp/doc.pdf', 50);
+    // Don't ack anything — let the timeout fire.
+    await expect(promise).rejects.toThrow(/Upload timeout after 50ms/);
+    expect(lastWs!.closed).toBe(true);
+  });
+
+  it('rejects when fileChooserOpened event is missing backendNodeId', async () => {
+    (fetchMock as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(okResponse([
+      { id: 'a', type: 'page', title: 'Home', url: 'https://a', webSocketDebuggerUrl: 'ws://x' },
+    ]));
+    const { uploadFile } = await import('../browser/cdp.js');
+    const promise = uploadFile('ot-linkedin', '/tmp/doc.pdf', 5000);
+
+    await waitForSend(0);
+    ack(0);
+    await waitForSend(1);
+    ack(1);
+
+    lastWs!.emit('message', Buffer.from(JSON.stringify({
+      method: 'Page.fileChooserOpened',
+      params: {},
+    })));
+    await expect(promise).rejects.toThrow(/missing backendNodeId/);
+  });
+});
+
 describe('cdp clickElement', () => {
   it('evaluates a querySelector+click expression via Runtime.evaluate', async () => {
     (fetchMock as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(okResponse([

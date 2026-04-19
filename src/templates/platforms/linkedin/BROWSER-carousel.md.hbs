@@ -1,0 +1,246 @@
+# BROWSER-carousel.md — LinkedIn Document / Carousel Publishing
+
+**Read ON-DEMAND only** when a `publish_carousel` task is due. Apply BROWSER-core.md globally (shadow DOM, evaluate-over-snapshot, tab reuse).
+
+**Inputs** (Content Writer emits into `{{pipeline_workspace}}/content-ready/{today_date}/`):
+- `linkedin-carousel.spec.json` — per-slide DATA (schema in content-writer AGENT.md §14)
+- `linkedin-carousel.md` — frontmatter (`status: pending`, `title:`, `spec_source:`) + 150-250 word commentary + hashtags. If writer skipped, this file is just `skipped: {reason}` and spec.json won't exist.
+
+**Outputs:** HTML + PDF at `/tmp/opentwins-uploads/{today_date}-linkedin-carousel.{html,pdf}`, published post, memory log, `weekly.carousels.current += 1`.
+
+**Renderer:** `{{pipeline_workspace}}/content-writer/templates/render-carousel.mjs` (Node, zero deps).
+
+---
+
+## Preflight checks
+
+```bash
+DATE=$(date +%Y-%m-%d)
+DOW=$(date +%u)   # 1=Mon … 2=Tue … 5=Fri … 7=Sun
+SPEC={{pipeline_workspace}}/content-ready/${DATE}/linkedin-carousel.spec.json
+DOC={{pipeline_workspace}}/content-ready/${DATE}/linkedin-carousel.md
+HTML=/tmp/opentwins-uploads/${DATE}-linkedin-carousel.html
+PDF=/tmp/opentwins-uploads/${DATE}-linkedin-carousel.pdf
+RENDERER={{pipeline_workspace}}/content-writer/templates/render-carousel.mjs
+
+# Tue (2) + Fri (5) = MANDATORY carousel days per PLAYBOOK. Anything missing on these days is an Alert, not a routine skip.
+is_mandatory_day() { [ "$DOW" = "2" ] || [ "$DOW" = "5" ]; }
+
+mkdir -p /tmp/opentwins-uploads
+
+fail_mandatory() { echo "ALERT: mandatory carousel day ${DATE} — $1. NO fallback. Investigate upstream."; exit 0; }
+fail_optional()  { echo "CarouselSkipped: $1"; exit 0; }
+
+test -f "$DOC" || { is_mandatory_day && fail_mandatory "no linkedin-carousel.md"; fail_optional "no .md"; }
+grep -q "^skipped:" "$DOC" && { is_mandatory_day && fail_mandatory "writer marked skipped"; fail_optional "writer_skipped"; }
+test -f "$SPEC" || { is_mandatory_day && fail_mandatory "no spec.json"; fail_optional "no spec"; }
+grep -q "^status: pending" "$DOC" || { echo "already published"; exit 0; }
+test -f "$RENDERER" || { echo "Type=Error Reason=renderer_not_found"; exit 1; }
+```
+
+Tue/Fri = mandatory: any missing/skipped fires Alert (day has no primary publish). Other days: routine skip. Renderer missing = hard error.
+
+---
+
+## SS-C1. Render spec → HTML → PDF (two steps, one block)
+
+Chrome is already installed at `/Applications/Google Chrome.app`. Node is at `/opt/homebrew/bin/node`. No npm install, no new dependency.
+
+```bash
+# Step 1: spec.json → HTML via renderer (validates spec shape and applies locked visual template)
+node "$RENDERER" "$SPEC" "$HTML" 2>&1
+RENDER_RC=$?
+if [ $RENDER_RC -ne 0 ]; then
+  echo "renderer failed rc=$RENDER_RC — log Type=Error Reason=spec_render_failed"; exit 1
+fi
+test -f "$HTML" || { echo "renderer produced no HTML — log Type=Error Reason=no_html_output"; exit 1; }
+
+# Step 2: HTML → PDF via headless Chrome
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --headless \
+  --disable-gpu \
+  --no-pdf-header-footer \
+  --no-margins \
+  --virtual-time-budget=3000 \
+  --print-to-pdf="$PDF" \
+  "file://$HTML" 2>&1
+```
+
+🚨 **Verify PDF output:**
+```bash
+test -f "$PDF" || { echo "PDF render failed — log Type=Error Reason=pdf_render_failed"; exit 1; }
+SIZE=$(stat -f%z "$PDF")
+test "$SIZE" -gt 20000 || { echo "PDF suspiciously small ($SIZE bytes) — log Type=Error Reason=pdf_too_small"; exit 1; }
+# Heuristic page count — renderer produces exactly 10 slides; anything else is a red flag
+PAGES=$(python3 -c "import re; print(len(re.findall(rb'/Type\s*/Page[^s]', open('$PDF','rb').read())))")
+echo "PDF OK: $SIZE bytes, $PAGES pages"
+```
+
+Capture `$SIZE` and `$PAGES` for SS-C7 logging. If PAGES > 10, log `Type=Warning` and continue (still posts).
+
+---
+
+## SS-C2. Open post composer + navigate to document upload
+
+```bash
+# Expects: {{browser_profile}} profile already logged in, at https://www.linkedin.com/feed/
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 3500)); var startBtn = Array.from(document.querySelectorAll('div, button')).find(function(el) { return (el.innerText || '').trim() === 'Start a post' && (el.getAttribute('role') === 'button' || el.tagName === 'BUTTON'); }); if (!startBtn) return { success: false, reason: 'no_start_post_btn' }; startBtn.click(); await new Promise(r => setTimeout(r, 4000)); var host = document.querySelector('#interop-outlet'); if (!host || !host.shadowRoot) return { success: false, reason: 'no_shadow_root' }; var shadow = host.shadowRoot; var editor = shadow.querySelector('[contenteditable=\"true\"][role=\"textbox\"]'); if (!editor) return { success: false, reason: 'modal_did_not_open' }; var more = Array.from(shadow.querySelectorAll('button')).find(function(b) { return b.getAttribute('aria-label') === 'More'; }); if (!more) return { success: false, reason: 'no_more_btn' }; more.click(); await new Promise(r => setTimeout(r, 1500)); var docBtn = Array.from(shadow.querySelectorAll('button')).find(function(b) { return b.getAttribute('aria-label') === 'Add a document'; }); if (!docBtn) return { success: false, reason: 'no_add_document_option' }; docBtn.click(); await new Promise(r => setTimeout(r, 2000)); var label = Array.from(shadow.querySelectorAll('label')).find(function(l) { return (l.innerText || '').trim() === 'Choose file'; }); return { success: true, chooseFileReady: !!label, forAttr: label ? label.getAttribute('for') : null }; }"}
+ENDJSON
+```
+
+Dialog has a `<label>Choose file</label>` (not a button) bound to a hidden `<input type=file accept=".doc,.docx,.pdf,.ppt,.pptx">`. On `modal_did_not_open`: retry once after 3s, then skip. Other failures: log `Type=Error Reason={reason}`, skip.
+
+---
+
+## SS-C3. Arm upload, click Choose file label
+
+🚨 **Arm BEFORE click.** The upload endpoint intercepts the next `Page.fileChooserOpened`. Clicking first pops the OS dialog and blocks.
+
+```bash
+# Arm (blocks until chooser opens + file delivered, or timeout)
+curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/upload -H 'Content-Type: application/json' -d "{\"filePath\":\"${PDF}\",\"timeoutMs\":60000}" > /tmp/upload-result.json &
+UPLOAD_PID=$!
+sleep 1
+
+# Click the label (fires chooser that the arm intercepts)
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var shadow = document.querySelector('#interop-outlet').shadowRoot; var label = Array.from(shadow.querySelectorAll('label')).find(function(l) { return (l.innerText||'').trim() === 'Choose file'; }); if (!label) return { success: false, reason: 'no_choose_file_label' }; label.click(); return { success: true }; }"}
+ENDJSON
+
+wait $UPLOAD_PID
+grep -q '"ok":true' /tmp/upload-result.json || { echo "upload failed:"; cat /tmp/upload-result.json; exit 1; }
+```
+
+LinkedIn processes the PDF server-side (~3-6s).
+
+---
+
+## SS-C4. Wait for upload + fill document title + click Done
+
+Pass the carousel title via `data.title` (read from the `title:` line of `linkedin-carousel.md` during preflight):
+
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var host = document.querySelector('#interop-outlet'); var shadow = host.shadowRoot; var done = null; var titleInput = null; for (var i = 0; i < 15; i++) { await new Promise(r => setTimeout(r, 1000)); done = Array.from(shadow.querySelectorAll('button')).find(function(b) { return (b.innerText || '').trim() === 'Done'; }); titleInput = Array.from(shadow.querySelectorAll('input[type=\"text\"]')).find(function(inp) { if (inp.offsetParent === null) return false; var ph = (inp.placeholder || '').toLowerCase(); return ph.includes('descriptive title') || ph.includes('document title'); }); if (done && !done.disabled && titleInput) break; } if (!done || done.disabled) return { success: false, reason: 'done_never_enabled', waited_s: i }; if (!titleInput) return { success: false, reason: 'no_title_input', waited_s: i }; var title = window.__data.title; var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(titleInput, title); titleInput.dispatchEvent(new Event('input', { bubbles: true })); titleInput.dispatchEvent(new Event('change', { bubbles: true })); await new Promise(r => setTimeout(r, 800)); done = Array.from(shadow.querySelectorAll('button')).find(function(b) { return (b.innerText || '').trim() === 'Done' && !b.disabled; }); if (!done) return { success: false, reason: 'done_disabled_after_title' }; done.click(); await new Promise(r => setTimeout(r, 2500)); var editor = shadow.querySelector('[contenteditable=\"true\"][role=\"textbox\"]'); return { success: !!editor, editorBack: !!editor, titleSet: title.slice(0, 80) }; }", "data": {"title": "CAROUSEL_TITLE_HERE"}}
+ENDJSON
+```
+
+Title is REQUIRED (Done disabled until length > 0). Cap ~100 chars.
+
+---
+
+## SS-C5. Type commentary in main editor
+
+Pass the commentary body via `data.text` (from `linkedin-carousel.md` body). Agent JSON-escapes quotes/newlines/backslashes when substituting.
+
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var host = document.querySelector('#interop-outlet'); var shadow = host.shadowRoot; var editor = shadow.querySelector('[contenteditable=\"true\"][role=\"textbox\"]') || shadow.querySelector('.ql-editor[role=\"textbox\"]'); if (!editor) return { success: false, reason: 'no_editor' }; editor.focus(); var text = window.__data.text; var lines = text.split(String.fromCharCode(10)); editor.innerHTML = lines.map(function(l) { return '<p>' + (l.trim() === '' ? '<br>' : l) + '</p>'; }).join(''); editor.dispatchEvent(new Event('input', { bubbles: true })); await new Promise(r => setTimeout(r, 1000)); var postBtn = Array.from(shadow.querySelectorAll('button')).find(function(b) { return (b.innerText || '').trim() === 'Post' && !b.disabled; }); return { success: !!postBtn, typed: true, chars: editor.innerText.length, postReady: !!postBtn }; }", "data": {"text": "COMMENTARY_BODY_HERE"}}
+ENDJSON
+```
+
+Target 150-250 words (LinkedIn caps at 3,000 chars).
+
+---
+
+## SS-C6. Click Post + verify
+
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var host = document.querySelector('#interop-outlet'); var shadow = host.shadowRoot; var postBtn = Array.from(shadow.querySelectorAll('button')).find(function(b) { return (b.innerText || '').trim() === 'Post' && !b.disabled; }); if (!postBtn) return { success: false, reason: 'post_btn_not_ready' }; postBtn.click(); for (var i = 0; i < 10; i++) { await new Promise(r => setTimeout(r, 1000)); var editorGone = !shadow.querySelector('[contenteditable=\"true\"][role=\"textbox\"]'); if (editorGone) break; } await new Promise(r => setTimeout(r, 2500)); var links = Array.from(document.querySelectorAll('a')); var postLink = links.find(function(a) { return (a.href || '').includes('/feed/update/urn:li:ugcPost:') || (a.href || '').includes('/feed/update/urn:li:activity:'); }); return { success: true, editorGone: true, postUrl: postLink ? postLink.href : null }; }"}
+ENDJSON
+```
+
+On `post_btn_not_ready`: retry once after 3s. Still not ready → dismiss modal (`aria-label="Dismiss"` → "Discard"), log error, do NOT mark done.
+
+If `editorGone: true` but no `postUrl`: LinkedIn feed delay. Navigate `/in/{{handle_slug}}/recent-activity/all/` and verify the document activity before logging success.
+
+---
+
+## SS-C7. Log + limits update
+
+🚨 Agent substitutes every `<<TOKEN>>` at compose time (shell sees only final strings). Tokens: `<<DATE>>` (`date +%Y-%m-%d`), `<<TIME>>` (`date +%H:%M`), `<<TITLE>>` (from .md), `<<POST_URL>>` (SS-C6), `<<PDF_PATH>>`/`<<PDF_SIZE>>`/`<<PDF_PAGES>>` (SS-C1), `<<DOC_PATH>>` ($DOC), `<<COMMENT_CHARS>>` (SS-C5).
+
+### Block 1 — memory log
+
+```bash
+cat >> {{opentwins_home}}agent-linkedin/memory/<<DATE>>.md <<'EOF'
+## <<DATE>> <<TIME>> - Carousel Published
+- Title: <<TITLE>>
+- URL: <<POST_URL>>
+- PDF: <<PDF_PATH>> (<<PDF_SIZE>> bytes, <<PDF_PAGES>> pages)
+- Source doc: <<DOC_PATH>>
+- Commentary chars: <<COMMENT_CHARS>>
+EOF
+```
+
+### Block 2 — increment `weekly.carousels.current`
+
+🚨 `.slice(-4)` (robust across Node versions' `process.argv` layouts).
+
+```bash
+node -e '
+  const fs = require("fs");
+  const [title, url, date, time] = process.argv.slice(-4);
+  const path = "{{opentwins_home}}agent-linkedin/limits.json";
+  const j = JSON.parse(fs.readFileSync(path, "utf8"));
+  j.weekly = j.weekly || {};
+  if (!j.weekly.carousels) {
+    j.weekly.carousels = { limit: 2, current: 0, last_reset: date, week_start: "monday", history: [] };
+  }
+  j.weekly.carousels.current = (j.weekly.carousels.current || 0) + 1;
+  j.weekly.carousels.history = j.weekly.carousels.history || [];
+  j.weekly.carousels.history.unshift({ date, time, title, url });
+  fs.writeFileSync(path, JSON.stringify(j, null, 2));
+  console.log("carousels.current =", j.weekly.carousels.current);
+' '<<TITLE>>' '<<POST_URL>>' '<<DATE>>' '<<TIME>>'
+```
+
+🚨 Arg order fixed: TITLE, POST_URL, DATE, TIME.
+
+### Block 3 — mark `linkedin-carousel.md` as published
+
+```bash
+node -e '
+  const fs = require("fs");
+  const path = process.argv.slice(-1)[0];
+  const body = fs.readFileSync(path, "utf8");
+  const next = body.replace(/^status: pending$/m, "status: published");
+  if (next === body) { console.error("no status: pending line found in " + path); process.exit(1); }
+  fs.writeFileSync(path, next);
+  console.log("marked published");
+' '<<DOC_PATH>>'
+```
+
+### Verify all three landed
+
+```bash
+# Memory log appended (grep for today's Title line)
+grep -c "Carousel Published" {{opentwins_home}}agent-linkedin/memory/<<DATE>>.md
+
+# limits.json increment
+node -e '
+  const j = JSON.parse(require("fs").readFileSync("{{opentwins_home}}agent-linkedin/limits.json","utf8"));
+  console.log("carousels:", j.weekly.carousels.current, "/", j.weekly.carousels.limit);
+'
+
+# Status flipped in doc
+grep "^status:" '<<DOC_PATH>>'
+```
+
+If any verify fails: re-run the failed block (log + status flip are idempotent; JSON increment is NOT — only rerun if `current` didn't advance).
+
+---
+
+## Error recovery
+
+| Symptom | Action |
+|---|---|
+| `no_start_post_btn` / `modal_did_not_open` | retry once after 3s, then skip |
+| `no_add_document_option` | LinkedIn removed for this account — skip, alert human |
+| upload failed | widen `timeoutMs` to 90000, retry once |
+| `done_never_enabled` | PDF rejected (check size + accept filter `.doc,.docx,.pdf,.ppt,.pptx`), re-render, retry once |
+| `done_disabled_after_title` | trim title to 90 chars, strip non-printable, retry |
+| `post_btn_not_ready` | wait 3s, retry once; else dismiss modal + log error |
+| `editorGone: true` but no `postUrl` | navigate `/in/{{handle_slug}}/recent-activity/all/` and verify |

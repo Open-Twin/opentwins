@@ -159,6 +159,31 @@ Theme: [today's theme]
 
 **Voice:** Builder-to-builder. Messy, real numbers, honest failures. "I" not "we." Half-thoughts OK. Self-review gate: "Would I think AI wrote this?" If yes, rewrite messier.
 
+### 14. `linkedin-carousel.spec.json` + `linkedin-carousel.md` — LinkedIn document post (PDF carousel)
+
+🚨 **Only emit if LinkedIn `weekly.carousels.limit > 0`.** When disabled, skip entirely — `linkedin-post.md` + `linkedin-article.md` are the LinkedIn surface.
+
+🚨 **Emit DATA only. Never HTML/CSS.** The visual is locked in a renderer; you produce structured JSON.
+
+**Two files:**
+- `linkedin-carousel.spec.json` — per-slide data. Full shape in `{{pipeline_workspace}}/content-writer/templates/linkedin-carousel-spec.example.json` — copy the shape, replace values with today's topic.
+- `linkedin-carousel.md` — title + 150-250-word commentary + hashtags. Voice rules identical to `linkedin-post.md`. Frontmatter: `status: pending`, `title: <100 chars`, `spec_source: <path>`.
+
+**Hard schema constraints (renderer validates and errors on violations):**
+- `spec.fields` MUST have exactly 4 entries.
+- `spec.fields[].icon` MUST be one of: `target`, `lock`, `notebook`, `alarm`, `lightning`, `shield`, `spark`, `map`. Never invent keys.
+- `*_html` fields may contain inline HTML (`<b>`, spans with classes `c1`/`c2`/`c3`/`c4`/`c5` for colored code, `<span class="blank"></span>` for fill-in blanks, entities like `&rarr;` `&mdash;`). Non-`_html` fields are plain text.
+- `body_lines` / `template_lines` are string arrays; empty string = blank line.
+- Soft caps: headlines ≤60 chars/line, definitions ≤70, takeaways ≤140, support ≤220, descriptions ≤120.
+
+**10-slide order (filled from spec):** cover → hook → code (Mac-window code block of the artifact) → 4 field slides → pattern (side-by-side cards) → CTA (forced-choice question) → bonus (template/checklist).
+
+**When to emit:** themes with a concrete framework, 4-repeatable-field artifact, or structured news peg. SKIP milestones, single-insight quips, unstructured opinion.
+
+**Skip path:** write single-line `linkedin-carousel.md` with `skipped: {reason}`, no spec file. On Tue/Fri a skip fires an Alert at the LinkedIn agent (no fallback post) — only use if reframing genuinely fails.
+
+**Post-emit sanity check:** run `node {{pipeline_workspace}}/content-writer/templates/render-carousel.mjs {spec} /tmp/check.html`. If non-zero exit, fix spec before continuing.
+
 ---
 
 ## Universal Voice Rules (ALL platforms)

@@ -395,7 +395,12 @@ export async function generateAgentFiles(config: OpenTwinsConfig): Promise<{ gen
             const srcPath = join(entryPath, file);
             const isTemplate = file.endsWith('.hbs');
 
-            if (isTemplate) {
+            if (statSync(srcPath).isDirectory()) {
+              // Nested asset dir (e.g. content-writer/templates/) — copy recursively.
+              // .hbs files inside still get rendered; other files copied verbatim.
+              copyDirRecursive(srcPath, join(agentOutputDir, file), pipelineContext);
+              generated.push(join(agentOutputDir, file));
+            } else if (isTemplate) {
               const outputName = file.replace(/\.hbs$/, '');
               const outputPath = join(agentOutputDir, outputName);
               const content = renderTemplate(srcPath, pipelineContext);

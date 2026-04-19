@@ -213,3 +213,90 @@ export async function getTabInfo(profileName: string): Promise<string> {
   const pages = tabs.filter((t) => t.type === 'page');
   return JSON.stringify(pages.map((t) => ({ id: t.id, title: t.title, url: t.url })));
 }
+
+// Arm file-chooser interception, wait for the chooser to open, deliver the file.
+// Caller triggers the chooser (e.g. by clicking a <label for="fileInput">) after this
+// function starts listening. Resolves when the file is delivered or the timeout fires.
+export async function uploadFile(profileName: string, filePath: string, timeoutMs = 60000): Promise<string> {
+  const port = getProfilePort(profileName);
+  const tab = await getActivePage(port);
+  if (!tab.webSocketDebuggerUrl) throw new Error('No WebSocket URL for active tab');
+
+  const { WebSocket } = await import('ws');
+  const ws = new WebSocket(tab.webSocketDebuggerUrl);
+
+  // Outbound request/response tracking — share the module-level msgId counter
+  // so ids never collide with a concurrent cdpSend() on a different socket.
+  const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
+
+  function send(method: string, params: Record<string, unknown> = {}): Promise<unknown> {
+    const id = msgId++;
+    return new Promise((resolve, reject) => {
+      pending.set(id, { resolve, reject });
+      ws.send(JSON.stringify({ id, method, params }));
+    });
+  }
+
+  return new Promise<string>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error(`Upload timeout after ${timeoutMs}ms: no file chooser opened`));
+    }, timeoutMs);
+
+    let resolved = false;
+    function cleanup(): void {
+      clearTimeout(timer);
+      try { ws.close(); } catch { /* ignore */ }
+    }
+
+    ws.on('open', async () => {
+      try {
+        await send('Page.enable');
+        await send('Page.setInterceptFileChooserDialog', { enabled: true });
+      } catch (err) {
+        cleanup();
+        reject(err instanceof Error ? err : new Error(String(err)));
+      }
+    });
+
+    ws.on('message', async (data: Buffer) => {
+      let msg: CdpMessage & { method?: string; params?: { backendNodeId?: number; mode?: string } };
+      try { msg = JSON.parse(data.toString()); } catch { return; }
+
+      // Response to an outbound request
+      if (typeof msg.id === 'number' && pending.has(msg.id)) {
+        const handler = pending.get(msg.id)!;
+        pending.delete(msg.id);
+        if (msg.error) handler.reject(new Error(`CDP error: ${msg.error.message}`));
+        else handler.resolve(msg.result);
+        return;
+      }
+
+      // Async event
+      if (msg.method === 'Page.fileChooserOpened' && !resolved) {
+        resolved = true;
+        const backendNodeId = msg.params?.backendNodeId;
+        if (backendNodeId === undefined) {
+          cleanup();
+          reject(new Error('fileChooserOpened event missing backendNodeId'));
+          return;
+        }
+        try {
+          await send('DOM.setFileInputFiles', { files: [filePath], backendNodeId });
+          await send('Page.setInterceptFileChooserDialog', { enabled: false });
+          cleanup();
+          resolve(JSON.stringify({ ok: true, filePath, backendNodeId }));
+        } catch (err) {
+          cleanup();
+          reject(err instanceof Error ? err : new Error(String(err)));
+        }
+      }
+    });
+
+    ws.on('error', (err: Error) => {
+      if (resolved) return;
+      cleanup();
+      reject(err);
+    });
+  });
+}

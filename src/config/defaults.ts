@@ -35,6 +35,7 @@ export const DEFAULT_LIMITS: Record<PlatformType, PlatformLimits> = {
     weekly: {
       posts: { limit: 3 },
       articles: { limit: 1 },
+      carousels: { limit: 0 },
       connection_requests: { limit: 25 },
       reposts: { limit: 1 },
       polls: { limit: 1 },

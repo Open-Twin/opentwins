@@ -12,7 +12,7 @@ import { handleUpdateConfig } from './api/config.js';
 import { handleListAgents, handleGetAgent, handleRunAgent, handleStopAgent, handleUpdateLimits, handleUpdateAgent, handleGetAgentFeed, handleBrowserSetup, handleBrowserConfirm } from './api/agents.js';
 import { handleSetup, handleSetupStatus, handleValidateAuth } from './api/setup.js';
 import { handleHealth } from './api/health.js';
-import { handleBrowserStart, handleBrowserStop, handleBrowserOpen, handleBrowserNavigate, handleBrowserClose, handleBrowserEvaluate, handleBrowserClick, handleBrowserSnapshot, handleBrowserTabs } from './api/browser.js';
+import { handleBrowserStart, handleBrowserStop, handleBrowserOpen, handleBrowserNavigate, handleBrowserClose, handleBrowserEvaluate, handleBrowserClick, handleBrowserSnapshot, handleBrowserTabs, handleBrowserUpload } from './api/browser.js';
 import { handleUsage } from './api/usage.js';
 import { getSessions } from '../util/session-parser.js';
 import * as log from '../util/logger.js';
@@ -260,6 +260,7 @@ export async function startDashboard(port: number): Promise<void> {
   app.post('/api/browser/:profile/click', (req, res) => { handleBrowserClick(req, res); });
   app.post('/api/browser/:profile/snapshot', (req, res) => { handleBrowserSnapshot(req, res); });
   app.get('/api/browser/:profile/tabs', (req, res) => { handleBrowserTabs(req, res); });
+  app.post('/api/browser/:profile/upload', (req, res) => { handleBrowserUpload(req, res); });
 
   // Platform logs API
   app.get('/api/logs', (_req, res) => {

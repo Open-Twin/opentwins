@@ -14,6 +14,7 @@
 - BROWSER-notifications.md → notification/reply tasks
 - BROWSER-engage.md → search/feed/comment/like/article tasks
 - BROWSER-post.md → poll/post/repost creation tasks (shadow DOM)
+- BROWSER-carousel.md → publish_carousel tasks only (HTML→PDF render + document upload)
 
 Steps in order: § 0 Morning Schedule Check → § 1 Limits → § 2 Browser → § 3 Notifications (FIRST) → § 4 Schedule → § 5 End-of-day → § 6 Log → § 7 Close → § 8 HEARTBEAT_OK. All mandatory.
 🚨 **ALL steps mandatory every heartbeat.** Browser + notifications MUST run even if no tasks are due.
@@ -232,6 +233,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
 ### Other task types
 
 - **publish_post:** Read BROWSER-post.md SS 10, POST-TEMPLATES.md, select unused template, self-review, peak hours, log template used
+- **publish_carousel:** Read BROWSER-carousel.md (SS-C1 render → SS-C7 log + limits). Skip silently if spec has `skipped:` marker.
 - **repost_with_commentary:** Read BROWSER-post.md SS 11. 🚨 **Browse the home feed** (`/feed/`) to find repostable posts — do NOT search (search returns Pulse articles). Click Repost directly on the feed post → "Repost with your thoughts" → type 2-4 sentences in shadow DOM editor → Post. Self-review before posting.
 - **publish_newsletter:** "Weekend Builder" digest
 
