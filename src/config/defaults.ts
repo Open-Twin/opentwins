@@ -11,7 +11,7 @@ export const DEFAULT_LIMITS: Record<PlatformType, PlatformLimits> = {
       upvotes: { limit: 12 },
     },
     weekly: {
-      posts: { limit: 1 },
+      posts: { limit: 4 },
     },
   },
   twitter: {
