@@ -132,7 +132,7 @@ Filter `schedule.json`: `status="pending"` AND `time <= now`
 3. Navigate to post, wait 3s
 4. 🚨 **MANDATORY: Follow post author from post page** — BROWSER-engage.md S 7 (no navigation needed). Every quote = follow.
 5. Run BROWSER-engage.md S 6 (Click Quote)
-6. Run BROWSER-core.md S 5 (Reply/Comment Flow) -- use SOUL.md voice, 1-2 sentences, add 3-5 hashtags (read from `queries.json → hashtags` array — refreshed daily by content planner)
+6. Run BROWSER-core.md S 5 (Reply/Comment Flow) -- use SOUL.md voice, 1-2 sentences. 🚨 **No hashtags** (see PLAYBOOK.md Hashtag Strategy).
 7. Log: Type = "Quote", increment `weekly.quotes.current`, mark done
 
 ### Content-Ready Override (publish tasks only)
@@ -149,7 +149,8 @@ Before executing any `original_post` task:
 ### Original post task
 
 1. If `weekly.posts.current >= limit` -> mark done, skip
-2. Draft post using TOOLS.md "Original Post Strategy" + SOUL.md voice. 1-3 sentences + 3-5 hashtags (read from `queries.json → hashtags` array).
+1b. **If `content_source` ends with `bluesky-thread.md`** → run single-post flow for **Post 1 only**, then jump to **Thread chain** below (skip log/mark done — Thread chain handles them). Thread counts as 1 unit against `weekly.posts.current`.
+2. Publish content from `config.content_source` (first `status: pending` post). 🚨 **No hashtags** (see PLAYBOOK.md Hashtag Strategy).
 3. Click compose button: `button[aria-label="Compose new post"]` (text: "New Post")
 4. 🚨 **300 character limit.** Bluesky disables publish above 300 chars. Verify post text is under 300 before typing.
 5. Type in dialog textbox using char-by-char with keyboard events, then click publish:
@@ -159,16 +160,49 @@ Before executing any `original_post` task:
    ENDJSON
    ```
    If `publish_button_disabled` → text is likely over 300 chars. Shorten and retry.
-6. 🚨 **Post-publish verification (MANDATORY):** Navigate to profile, wait 4s, check:
+5b. **Image attach (only if `{{pipeline_workspace}}/content-ready/{today_date}/bluesky-post-image.spec.json` exists).** Runs between typing and publish. Any failure → remove pending image, continue text-only. Never block.
+   a. Render PNG:
+      ```bash
+      mkdir -p /tmp/opentwins-uploads
+      node {{pipeline_workspace}}/content-writer/templates/render-post-image.mjs \
+        {{pipeline_workspace}}/content-ready/{today_date}/bluesky-post-image.spec.json \
+        /tmp/opentwins-uploads/bluesky-post-image.png
+      ```
+   b. Click "Add media to post" button inside dialog (evaluate), wait 800ms.
+   c. Upload via selector-mode:
+      ```bash
+      curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/upload -H 'Content-Type: application/json' \
+        -d '{"filePath":"/tmp/opentwins-uploads/bluesky-post-image.png","selector":"input[data-testid=\"file-input\"]","timeoutMs":10000}'
+      ```
+      Wait 3s.
+   d. Verify attach: `!!document.querySelector('[data-testid="selectedPhotosView"]')`. If false → click `[data-testid="removePhotoButton"]` if present, continue text-only.
+   e. Alt text (only if spec has `alt` field): click `[data-testid="altTextButton"]`, wait 1.5s, find dialog with "Add alt text", type alt char-by-char, click `Save`.
+6. 🚨 **Post-publish verification (MANDATORY):** Navigate to profile, wait 4s. **Text-match on `div[role="link"]` containers** (first `[data-testid="postText"]` may be a pinned Note — don't rely on it):
    ```bash
    exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-   {"fn":"async () => { await new Promise(r => setTimeout(r, 4000)); var firstPost = document.querySelector('[data-testid=\"postText\"]'); if (!firstPost) return { verified: false, reason: 'no_posts_on_profile' }; var verified = firstPost.innerText.includes(window.__data.snippet); return { verified: verified, firstPostPreview: firstPost.innerText.slice(0, 100) }; }", "data": {"snippet": "first 30 chars of post"}}
+   {"fn":"async () => { await new Promise(r => setTimeout(r, 4000)); var snippet = window.__data.snippet; var containers = Array.from(document.querySelectorAll('div[role=\"link\"]')); var target = containers.find(function(c) { return c.innerText.includes(snippet); }); if (!target) return { verified: false, reason: 'post_not_on_profile' }; var a = target.querySelector('a[href*=\"/post/\"]'); return { verified: true, permalink: a ? a.href : null }; }", "data": {"snippet": "first 40 chars of post"}}
    ENDJSON
    ```
-   - `verified: true` → post confirmed live. Proceed to log + update.
+   - `verified: true` → post confirmed live. Capture `permalink` for Thread chain. Proceed to log + update.
    - `verified: false` → post failed silently. Do NOT mark as published. Log `Type=Post Failed`. Mark task pending for retry.
 7. Log: Type = "Post". Increment `weekly.posts.current`
 8. Mark done
+
+### Thread chain (only when `content_source` ends with `bluesky-thread.md`)
+
+Run AFTER Post 1 verified (step 6 captured its `permalink`) and BEFORE step 7.
+
+1. Set `parentPermalink = permalink` from step 6.
+2. For each subsequent `## Post N` with `status: pending` in file order:
+   a. Navigate to `parentPermalink`. Wait 3s.
+   b. Click page-level `button[aria-label="Compose reply"]` (root post on permalink page is NOT a `div[role="link"]` — must use page-level button).
+   c. Wait 1.5s. Type Post N char-by-char (same method as step 5).
+   d. Click `[role="dialog"] button[aria-label="Publish reply"]` (or `[data-testid="composerPublishBtn"]`), wait 5s.
+   e. On the thread page, find Post N's container by text-match on `div[role="link"]`, grab its `a[href*="/post/"]` — that's the next `parentPermalink`.
+   f. Update that post's `status: pending` → `status: published` in the `.md` file.
+   g. On any failure → stop chain, log `Type=Thread Partial, published=K/N`. Do NOT revert earlier posts. Skip to step 3.
+3. Log: Type = "Thread", count = N. Increment `weekly.posts.current` by **1** (thread = 1 unit).
+4. Mark done.
 
 ### Other tasks
 

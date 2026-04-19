@@ -45,7 +45,7 @@ export const DEFAULT_LIMITS: Record<PlatformType, PlatformLimits> = {
       comments: { limit: 6 },
     },
     weekly: {
-      posts: { limit: 2 },
+      posts: { limit: 7 },
       quotes: { limit: 2 },
     },
   },

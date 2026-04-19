@@ -180,10 +180,24 @@ Tags: [0-1 hashtag]
 
 **Topic tag:** ONE tag on the LAST post only.
 
-### 7. `bluesky-post.md` — Bluesky post (max 300 characters per post)
+### 7. `bluesky-post.md` — Bluesky single post (max 300 characters)
 
-**Voice:** English only. Casual, similar to Threads but English. No hashtags. Paragraphs separated by `\n\n`. Incomplete thoughts fine ("idk maybe", "tbh not sure").
-**HARD LIMIT: 300 characters per post.** Bluesky disables the publish button above 300 chars. Count characters before writing. Shorter is better.
+**Voice:** English only. Casual, similar to Threads but English. No hashtags. `\n\n` paragraphs. Incomplete thoughts fine.
+**HARD LIMIT: 300 characters per post.**
+
+**When to emit:** 🚨 **Every day except Mon + Sat** (those are handled by §7b threads).
+
+### 7b. `bluesky-thread.md` — Bluesky reply-chained thread (3-5 posts)
+
+**Voice:** Same as §7. Each post ≤ 300 characters. No hashtags.
+
+**Format:** `## Post 1` ... `## Post N` sections separated by `---`, each with `status: pending` header.
+
+**When to emit:** 🚨 **Mon + Sat = MANDATORY.** Other days: single line `skipped: {reason}`.
+
+**Rule:** Post 1 is the hook. Each later post is a reply to the previous one. No numbering (1/N).
+
+**Image spec (`bluesky-post-image.spec.json`) — emit alongside `bluesky-thread.md` on Mon+Sat.** Same schema as `twitter-post-image.spec.json` (type: `stack` | `matrix` | `venn`), rendered via `{{pipeline_workspace}}/content-writer/templates/render-post-image.mjs`. Add top-level `"alt"` field (80–200 chars, accessibility). Attached to **Post 1 only**; replies stay text-only. Render/attach failure → agent publishes text-only (never blocks).
 
 ### 8. `substack-note.md` — Substack Note (50-120 words, ~87 ideal)
 
