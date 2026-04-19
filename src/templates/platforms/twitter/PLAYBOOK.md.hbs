@@ -14,6 +14,7 @@ End-of-day / on-demand. DO NOT load on routine heartbeats. Read sections as need
    - **Content brief:** `{{pipeline_workspace}}/content-briefs/{target_date}.md` — provides today's theme, engagement targets, suggested hooks, hashtags. Adapt to Twitter style, don't copy verbatim.
    - **INSIGHTS.md** — provides what's been working: engagement patterns, timing insights, conversion triggers, key accounts.
    - **How they work together:** Content brief sets the THEME (what to talk about). INSIGHTS.md sets the STRATEGY (who to target, when to post, what format works). If no content brief exists, use INSIGHTS.md alone.
+   - 🚨 **Dead-query skip (MANDATORY).** Before writing any `search_and_promo_reply` task config, check INSIGHTS.md `## Search Query Performance` → `**Miss / avoid:**` list. If the query text you are about to schedule substring-matches any entry there, pick a different angle instead. The Miss list records queries that returned 0 qualifying results across 2+ past attempts; re-scheduling them wastes a task slot.
 
 2. **Extract patterns** (2+ occurrences only):
    - Conversions: "what app?" triggers?
@@ -178,6 +179,11 @@ Review today's activity and update `INSIGHTS.md`:
 - Strategy Adjustments: approach changes
 - Strategic Reply Performance: which accounts/niches got engagement
 - Hashtag Performance: which hashtags appeared in high-engagement tweets
+
+🚨 **Dead-query tracking (MANDATORY).** Walk today's `memory/{today}.md` for any `search_and_promo_reply` task that logged "No targets found" / "0 qualifying" / failed with ≥3 search iterations. Cross-check against yesterday's memory for the same query pattern:
+- If the same query (or near-duplicate) returned 0 results 2 days in a row → add to `## Search Query Performance` → `**Miss / avoid:**` list with format: `"{query text}" → 0 qualifying ({date1}, {date2}, {N searches each}). Too niche.`
+- If a query in the Miss list returned 20+ likes once this week (retry attempt succeeded) → remove it from Miss list, add to `**Hit**` list.
+- Never let Miss list exceed 12 entries — remove the oldest when at cap to keep actionable.
 
 **Rules:**
 - < 100 lines

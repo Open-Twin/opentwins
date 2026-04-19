@@ -134,9 +134,11 @@ Filter: `status="pending" AND time<=now`, sort by time.
 **Task types:**
 
 - **browse_and_engage** -> Optimized workflow:
-  1. **Search (MAX 2 queries total).** Pick from:
-     - **Search:** `medium.com/search?q={query}` — use queries from `queries.json`
-     - **Tags:** `medium.com/tag/{tag}` — use tags relevant to your pillars
+  1. **Search (MAX 2 queries total).** 🚨 **Source of truth is `queries.json`** (generated fresh daily by content-planner at 07:00, aligned to today's theme). Read `queries.json` `search_queries[]` and pick 2 entries. Medium queries are tag-slug formatted (hyphenated, lowercase):
+     - **Tags (preferred):** `medium.com/tag/{query}` — e.g. `medium.com/tag/ai-agents`
+     - **Search (fallback if tag returns nothing recent):** `medium.com/search?q={query_with_spaces}` — convert hyphens to spaces
+     - 🚨 **Do NOT use a hardcoded tag list.** Hardcoded tags drift stale because they ignore queries.json. Always use today's queries.json.
+     - **Fallback if queries.json is missing or empty:** use broad evergreen tags aligned to your configured pillars.
      - ❌ NEVER use `/recommended` suffix on any tag. NEVER exceed 2 queries per task.
   2. Batch extract articles — BROWSER-engage.md § 5. **Extraction auto-filters:** `/@author/` URLs AND publication URLs (`medium.com/{pub}/slug-hash`) + articles ≤14 days old. Publication URLs may redirect to custom domains — this is normal. If any URL causes SSL error → skip immediately.
   3. **🚨 MANDATORY batch grep pre-check BEFORE navigating** — check ALL candidate URLs at once:

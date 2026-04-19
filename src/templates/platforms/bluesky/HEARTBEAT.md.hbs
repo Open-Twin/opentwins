@@ -113,7 +113,15 @@ Filter `schedule.json`: `status="pending"` AND `time <= now`
 5. **After each successful comment:** `echo "{post_id}" >> memory/commented_posts.txt`
 6. 🚨 **MANDATORY: Follow post author from post page** — BROWSER-engage.md S 7 (no navigation needed). Every comment = follow.
 7. Log: Type = "Comment", increment `comments_done` in memory
-8. Completion: `comments_done >= config.max_comments` → mark "done". If `comments_done == 0` AND all candidates exhausted → keep "pending" for retry with different queries next heartbeat.
+8. Completion logic:
+   - `comments_done >= config.max_comments` → mark "done".
+   - `comments_done < config.max_comments` AND `allCandidates[]` still has unexamined posts → continue the per-candidate loop (step 4) in this same heartbeat. Do NOT exit early.
+   - `comments_done == 0` AND ALL candidates from `config.search_queries` have been examined (exhausted) → 🚨 **Immediate in-heartbeat retry with DIFFERENT queries (MANDATORY, do not defer to next heartbeat):**
+     a. Load `queries.json` `search_queries[]` and select 2-3 queries NOT already in `config.search_queries`. Prefer queries from a different `category` than the task's original theme (e.g., if task was `ai`, pick `career` or `trending`).
+     b. Re-run step 1 (multi-query candidate pool) with these fallback queries.
+     c. Re-run step 3 (grep pre-check) and step 4 (per-candidate loop) on the new pool.
+     d. If still `comments_done == 0` after fallback → keep task "pending", log `fallback_exhausted: true` in the task entry, and append the failing original queries to `memory/dead_queries.txt` with format `{date}|{query}|0_qualifying`. Next heartbeat's retry then skips queries listed in dead_queries.txt.
+   - 🚨 **Rationale:** the deferred-retry model silently loses a task slot whenever the next heartbeat has other priority work due sooner. Immediate in-heartbeat retry eliminates this failure mode.
 
 ### Quote post task
 
