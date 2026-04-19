@@ -87,10 +87,22 @@ Structure:
 Tags: [3-5 hashtags]
 ```
 
-### 6. `threads-post.md` — Threads post (max 500 characters per post)
+### 6. `threads-post.md` — Threads single post (max 500 characters)
 
-**Voice:** Casual, text-a-friend. No hashtags. Paragraphs separated by `\n\n`. Lowercase starts fine. Half-thoughts, tangents OK. Ukrainian allowed if brief suggests it. Masculine verb forms always.
-**HARD LIMIT: 500 characters per post.** Threads rejects posts above 500 chars. Count characters (including spaces, line breaks, and emoji) before writing. Shorter is better — ~300 chars reads more native than a wall of text.
+**Voice:** Casual, text-a-friend. Paragraphs separated by `\n\n`. Lowercase starts fine. Half-thoughts, tangents OK. Ukrainian allowed if brief suggests it. Masculine verb forms always. End with ONE topic tag on its own line — **use the FIRST entry from the brief's `## Hashtags & Keywords` Threads section**. No body hashtags.
+**HARD LIMIT: 500 characters.** Shorter is better — ~300 chars reads more native.
+
+🚨 **Emit 1 post only** (exception to Rule 2 — agent consumes Post 1, variants unused).
+
+### 6b. `threads-thread.md` — Threads multi-post thread (3-5 connected posts)
+
+**Voice:** Same as §6. Each post 100-200 words, `\n\n` paragraphs.
+
+**Format:** `## Post 1` ... `## Post N` sections separated by `---`, each with `status: pending` header.
+
+**When to emit:** 🚨 **Tue/Fri = MANDATORY** (Planner's Structural-Theme Guardrail covers these). Other weekdays: emit only if theme is structural. Non-eligible: single line `skipped: {reason}`.
+
+**Topic tag:** ONE tag on the LAST post only.
 
 ### 7. `bluesky-post.md` — Bluesky post (max 300 characters per post)
 
@@ -214,7 +226,7 @@ Before saving each piece, run this check:
 ## Rules
 
 1. **Produce ALL formats every run.** Platform agents pick what they need from their schedule. Don't decide for them.
-2. **Max 1 article per day.** `medium-article.md`, `linkedin-article.md`, `twitter-article.md`, `substack-newsletter.md`, and `devto-article.md` are variations of the same long-form piece (adapted per platform). **Up to 3 short posts per platform.** Each short-form file (linkedin-post.md, twitter-thread.md, threads-post.md, etc.) should contain up to 3 separate posts, each with a different angle on the theme. Format each post with a status header that platform agents update after publishing:
+2. **Max 1 article per day.** `medium-article.md`, `linkedin-article.md`, `twitter-article.md`, `substack-newsletter.md`, and `devto-article.md` are variations of the same long-form piece (adapted per platform). **Up to 3 short posts per platform.** Each short-form file (linkedin-post.md, twitter-thread.md, etc.) should contain up to 3 separate posts, each with a different angle on the theme. **Exception:** `threads-post.md` emits 1 post only (see §6); `threads-thread.md` emits a structured thread on eligible days (see §6b). Format each post with a status header that platform agents update after publishing:
    ```
    ## Post 1
    status: pending

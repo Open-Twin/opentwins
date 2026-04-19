@@ -32,7 +32,7 @@ fail_mandatory() { echo "ALERT: mandatory carousel day ${DATE} — $1. NO fallba
 fail_optional()  { echo "CarouselSkipped: $1"; exit 0; }
 
 test -f "$DOC" || { is_mandatory_day && fail_mandatory "no linkedin-carousel.md"; fail_optional "no .md"; }
-grep -q "^skipped:" "$DOC" && { is_mandatory_day && fail_mandatory "writer marked skipped"; fail_optional "writer_skipped"; }
+grep -q "^skipped:" "$DOC" && { is_mandatory_day && fail_mandatory "writer marked skipped (check Planner's Structural-Theme Guardrail)"; fail_optional "writer_skipped"; }
 test -f "$SPEC" || { is_mandatory_day && fail_mandatory "no spec.json"; fail_optional "no spec"; }
 grep -q "^status: pending" "$DOC" || { echo "already published"; exit 0; }
 test -f "$RENDERER" || { echo "Type=Error Reason=renderer_not_found"; exit 1; }

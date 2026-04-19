@@ -1,0 +1,17 @@
+# BROWSER-thread.md — Multi-post Thread Publishing
+
+**Prereq:** Compose dialog already open (BROWSER-engage.md S 8).
+**Input:** `postsArray` — 3-5 post strings, passed via `data.posts`.
+
+## S T. Post Multi-Post Thread (ONE evaluate)
+
+Loops: fill last textbox → click "Add to thread" (spawns new textbox) → repeat. After last post, click single "Post" — submits atomically.
+
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var posts = window.__data.posts; await new Promise(r => setTimeout(r, 1500)); var dialog = document.querySelector('[role=\"dialog\"]'); if (!dialog) return { error: 'no_dialog' }; for (var i = 0; i < posts.length; i++) { var textboxes = dialog.querySelectorAll('[role=\"textbox\"][contenteditable=\"true\"]'); var tb = textboxes[textboxes.length - 1]; if (!tb) return { error: 'no_textbox', at: i }; tb.focus(); var dt = new DataTransfer(); dt.setData('text/html', posts[i].replace(/\\n/g, '<br>')); dt.setData('text/plain', posts[i]); tb.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 800)); if (i < posts.length - 1) { var addBtn = Array.from(dialog.querySelectorAll('div[role=\"button\"]')).find(function(b) { return b.innerText.trim() === 'Add to thread'; }); if (!addBtn) return { error: 'no_add_button', at: i }; addBtn.click(); await new Promise(r => setTimeout(r, 1500)); } } var postBtn = Array.from(dialog.querySelectorAll('div[role=\"button\"]')).find(function(b) { return b.innerText.trim() === 'Post'; }); if (!postBtn) return { error: 'no_post_button' }; postBtn.click(); return { submitted: true, count: posts.length }; }", "data": {"posts": ["POST_1_TEXT", "POST_2_TEXT", "POST_3_TEXT"]}}
+ENDJSON
+```
+
+**Returns:** `{ submitted: true, count: N }` on success.
+**Errors:** `no_dialog`, `no_textbox`, `no_add_button`, `no_post_button`.

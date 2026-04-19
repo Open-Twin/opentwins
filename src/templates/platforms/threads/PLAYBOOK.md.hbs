@@ -26,13 +26,9 @@
    **Weekdays (Mon-Fri):** (10 comments/day)
    - 09:00 Search & comment - pillar (max_comments: 2)
    - 10:30 Search & comment - trending (max_comments: 2)
-   - 🚨 **11:30 Original post — Monday, Wednesday, and Friday** (rotate category, see TOOLS.md) — 🚨 MUST include `content_source` in config:
-     ```json
-     "config": {
-       "content_source": "{{pipeline_workspace}}/content-ready/{today_date}/threads-post.md",
-       ...
-     }
-     ```
+   - 🚨 **11:30 daily original** — MUST include `content_source`:
+     - **Mon/Wed/Thu:** `action: original_post`, `content_source: {{pipeline_workspace}}/content-ready/{today_date}/threads-post.md`
+     - **Tue/Fri:** `action: original_thread`, `content_source: {{pipeline_workspace}}/content-ready/{today_date}/threads-thread.md`
    - 12:00 Quote post — Mon/Wed/Fri (rotate category, prefer trending/ai)
    - 15:00 Search & comment - ai (max_comments: 2)
    - 17:00 Quote post — Tue/Thu (rotate category)
@@ -49,7 +45,7 @@
    - 20:00 Search & comment - trending (max_comments: 2)
    - 🚨 **22:00 update_memory** (PLAYBOOK.md § Memory Update)
 
-   **Original posts:** 🚨 **MANDATORY per `weekly.posts.limit` from limits.json.** Monday + Wednesday + Friday. Always include in schedule — do NOT skip.
+   **Originals:** 🚨 **MANDATORY 5/week at 11:30.** Mon/Wed/Thu = `original_post`, Tue/Fri = `original_thread`. Always include — do NOT skip.
 
    **Capacity check (mandatory):** After building the schedule, validate before writing:
    - Σ(max_comments across all tasks) MUST = `daily.comments.limit` from limits.json. Do NOT modify the limit value — it is user-configured.
@@ -126,20 +122,9 @@ When searching, **prefer posts where:**
 
 ## Hashtag Strategy
 
-**Add 3-5 hashtags to every quote post and original post.** Do NOT add hashtags to comments/replies.
-
-**Core hashtags (rotate, use 2-3 per post):**
-{{#each behavior.hashtags}}- {{@key}}: {{join this " "}}
-{{/each}}
-
-**Trending hashtags (use 1-2 per post, check what's active):**
-- #threads #threadsapp (platform-specific discovery)
-- Topic-specific trending tags from search results
-
-**Rules:**
-- Mix English + Ukrainian hashtags for broader reach
-- Never use more than 5 hashtags (looks spammy)
-- Place hashtags at end of post, separated by line break
+- **Originals:** ONE topic tag at end, own line after `\n\n`. Use FIRST entry from `queries.json → hashtags`.
+- **Quotes:** NO hashtags.
+- **Comments/replies:** NO hashtags.
 
 ---
 
@@ -159,7 +144,7 @@ If browser fails → log "Follower check: browser unavailable" and **continue to
 
 ### Step 2: Check post performance (browser — best effort)
 
-For each original post and quote post from the last 48h, check likes/replies/views. Log what worked or didn't.
+For each original post, original thread (check EVERY post in the thread — log as `thread:N/M`), and quote post from the last 48h, check likes/replies/views. Log what worked or didn't.
 
 If browser fails → log "Post performance check: browser unavailable" and **continue to step 3**.
 
@@ -175,6 +160,7 @@ If browser fails → log "Post performance check: browser unavailable" and **con
 
 **Update `INSIGHTS.md`** with:
 - follower count + weekly delta (use browser data or "unchanged — browser unavailable")
+- **per-post reach ratio** = `views / follower_count_at_post_time` (log `Nx organic` per post; flag `>1x` above-index, `<0.3x` under-index)
 - what worked (post type, hashtag, topic with above-average replies)
 - what didn't (style or hashtag with no engagement)
 - new active accounts engaging with our content

@@ -79,13 +79,13 @@ Before selecting today's pillar, calculate each pillar's share of the week so fa
 
 Trend overrides (16+ score) do NOT exempt you from this guardrail. If an underrepresented pillar is at 0% and it's Thursday, find an angle on the trending topic for that pillar or pick a pillar theme entirely. Engagement metrics show underrepresented pillars often outperform dominant ones - the audience wants variety.
 
-### LinkedIn Carousel-Eligibility Guardrail (Tue + Fri only)
+### Structural-Theme Guardrail (Tue + Fri only)
 
-🚨 Applies only if LinkedIn `weekly.carousels.limit > 0`. On Tue/Fri, pick a carousel-eligible theme: one that renders as 10 slides (Cover + Hook + artifact/code + 4 fields + pattern + CTA + bonus). Themes with a concrete framework, 4-repeatable-field artifact, or news peg with visualizable structure qualify. Milestones, single-insight quips, and unstructured opinion pieces do NOT.
+🚨 **Tue + Fri drive BOTH LinkedIn carousel AND Threads thread (`threads-thread.md`).** Skipping costs TWO originals, not one. Pick a structural theme that renders as 10 carousel slides AND as a 3-5 post thread: framework, fields, before/after, checklist, or multi-step breakdown. Themes with a concrete framework, 4-repeatable-field artifact, or news peg with visualizable structure qualify. Milestones, single-insight quips, and unstructured opinion pieces do NOT.
 
-If the strongest peg isn't eligible, either (a) pick a different eligible peg, or (b) reframe it structurally ("5 things missed", "4 questions answered"). Only if both fail, add a `## ⚠ Carousel Skipped` section — the LinkedIn agent will Alert, no fallback post.
+If the strongest peg isn't eligible, either (a) pick a different eligible peg, or (b) reframe structurally ("5 things missed", "4 questions answered"). Only if both fail, add a `## ⚠ Structural Skipped` section — both LinkedIn carousel AND Threads thread skip that day (agents fire Alerts; no fallback posts).
 
-Other days: carousel-eligibility is a bonus, not required.
+Other days: structural eligibility is a bonus, not required.
 
 ## Brief Sections
 
@@ -102,7 +102,7 @@ The brief MUST include all of these sections:
    - If no wins report exists or report says "no wins" → omit this section entirely
    - Staleness check: If the same win has appeared in briefs for 2+ consecutive days, DROP it. Do not recycle the same win across 3+ days - audience fatigue kills amplification value. If no fresh wins exist, omit the Amplification section entirely rather than reusing stale ones.
 6. **Platform Notes** — any platform-specific advice for today
-7. **Hashtags & Keywords** — per platform. **LinkedIn: 1 broad + 2-3 niche + 1 branded (if user has a brand tag), 4-5 total.** Pick broad by matching today's angle: `#FutureOfWork` (AI + work shifts), `#Leadership` (career / team / management), `#DigitalTransformation` (enterprise tooling / AI adoption), `#Innovation` (build-in-public / new-product). Niche = topic-specific to the pillar. Other platforms: niche-only OK.
+7. **Hashtags & Keywords** — per platform. **LinkedIn: 1 broad + 2-3 niche + 1 branded (if user has a brand tag), 4-5 total.** Pick broad by matching today's angle: `#FutureOfWork` (AI + work shifts), `#Leadership` (career / team / management), `#DigitalTransformation` (enterprise tooling / AI adoption), `#Innovation` (build-in-public / new-product). Niche = topic-specific to the pillar. Other platforms: niche-only OK. **Threads: FIRST entry MUST be the primary topic tag (single broad tag). Mirror the same FIRST tag into each platform's `queries.json → hashtags[0]`** — writer and downstream consumers treat `[0]` as the topic tag.
 
 ## Community Audience Profiles (MANDATORY for platform hooks)
 
