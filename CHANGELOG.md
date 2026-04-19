@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026.4.19
+
+### Scheduler & CLI
+
+**New**
+- Browser upload endpoint (`POST /api/browser/:profile/upload`) with dual modes: intercept (CDP file-chooser arm) and selector (direct `DOM.setFileInputFiles`).
+- Recursive subdir copy in pipeline generator (ships renderer assets at init).
+- 6 new tests for the upload endpoint; 338/338 passing.
+
+**Improved**
+- `defaults.ts` weekly caps aligned with ported cadence rules: linkedin articles 1→2, bluesky posts 2→7, threads posts 2→5, devto articles 1→2, reddit posts 1→4, ih posts 1→3. Added: linkedin carousels (0, opt-in), substack recommendations.
+
+### Templates
+
+**New**
+- LinkedIn document-carousel pipeline (opt-in via `weekly.carousels.limit > 0`): new BROWSER-carousel.md.hbs, 10-slide PDF via headless Chrome, `publish_carousel` task type.
+- LinkedIn post-image attachment (SS 10b) with matrix / venn / stack layouts.
+- Twitter image attachment (§ 7b) on original_tweet + thread hook (Post 1 only).
+- Bluesky reply-chained threads on Mon + Sat with optional Post 1 image + alt text.
+- Threads multi-post threads on Tue + Fri (new BROWSER-thread.md.hbs).
+- Substack note image attach via selector-mode upload.
+- Dev.to `seed_article_comment` task (2h self-seed) + hot-tag gate in devto-api.sh.
+- Renderer assets: `render-carousel.mjs`, `render-post-image.mjs` (1200×1200), `render-note-image.mjs` (1080×1080, 2× DPR).
+
+**Improved**
+- **LinkedIn**: publish at 15:00 Kyiv; forced-choice closings on every post; 0-1 hashtag rule (1 broad + 2-3 niche + 1 branded); save-hook on 1 in 3 posts; dead-URL tracking + priority-target pruning; per-author daily cap; follower-band bias in planner.
+- **Twitter**: 0-1 hashtag max; fresh-first reply pick (ageMin-based); keyword-family dead-query skip; dead-target demotion; twitter-article 1000-1500w.
+- **Bluesky**: 7/week cadence; zero hashtags; like-before-compose in S 4b.
+- **Threads**: 5/week cadence; per-author daily cap; spam detection in noise filter.
+- **Substack**: newsletter Tue-only at 16:00; Mon-Sat recommendations; cold-breadth rule in browse_and_engage.
+- **Medium**: Saturday-only cadence; optional frontmatter with SEO keyword rule.
+- **Dev.to**: Wed+Fri article cadence; title rubric (first-person + digit + reveal clause).
+- **Reddit**: 4/week cadence (Mon/Wed/Thu/Sat); "Title = literal question + named product" rule.
+- **IH**: 3/week with alternating-Sat; ≤55-char titles with ≥1 digit; 9-group routing via S 7.5.
+- **Content-planner**: platform-verified engagement targets; Structural-Theme Guardrail (Tue+Fri carousel+thread); dedicated Step 2.5 anti-repetition check.
+- **PH**: Follow gated by `daily.follows.limit` (was unlimited auto).
+
+**Fixed**
+- LinkedIn SS 4b covers both Pulse AND post detail pages.
+- LinkedIn post-detail comment flow likes the top-level post before commenting.
+- Substack tracking files no longer pruned (prevents duplicate comments on `/note/` URLs).
+
+**Removed**
+- LinkedIn `browse_and_engage` task type (feed saturated) + orphaned SS 3/3b/6 selectors.
+- Auto-connect after cold LinkedIn comments (warm notification-reply path unchanged).
+- LinkedIn daily likes budget (per-post like-before-commenting preserved).
+
 ## 2026.4.17
 
 ### Scheduler & CLI
