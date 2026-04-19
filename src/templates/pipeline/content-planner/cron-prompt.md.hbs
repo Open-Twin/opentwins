@@ -31,7 +31,9 @@ Read these (skip gracefully if file is empty/missing):
 1. Read contacts-active.json (already filtered to last 7 days)
 2. Prioritize: Tier 1 contacts > Tier 2 > Tier 3
 3. Prioritize: contacts with activity matching today's pillar/theme
-4. Select top 3-5 targets with specific engagement angles
+4. 🚨 **Platform-verify each candidate BEFORE including them as a platform target.** For each candidate, inspect their `recent_activity[]` array. A contact qualifies for platform X's engagement-target list ONLY if at least one `recent_activity` entry has `platform == X` within the last 7 days. Having `platforms.{X} != null` (profile URL exists) is NOT enough. Do not recommend that LinkedIn agents engage with a contact whose only recent activity is `platform: "twitter"` or `platform: "podcast"` — that profile will be silent on LinkedIn and the navigation wastes a task slot.
+5. **Organize targets by platform in the brief** (per AGENT.md rule 2a). Each platform subsection includes ONLY contacts whose verified platform activity matches. If zero contacts qualify for a platform, write an explicit empty-state note directing platform agents to use search queries only.
+6. Select top 3-5 qualified targets per active platform, with specific engagement angles grounded in the verified activity entry.
 
 ## Step 4: Generate Brief
 

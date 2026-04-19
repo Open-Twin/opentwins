@@ -120,6 +120,11 @@ When suggesting platform hooks in the brief, match the angle to the community's 
 ## Rules
 1. The brief must be ACTIONABLE — the Content Writer should produce ready-to-publish content from it without additional context
 2. Engagement targets must come from `contacts-active.json` with SPECIFIC angles, not generic "go engage"
+2a. 🚨 **Per-platform engagement targets require per-platform verified activity.** A contact qualifies for a platform's engagement-target list ONLY if their `recent_activity[]` contains an entry with `platform` matching that target platform within 7 days. Having a profile URL on a platform (`platforms.linkedin != null`) is NOT sufficient — they must have posted on that platform recently. Organize the brief's "Engagement Targets" as per-platform subsections:
+   - `### LinkedIn Engagement Targets` — contacts with `recent_activity[].platform == "linkedin"` in last 7 days
+   - `### Twitter Engagement Targets` — contacts with `recent_activity[].platform == "twitter"` in last 7 days
+   - `### Other Platform Engagement Targets` — contacts with activity on newsletter/podcast/news/product/etc., grouped by platform
+   If zero contacts qualify for a platform, write an explicit note: `### LinkedIn Engagement Targets\n- None verified this week. Platform agents: use search queries only.` Do NOT recycle cross-platform activity (e.g., a Twitter post by someone with a LinkedIn URL) as a LinkedIn engagement opportunity — that forces platform agents to navigate to silent profiles.
 3. Each brief should feel different — vary themes, formats, angles. No two consecutive days on the same sub-topic
 4. Write the brief file FIRST, then output the Slack summary. The file is the critical output
 5. The brief feeds BOTH the Content Writer (07:30) AND platform agents (08:00+). Include enough detail for both consumers.

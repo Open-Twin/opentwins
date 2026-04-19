@@ -125,7 +125,11 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
    ENDJSON
    ```
    If `tooOld` → skip immediately. If `alreadyCommented` → **backfill tracking** (`grep -qF "{trackId}" memory/commented_posts.txt || echo "{trackId}" >> memory/commented_posts.txt`), then skip.
-   If page shows "Something went wrong" → URL is invalid, skip immediately.
+   If page shows "Something went wrong" OR returns 404 → URL is invalid. 🚨 **MANDATORY: Append URL to `memory/dead_urls.txt`** so future schedule generations exclude it (PLAYBOOK.md § Generate Schedule):
+   ```bash
+   grep -qF "{url}" memory/dead_urls.txt || echo "{url}" >> memory/dead_urls.txt
+   ```
+   Then skip immediately.
 2. Pick query from `queries.json` — `high_engagement` first, then product-specific
 3. Navigate: `https://www.linkedin.com/search/results/content/?keywords={QUERY}&datePosted=%22past-week%22&sortBy=%22relevance%22`
 4. Extract using BROWSER-engage.md SS 2 (has embedded 3s wait — NO separate wait needed). SS 2 now returns `postUrl`, `trackId`, `username`, `isPulse` per result.
