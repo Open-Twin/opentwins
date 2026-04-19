@@ -43,13 +43,9 @@ If browser fails -> log "Subscriber check: browser unavailable" and **continue t
 
 🚨 **Stale target pruning (MANDATORY).** Walk the `## Key Relationships` section. For each `@handle` without activity observed in the last 7 days (grep the handle across `memory/*.md` for this week): demote it to a `## Key Relationships (watching — silent 7+d)` subsection. Watching entries are not used as `priority_targets` in daily browse_and_engage tasks — they get a weekly check at most. Remove handles with 14+ days silence entirely. Annotate every Key Relationship entry with its most recent activity date (format: `last seen: YYYY-MM-DD`) so next retro has clean timestamps. Undated entries MUST get a date appended during this pass.
 
-### Step 4: Cleanup tracking files
-
-- Remove entries >7 days old from tracking files
-- Keep file size manageable
-- If file doesn't exist -> skip
-
 Keep INSIGHTS.md under 100 lines. Replace outdated entries vs appending.
+
+🚨 **Do NOT prune tracking files.** `memory/commented_posts.txt`, `memory/replied_notifications_substack.txt`, and `memory/recommended_publications.txt` are permanent. They are the sole dedup mechanism for `/note/` URLs — HEARTBEAT.md SS 3 explicitly skips the page-level `alreadyCommented` check on `/note/` URLs because our profile link always appears as note author (false positive). Pruning these files causes duplicate comments on notes whose content resurfaces in feed/search after the prune window. File size is not a concern — tracking files grow slowly and remain trivially small.
 
 ---
 
