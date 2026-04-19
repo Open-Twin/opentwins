@@ -119,23 +119,13 @@ Engage with empathy, share experience. Position as practitioner, not seller.
 
 ## Hashtag Strategy (NEW)
 
-**For original tweets only.** NEVER use hashtags in replies (looks spammy).
+**For original tweets only.** NEVER use hashtags in replies.
 
 **Rules:**
-- 2-3 hashtags per original tweet
-- Place at END of tweet, not beginning
-- Mix: 1 topic-specific + 1-2 generic
-- Don't use same hashtags every tweet — rotate from pools
-- Check `queries.json → hashtag_pools` for available hashtags
-
-**Topic hashtags:** Pick 1 from topic pool matching the tweet's pillar.
-{{#if behavior.hashtags}}
-**Hashtag pools:**
-{{#each behavior.hashtags}}
-- **{{@key}}:** {{join this ", "}}
-{{/each}}
-{{/if}}
-**Generic hashtags:** Pick 1-2 from generic pool in `queries.json → hashtag_pools`.
+- 0-1 hashtag per original tweet (zero is default; one only if it genuinely routes discovery)
+- Place at END of tweet
+- Rotate — don't repeat same hashtag back-to-back
+- Check `queries.json → hashtags` for available pool
 
 ## Trending
 
@@ -166,7 +156,7 @@ Promo + original tweets → peak. Strategic replies + likes/RTs anytime. Mention
 
 | Type | Details |
 |------|---------|
-| Original | Insights on {{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}, building-in-public. 280 chars, **2-3 hashtags** (from hashtag_pools, at END), engagement hook, peak hours. Apply time-of-day voice (SOUL.md). |
+| Original | Insights on {{#each pillars}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}, building-in-public. 280 chars, **0-1 hashtag** (from queries.json, at END), engagement hook, peak hours. Apply time-of-day voice (SOUL.md). |
 | Quote | **1/day Tue-Fri** (5/week). When: viral (500+ likes), hot take, stat, founder story, **10K+ accounts priority** (borrowed audience). How: lead with take, 280 chars, brand tie-in optional, peak hours. Types: agree+amplify, disagree, data add, hot take. |
 | Thread | Hook → 3-4 value tweets → CTA tweet. **2/week Wed+Thu** peak. < 280/tweet, specifics not vague, self-review all. |
 | Strategic | **Pure value reply** to 10K+ accounts. NO product. Expert insight, personal experience. 3-5/day. |
