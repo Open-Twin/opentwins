@@ -45,14 +45,26 @@ Auto-send after commenting. Safety checks → BROWSER-notifications.md SS 7 (pro
 
 ## Engagement Windows (Kyiv)
 
-- **15:00-17:00** BEST (8-10am US East)
-- **19:00-20:00** good
-- **10:00-11:00** decent
+- **15:00–17:00** BEST. 15:00 = publish slot; engagement burst at 16:00.
+- **19:00–20:00** good.
+- **10:00–11:00** engagement only — never publish here.
 
 ## Schedule Templates
 
-4 engagement windows daily (~10:00, 13:00, 15:00, 19:00). Mon=Newsletter + 4 engage. Tue/Fri=Article + 3 engage. Wed=4 engage. Thu=Poll/Post + 4 engage. Sat=3 engage. Sun=1 engage.
+Engagement windows: 10:00, 13:00, 16:00, 19:30.
 
-End-of-day (every day): update_memory ~22:00.
+| Day | Primary | Time |
+|---|---|---|
+| Mon | publish_post | 15:00 |
+| Tue | publish_carousel (if enabled) else publish_article | 15:30 / 15:00 |
+| Wed | publish_post | 15:00 |
+| Thu | publish_post or create_poll | 15:00 |
+| Fri | publish_carousel (if enabled) else publish_article | 15:30 / 15:00 |
+| Sat | publish_post | 15:00 |
+| Sun | publish_post | 15:00 |
 
-Capacity: Σ comments = daily.comments.limit, Σ reactions = daily.reactions.limit. Ramp weekly per limits.json ramp_plan.
+Tue + Fri = primary-only. Sat = 3 engage, Sun = 1 engage.
+
+End-of-day: update_memory ~22:00.
+
+Capacity: Σ comments = daily.comments.limit, Σ reactions = daily.reactions.limit. Ramp per limits.json `ramp_plan`.

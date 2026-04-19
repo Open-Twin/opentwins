@@ -35,17 +35,19 @@ End-of-day and on-demand tasks. **Do NOT load on routine heartbeats.** Only read
 4. **Capacity matching (MANDATORY):**
    - Sum `max_comments` across all tasks = `daily.comments.limit` (limits.json)
    - Sum `max_likes` across all tasks = `daily.reactions.limit` (limits.json)
-   - 4 engagement windows: ~10:00, ~13:00, ~15:00, ~19:00
+   - 4 engagement windows: ~10:00, ~13:00, ~16:00, ~19:30 (15:00 reserved for publish — step 5).
    - Read `ramp_plan` fields in limits.json and adjust limits weekly
-   - Distribute comments to peak windows (15:00 and 10:00 first)
+   - Distribute comments to peak windows (16:00 and 10:00 first)
    - Midday window can be likes-only when comment budget is tight
    Adjust to match exactly.
 5. 🚨 **Tue + Fri primary content (MANDATORY — do NOT skip):**
    - If `weekly.carousels.limit > 0`: `publish_carousel` at 15:30 both days.
-   - Else: `publish_article` at 10:00 both days.
+   - Else: `publish_article` at 15:00 both days.
    - If current >= limit → skip that task, keep others.
    - NO `publish_post` on Tue/Fri (primary-only).
    - NO fallback-to-post if carousel spec missing or `skipped:` marker present — agent fires an Alert (see BROWSER-carousel.md preflight).
+
+   🚨 `publish_post` at 15:00 Kyiv on post-days (Mon/Wed/Thu/Sat/Sun). Never morning. Engagement burst at 16:00.
 
    Config sources (MANDATORY):
    - `publish_post`: `content_source: "{{pipeline_workspace}}/content-ready/{today_date}/linkedin-post.md"`
