@@ -118,23 +118,22 @@ ENDJSON
 
 ## § 7b — Compose with Image
 
-Use when `content-ready/{today}/linkedin-post-image.spec.json` exists. Inserts image upload between compose-open and Post click.
+Use when `content-ready/{today_date}/linkedin-post-image.spec.json` exists. Inserts image upload between compose-open and Post click.
 
 ### Step 0: Render spec to PNG
 
 ```bash
 mkdir -p /tmp/opentwins-uploads
 node {{pipeline_workspace}}/content-writer/templates/render-post-image.mjs \
-  {{pipeline_workspace}}/content-ready/{today}/linkedin-post-image.spec.json \
+  {{pipeline_workspace}}/content-ready/{today_date}/linkedin-post-image.spec.json \
   /tmp/opentwins-uploads/linkedin-post-image.png
 ```
 
 🚨 If render exits non-zero, skip image stage. Fall through to § 7 text-only. Never block the post.
 
-### Step 1: Open compose (§ 7), wait 1s
-### Step 2: Type tweet text (BROWSER-core.md § 1)
+### Step 1: Open compose + type text (§ 7 flow: navigate /home → click compose button → wait 1s → CDP type into `[role="dialog"] [data-testid="tweetTextarea_0"]`). **Do NOT click Post yet.**
 
-### Step 3: Attach image via selector-mode upload
+### Step 2: Attach image via selector-mode upload
 
 ```bash
 curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/upload -H 'Content-Type: application/json' \
@@ -143,7 +142,7 @@ curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/upload -H 
 
 Wait 3s.
 
-### Step 4: Verify attach
+### Step 3: Verify attach
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
@@ -151,12 +150,11 @@ exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evalu
 ENDJSON
 ```
 
-If `false` → dismiss dialog (click close X, confirm Discard), fall through to § 7 text-only.
+If `false` → dismiss dialog (click close X, confirm Discard if prompted), fall through to § 7 text-only.
 
-### Step 5: Click Post (§ 7 existing flow)
-### Step 6: Verify post + extract tweet ID (§ 7 existing flow)
+### Step 4: Click Post — `[role="dialog"] [data-testid="tweetButton"]`, verify post landed + extract tweet ID from profile URL (same as § 7 closing pattern).
 
-🚨 **Failure recovery:** any failure in Step 0, 3, or 4 → fall through to § 7 text-only. Log as `Image: false, Reason: <why>`.
+🚨 **Failure recovery:** any failure in Step 0, 2, or 3 → fall through to § 7 text-only. Log as `Image: false, Reason: <why>`.
 
 ## § 8 — Quote Tweet
 
