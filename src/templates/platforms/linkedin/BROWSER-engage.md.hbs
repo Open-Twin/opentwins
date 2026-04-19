@@ -79,18 +79,6 @@ exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evalu
 ENDJSON
 ```
 
-## SS 3. Extract Feed Posts
-
-```bash
-exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var items = document.querySelectorAll('div[role=\"listitem\"]'); var posts = []; for (var i = 0; i < Math.min(items.length, 12); i++) { var item = items[i]; var text = item.innerText; if (text.length < 100) continue; var lines = text.split(String.fromCharCode(10)).filter(function(l) { return l.trim().length > 0; }); var allLinks = item.querySelectorAll('a'); var postUrl = null; var profileUrl = null; for (var k = 0; k < allLinks.length; k++) { var href = allLinks[k].href; if (!postUrl && (href.indexOf('/feed/update/') > -1 || href.indexOf('/pulse/') > -1 || href.indexOf('/posts/') > -1)) postUrl = href; if (!profileUrl && href.indexOf('/in/') > -1 && allLinks[k].innerText.trim().length > 0) profileUrl = href; } var likeBtn = item.querySelector('button[aria-label=\"Reaction button state: no reaction\"]'); var isLiked = item.querySelector('button[aria-label=\"Reaction button state: Like\"]'); var promoted = text.includes('Promoted'); if (promoted) continue; var rm = text.match(/(\\d+)\\s+reaction/); var cm = text.match(/(\\d+)\\s+comment/); posts.push({ idx: i, author: lines.length > 1 ? lines[1].slice(0, 60) : '', postUrl: postUrl, content: text.slice(0, 300), reactions: rm ? parseInt(rm[1]) : 0, comments: cm ? parseInt(cm[1]) : 0, notLiked: !!likeBtn, alreadyLiked: !!isLiked }); } return posts; }"}
-ENDJSON
-```
-
-## SS 3b. Posts with no URL
-
-🚨 **Skip posts with `postUrl: null`.** Simply skip to the next post that has a URL.
-
 ## SS 3c. Like + Extract Post Content
 
 Run BEFORE commenting on a post you navigated to. Clicks top-level post Like (null-safe: only matches `aria-label="React Like"`; already-liked posts skip). Returns `{ liked, author, text }`. Your comment MUST directly address the returned `text`.
@@ -161,16 +149,6 @@ ENDJSON
 ```
 
 If `verified: false`: retry Step 1 + Step 2 ONCE. Still fails → skip.
-
-## SS 6. Like Posts (Batch)
-
-Replace `${maxLikes}` with the number of likes to do.
-
-```bash
-exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { var maxLikes = window.__data.maxLikes; var buttons = document.querySelectorAll('button'); var unliked = []; for (var i = 0; i < buttons.length; i++) { var label = buttons[i].getAttribute('aria-label'); if (label === 'Reaction button state: no reaction') unliked.push(buttons[i]); } var liked = 0; for (var i = 0; i < Math.min(maxLikes, unliked.length); i++) { unliked[i].click(); liked++; } await new Promise(r => setTimeout(r, 2000)); var verifyBtns = document.querySelectorAll('button'); var likedCount = 0; for (var j = 0; j < verifyBtns.length; j++) { if (verifyBtns[j].getAttribute('aria-label') === 'Reaction button state: Like') likedCount++; } return { totalUnliked: unliked.length, attempted: liked, totalLikedAfter: likedCount }; }", "data": {"maxLikes": 4}}
-ENDJSON
-```
 
 ## SS 7. Article Publishing
 
