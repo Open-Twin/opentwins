@@ -181,7 +181,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
    ```
    Only navigate to posts NOT in tracking file.
 5. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) before writing comment. 🚨 Use the `content` field from SS 3 extraction to inform your comment — your comment MUST directly address the post's topic.
-6. Navigate to unchecked post URL, 🚨 **MANDATORY: Read post content** (BROWSER-engage.md SS 3c), then use BROWSER-notifications.md SS 5 for comment. After success: `echo "{post_id}" >> memory/commented_posts.txt`
+6. Navigate to unchecked post URL. 🚨 **Like first, then comment.** On the post detail page, click the top-level post Like: `Array.from(document.querySelectorAll("button")).find(b => b.getAttribute("aria-label") === "React Like")` (first match = main post, NOT a comment-level "React Like to X's comment"). After click, aria flips to `"Unreact Like"`. Then read post content (BROWSER-engage.md SS 3c) and comment via BROWSER-notifications.md SS 5. After success: `echo "{post_id}" >> memory/commented_posts.txt`
 
 ### publish_article
 
@@ -258,7 +258,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
    EOF
    ```
    🚨 **Style field MANDATORY** for all Comment entries — track which style was used (insight|short|personal|disagree). Enables quality audits.
-   Types: Heartbeat, Comment, Reply, Reaction, Post Published, Article Published, Poll, Repost, Newsletter, Connection Request, Error, Alert
+   Types: Heartbeat, Comment, Reply, Post Published, Article Published, Poll, Repost, Newsletter, Connection Request, Error, Alert
 
 2. Update `limits.json` after each action:
    - Comment: `daily.comments.current += 1`, append history
