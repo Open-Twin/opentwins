@@ -15,15 +15,17 @@ shadow.querySelector('button')  // finds modal buttons
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { var host = document.querySelector('#interop-outlet'); if (host && host.shadowRoot) { var editor = host.shadowRoot.querySelector('[contenteditable=\"true\"][role=\"textbox\"]'); if (editor) return { alreadyOpen: true }; } var startBtn = Array.from(document.querySelectorAll('p, div, button')).find(function(el) { return el.textContent && el.textContent.trim() === 'Start a post' && el.offsetParent !== null && el.children.length === 0; }); if (!startBtn) return { success: false, reason: 'no-start-post-button' }; startBtn.click(); return { success: true }; }"}
+{"fn":"async () => { var host = document.querySelector('#interop-outlet'); if (host && host.shadowRoot) { var editor = host.shadowRoot.querySelector('[contenteditable=\"true\"][role=\"textbox\"]'); if (editor) return { alreadyOpen: true }; } var startBtn = Array.from(document.querySelectorAll('div, button')).find(function(el) { return (el.innerText || '').trim() === 'Start a post' && (el.getAttribute('role') === 'button' || el.tagName === 'BUTTON'); }); if (!startBtn) return { success: false, reason: 'no-start-post-button' }; startBtn.click(); return { success: true }; }"}
 ENDJSON
 ```
 
-Wait 2s. Verify modal opened:
+🚨 **MUST filter by `role="button"` or `tagName === "BUTTON"`** — first plain `<div>` is a decorative wrapper that no-ops on click.
+
+Wait 4s. Verify modal opened:
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); var host = document.querySelector('#interop-outlet'); if (!host || !host.shadowRoot) return { open: false, reason: 'no-shadow-root' }; var shadow = host.shadowRoot; var btns = Array.from(shadow.querySelectorAll('button')); return { open: btns.length > 3, buttons: btns.map(b => ({ text: (b.innerText || '').trim().slice(0, 30), label: b.getAttribute('aria-label') || '' })) }; }"}
+{"fn":"async () => { await new Promise(r => setTimeout(r, 4000)); var host = document.querySelector('#interop-outlet'); if (!host || !host.shadowRoot) return { open: false, reason: 'no-shadow-root' }; var shadow = host.shadowRoot; var btns = Array.from(shadow.querySelectorAll('button')); return { open: btns.length > 3, buttons: btns.map(b => ({ text: (b.innerText || '').trim().slice(0, 30), label: b.getAttribute('aria-label') || '' })) }; }"}
 ENDJSON
 ```
 
@@ -133,6 +135,58 @@ ENDJSON
 
 ### Step 3: Click "Post" (SS 9 Step 9)
 ### Step 4: Dismiss + verify (SS 9 Step 10)
+
+---
+
+## SS 10b. Create Regular Post with Image Attached
+
+Same as SS 10 but inserts a media-upload stage between editor open and Post click. Use when `linkedin-post-image.spec.json` exists alongside today's `linkedin-post.md`.
+
+### Step 0: Render spec to PNG
+
+```bash
+mkdir -p /tmp/opentwins-uploads
+node {{pipeline_workspace}}/content-writer/templates/render-post-image.mjs \
+  {{pipeline_workspace}}/content-ready/{today}/linkedin-post-image.spec.json \
+  /tmp/opentwins-uploads/linkedin-post-image.png
+```
+
+🚨 If render exits non-zero, skip image stage and fall through to SS 10 (text-only). Never block the post.
+
+### Step 1: Open modal (SS 8, 4s wait)
+### Step 2: Type post text (SS 10 Step 2), wait 1s
+
+### Step 3: Click More, then "Add media" (shadow DOM)
+
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var shadow = document.querySelector('#interop-outlet').shadowRoot; var moreBtn = Array.from(shadow.querySelectorAll('button')).find(function(b) { return b.getAttribute('aria-label') === 'More'; }); if (!moreBtn) return { success: false, reason: 'no-more-button' }; moreBtn.click(); await new Promise(r => setTimeout(r, 1000)); var mediaBtn = Array.from(shadow.querySelectorAll('button')).find(function(b) { return b.getAttribute('aria-label') === 'Add media'; }); if (!mediaBtn) return { success: false, reason: 'no-add-media' }; mediaBtn.click(); await new Promise(r => setTimeout(r, 2000)); return { success: true }; }"}
+ENDJSON
+```
+
+### Step 4: Direct-set file via selector-mode upload
+
+🚨 **MUST use `selector`.** Intercept mode fires the chooser twice → "1 of 2" duplicate. Selector sets files directly, no chooser.
+
+```bash
+curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/upload -H 'Content-Type: application/json' \
+  -d '{"filePath":"/tmp/opentwins-uploads/linkedin-post-image.png","selector":"#media-editor-file-selector__file-input","timeoutMs":10000}'
+```
+
+Wait 3s. Editor opens with "1 of 1".
+
+### Step 5: Click "Next" in Editor dialog, wait 2s
+
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { function walk(root, pred, depth) { depth = depth || 0; if (depth > 6) return null; var hit = Array.from(root.querySelectorAll('*')).find(pred); if (hit) return hit; var hosts = Array.from(root.querySelectorAll('*')).filter(function(el) { return el.shadowRoot; }); for (var i = 0; i < hosts.length; i++) { var r = walk(hosts[i].shadowRoot, pred, depth + 1); if (r) return r; } return null; } var next = walk(document, function(el) { return el.tagName === 'BUTTON' && el.getAttribute('aria-label') === 'Next'; }); if (!next) return { success: false, reason: 'no-next' }; next.click(); await new Promise(r => setTimeout(r, 2500)); return { success: true }; }"}
+ENDJSON
+```
+
+### Step 6: Click "Post" (SS 9 Step 9)
+### Step 7: Dismiss + verify (SS 9 Step 10)
+
+🚨 **Failure recovery:** if any step 3-5 fails, click Dismiss on the Editor modal (if open), then fall through to SS 10 Step 3 (post text-only). Log as `Post Published` with `image: false`.
 
 ---
 
