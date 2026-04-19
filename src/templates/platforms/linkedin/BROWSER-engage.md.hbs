@@ -91,9 +91,9 @@ ENDJSON
 
 🚨 **Skip posts with `postUrl: null`.** Simply skip to the next post that has a URL.
 
-## SS 3c. Like + Extract Post Content (after navigating to post page)
+## SS 3c. Like + Extract Post Content
 
-Clicks the top-level post Like (null-safe — if already liked, selector misses and returns `liked: false`) and returns post author + text. Run BEFORE commenting. One evaluate replaces two round-trips.
+Run BEFORE commenting on a post you navigated to. Clicks top-level post Like (null-safe: only matches `aria-label="React Like"`; already-liked posts skip). Returns `{ liked, author, text }`. Your comment MUST directly address the returned `text`.
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
