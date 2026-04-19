@@ -14,7 +14,10 @@ End-of-day / on-demand. DO NOT load on routine heartbeats. Read sections as need
    - **Content brief:** `{{pipeline_workspace}}/content-briefs/{target_date}.md` — provides today's theme, engagement targets, suggested hooks, hashtags. Adapt to Twitter style, don't copy verbatim.
    - **INSIGHTS.md** — provides what's been working: engagement patterns, timing insights, conversion triggers, key accounts.
    - **How they work together:** Content brief sets the THEME (what to talk about). INSIGHTS.md sets the STRATEGY (who to target, when to post, what format works). If no content brief exists, use INSIGHTS.md alone.
-   - 🚨 **Dead-query skip (MANDATORY).** Before writing any `search_and_promo_reply` task config, check INSIGHTS.md `## Search Query Performance` → `**Miss / avoid:**` list. If the query text you are about to schedule substring-matches any entry there, pick a different angle instead. The Miss list records queries that returned 0 qualifying results across 2+ past attempts; re-scheduling them wastes a task slot.
+   - 🚨 **Dead-query skip (MANDATORY).** Before writing any `search_and_promo_reply` task, check INSIGHTS.md `## Search Query Performance` → `**Miss / avoid:**` with both tests:
+     - **Substring match:** query substring-matches any Miss entry → skip.
+     - **Keyword-family match:** query shares 2+ distinctive keywords with any Miss entry (exclude common terms: `AI`, `agent`, `project`) → skip. Rotate to different pillar.
+   - 🚨 **Dead-target skip (MANDATORY).** Before scheduling any `strategic_reply` for a specific account, check INSIGHTS.md `## Account Targets` → `**Demoted:**` subsection. If listed → pick different account. Demoted targets failed 2+ recent `strategic_reply` attempts.
 
 2. **Extract patterns** (2+ occurrences only):
    - Conversions: "what app?" triggers?
@@ -184,6 +187,8 @@ Review today's activity and update `INSIGHTS.md`:
 - If the same query (or near-duplicate) returned 0 results 2 days in a row → add to `## Search Query Performance` → `**Miss / avoid:**` list with format: `"{query text}" → 0 qualifying ({date1}, {date2}, {N searches each}). Too niche.`
 - If a query in the Miss list returned 20+ likes once this week (retry attempt succeeded) → remove it from Miss list, add to `**Hit**` list.
 - Never let Miss list exceed 12 entries — remove the oldest when at cap to keep actionable.
+
+🚨 **Dead-target tracking (MANDATORY).** Walk today's memory for failed `strategic_reply` tasks (0 qualifying, all meme-filtered, or `Strategic Reply (Failed)` log). For any target with 2+ fails in last 7 days: add to `## Account Targets` → `**Demoted:**` as `@handle — {N} fails ({reason}). Demoted {date}.` Cap 10; remove oldest. If a demoted target produces a 20+ like reply later, remove and restore to tier list.
 
 **Rules:**
 - < 100 lines
