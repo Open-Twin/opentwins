@@ -271,6 +271,25 @@ tags: [relevant, topic, tags, from, pillars]
 [content]
 ```
 
+### 11b. `devto-seed-comment.md` — self-seed comment for Dev.to article
+
+**Purpose:** posted by the Dev.to agent ~2h after publish to kickstart discussion if no external comments yet. Author jumps in with a self-counter that invites debate.
+
+**Voice:** developer-casual, self-critical. Concede a real weakness or edge case the article didn't cover. 1-3 sentences. Under 40 words. Same anti-AI voice rules as §11.
+
+**Format:**
+```
+status: pending
+
+[seed comment body]
+```
+
+**Good:** `"honestly, the reversibility map breaks for LLM-latency-critical paths where the 30-min window doesn't exist."`
+**Bad:** `"Great article! Curious what others think."` (generic)
+**Bad:** `"I want to add one more point: X is also important."` (expansion, not counter)
+
+Emit on every writer run. Dev.to agent skips consumption on non-publish days.
+
 ### 12. `ph-comment-angles.md` — Product Hunt comment angles (not full comments)
 
 Product Hunt comments are reactive to specific launches, so provide **angles** not full text:

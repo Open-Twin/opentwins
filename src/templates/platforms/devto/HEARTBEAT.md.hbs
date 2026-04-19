@@ -212,7 +212,7 @@ Before executing any `publish_article` task:
 3. After publish → mark task done
 
 ### Publish article
-🚨 **MANDATORY per `weekly.articles.limit` from limits.json (Wednesday + Sunday).** If `weekly.articles.current >= weekly.articles.limit` → skip.
+🚨 **MANDATORY per `weekly.articles.limit` from limits.json (Wednesday + Friday).** If `weekly.articles.current >= weekly.articles.limit` → skip.
 1. Pick topic from queries.json + check INSIGHTS.md for what resonates
 2. Write article: 800-1500 words, conversational, story-driven, personal experience. Match SOUL.md voice.
 3. Use markdown formatting: `##` headers for sections, `**bold**` for key phrases, short paragraphs, `---` separator before CTA
@@ -222,6 +222,22 @@ Before executing any `publish_article` task:
 7. `{{opentwins_home}}/agent-devto/scripts/devto-api.sh publish <file.md> --series "Series Name"`, log + mark done
 8. Update `weekly.articles.current += 1`
 
+### seed_article_comment
+
+Fires ~2h after publish on Wed/Fri. Kickstarts thread if empty. **Exempt from `daily.comments.limit`** — do NOT increment the counter.
+
+1. Read `config.seed_source`. If missing or first non-blank line is `status: published` → mark done, log "Seed skipped: already published", skip.
+2. Fetch latest article: `{{opentwins_home}}/agent-devto/scripts/devto-api.sh my-articles 1`. Extract `published_at`, `url`, `comments_count`.
+3. If `published_at` date != today → mark done, log "Seed skipped: no publish today", skip.
+4. If `comments_count >= 1` → mark done, log "Seed skipped: N comments exist", skip.
+5. Parse seed body: all lines of `config.seed_source` after the `status: pending` line, trimmed.
+6. Navigate to `url`, post via BROWSER-engage.md comment flow (dedup on `a[href*="/{{handle}}"]` prevents double-seed on retry).
+7. On verified post:
+   - Rewrite line 1 of `config.seed_source` to `status: published`.
+   - Log Type="Seed Comment" to `memory/{today}.md` with article URL + comment body.
+   - Do NOT increment `limits.daily.comments.current`.
+8. On submit failure: retry next heartbeat. After 1 retry, mark failed + log Error.
+
 ### update_memory
 Read PLAYBOOK.md -> "Memory Update"
 
@@ -230,7 +246,7 @@ Read PLAYBOOK.md -> "Memory Update"
 ## 5. Log & Update Limits
 
 1. Append to `memory/{today}.md` via `cat >> file <<'EOF'` (never read/edit).
-   Format: `## {date} {time} - {Type}` + Article URL + Tags + Style + text. Types: Heartbeat, Comment, Reply, Reaction, Article Published, Tag Follow, Error.
+   Format: `## {date} {time} - {Type}` + Article URL + Tags + Style + text. Types: Heartbeat, Comment, Reply, Reaction, Article Published, Tag Follow, Seed Comment, Error.
    🚨 **Comment/Reply entries MUST include:**
    - `Style: {insight|short|personal|disagree}` — which style was used
    - `Our comment: "{full text posted}"` — actual text, not topic summary. Min 120 chars.

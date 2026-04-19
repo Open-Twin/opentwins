@@ -42,8 +42,8 @@ Read only when: (1) schedule generation task, (2) updating INSIGHTS.md, (3) debu
    - **Example:** if limit=6: 3 tasks → task1: max_comments=2, max_reactions=5; task2: max_comments=2, max_reactions=5; task3: max_comments=2, max_reactions=5 → total: 6 ✅
    - **WRONG:** 1 task with max_comments=1 → total doesn't match limit ❌
 
-7. 🚨 **Articles: MANDATORY per `weekly.articles.limit` from limits.json.** Wednesday + Sunday. Always include `publish_article` task in schedule on those days — do NOT skip.
-   - Wednesday at 10:00, Sunday at 10:00
+7. 🚨 **Articles: MANDATORY per `weekly.articles.limit` from limits.json.** Wednesday + Friday. Always include `publish_article` task in schedule on those days — do NOT skip.
+   - Wednesday at 10:00, Friday at 10:00
    - If `weekly.articles.current >= limit` → skip the task but keep other tasks
    - Series selection from trending category (step 2 tag performance):
      - ai_dev trending → "Vibe Coding Lessons"
@@ -57,6 +57,15 @@ Read only when: (1) schedule generation task, (2) updating INSIGHTS.md, (3) debu
        ...
      }
      ```
+
+7b. 🚨 **Seed comment task:** on Wed + Fri, add `seed_article_comment` at 12:00 (2h after publish). Task self-skips if publish didn't occur or article already has comments — include unconditionally.
+    ```json
+    "config": {
+      "seed_source": "{{pipeline_workspace}}/content-ready/{today_date}/devto-seed-comment.md",
+      "exempt_from_comment_limit": true
+    }
+    ```
+    Seed task has NO `max_comments` / `max_reactions` — excluded from step 6 capacity check.
 
 8. Apply: jitter (±30min), anti-collision (10min spacing), active hours (08:00-23:00)
 
