@@ -181,7 +181,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
    ```
    Only navigate to posts NOT in tracking file.
 5. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) before writing comment. 🚨 Use the `content` field from SS 3 extraction to inform your comment — your comment MUST directly address the post's topic.
-6. Navigate to unchecked post URL. 🚨 **Like first, then comment.** On the post detail page, click the top-level post Like: `Array.from(document.querySelectorAll("button")).find(b => b.getAttribute("aria-label") === "React Like")` (first match = main post, NOT a comment-level "React Like to X's comment"). After click, aria flips to `"Unreact Like"`. Then read post content (BROWSER-engage.md SS 3c) and comment via **BROWSER-engage.md SS 4b** (Quill editor — post detail pages use the same editor as Pulse). After success: `echo "{post_id}" >> memory/commented_posts.txt`
+6. Navigate to unchecked post URL. **Like + read content** via BROWSER-engage.md SS 3c (one evaluate: clicks top-level post Like, then extracts author + text). Comment via **BROWSER-engage.md SS 4b** (Quill editor — post detail pages use the same editor as Pulse). After success: `echo "{post_id}" >> memory/commented_posts.txt`
 
 ### publish_article
 

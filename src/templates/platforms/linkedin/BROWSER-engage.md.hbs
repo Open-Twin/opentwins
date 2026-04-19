@@ -91,13 +91,13 @@ ENDJSON
 
 🚨 **Skip posts with `postUrl: null`.** Simply skip to the next post that has a URL.
 
-## SS 3c. Extract Post Content (after navigating to post page)
+## SS 3c. Like + Extract Post Content (after navigating to post page)
 
-Run BEFORE commenting. Your comment MUST address this post's topic.
+Clicks the top-level post Like (null-safe — if already liked, selector misses and returns `liked: false`) and returns post author + text. Run BEFORE commenting. One evaluate replaces two round-trips.
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var authorEl = document.querySelector('.update-components-actor__title span span'); var author = authorEl ? authorEl.innerText.trim().split(String.fromCharCode(10))[0] : ''; var postEl = document.querySelector('.feed-shared-update-v2__description') || document.querySelector('.update-components-text'); var text = postEl ? postEl.innerText.trim().slice(0, 500) : ''; return { author, text }; }"}
+{"fn":"async () => { var likeBtn = Array.from(document.querySelectorAll('button')).find(function(b) { return b.getAttribute('aria-label') === 'React Like'; }); var liked = false; if (likeBtn) { likeBtn.click(); liked = true; } await new Promise(r => setTimeout(r, 3000)); var authorEl = document.querySelector('.update-components-actor__title span span'); var author = authorEl ? authorEl.innerText.trim().split(String.fromCharCode(10))[0] : ''; var postEl = document.querySelector('.feed-shared-update-v2__description') || document.querySelector('.update-components-text'); var text = postEl ? postEl.innerText.trim().slice(0, 500) : ''; return { liked, author, text }; }"}
 ENDJSON
 ```
 
