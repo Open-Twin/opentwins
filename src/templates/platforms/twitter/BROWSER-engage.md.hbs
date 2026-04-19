@@ -118,15 +118,15 @@ ENDJSON
 
 ## § 7b — Compose with Image
 
-Use when `content-ready/{today_date}/linkedin-post-image.spec.json` exists. Inserts image upload between compose-open and Post click.
+Use when `content-ready/{today_date}/twitter-post-image.spec.json` exists. Inserts image upload between compose-open and Post click.
 
 ### Step 0: Render spec to PNG
 
 ```bash
 mkdir -p /tmp/opentwins-uploads
 node {{pipeline_workspace}}/content-writer/templates/render-post-image.mjs \
-  {{pipeline_workspace}}/content-ready/{today_date}/linkedin-post-image.spec.json \
-  /tmp/opentwins-uploads/linkedin-post-image.png
+  {{pipeline_workspace}}/content-ready/{today_date}/twitter-post-image.spec.json \
+  /tmp/opentwins-uploads/twitter-post-image.png
 ```
 
 🚨 If render exits non-zero, skip image stage. Fall through to § 7 text-only. Never block the post.
@@ -137,7 +137,7 @@ node {{pipeline_workspace}}/content-writer/templates/render-post-image.mjs \
 
 ```bash
 curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/upload -H 'Content-Type: application/json' \
-  -d '{"filePath":"/tmp/opentwins-uploads/linkedin-post-image.png","selector":"[role=\"dialog\"] [data-testid=\"fileInput\"]","timeoutMs":10000}'
+  -d '{"filePath":"/tmp/opentwins-uploads/twitter-post-image.png","selector":"[role=\"dialog\"] [data-testid=\"fileInput\"]","timeoutMs":10000}'
 ```
 
 Wait 3s.

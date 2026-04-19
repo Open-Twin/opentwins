@@ -123,6 +123,17 @@ Renderer: `{{pipeline_workspace}}/content-writer/templates/render-post-image.mjs
 
 Used for both `original_tweet` tasks (agent picks one thread) and general Twitter content.
 
+**Image spec (`twitter-post-image.spec.json`) — emit whenever you emit `linkedin-post-image.spec.json`:**
+
+Same schema (matrix/venn/stack) and same renderer as §3. Differences from LinkedIn:
+- Title: 4-10 words (vs 5-15)
+- Subtitle: 5-12 words (vs 8-20)
+- Cell/item body: 8-15 words (vs 12-25)
+- Doodle: skip or 3-5 words
+- Voice: punchier, hot-take flavor. Drop audience-labeling setup — Twitter readers don't need it.
+
+Skip this file on days you skip `linkedin-post-image.spec.json`.
+
 ### 5. `twitter-article.md` — Twitter article (1000-1500 words)
 
 **Voice:** Adapted from Medium style for Twitter's audience — shorter paragraphs, punchier language, more conversational. First person, experience-driven. End with a question or provocative statement. 0-1 hashtag at the end (zero is the default).
