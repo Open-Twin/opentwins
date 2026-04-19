@@ -124,4 +124,6 @@ If browser fails → log "Tag follow/unfollow: browser unavailable" and **contin
 - Strategy Adjustments: patterns for future schedules
 - Tag Performance: hot tags to prioritize, cold tags to avoid (use API data or memory-based estimates)
 
+🚨 **Stale target pruning (MANDATORY).** Walk the `## Key Relationships` section. For each `@handle` without activity observed in the last 7 days (grep the handle across `memory/*.md` for this week): demote it to a `## Key Relationships (watching — silent 7+d)` subsection. Watching entries are not prioritized for daily comment tasks. Remove handles with 14+ days silence entirely. Annotate reciprocal-but-stale entries with `last seen: {date}` so the next retro can make a clean call.
+
 Keep <100 lines. Archive old insights when new confirmed.

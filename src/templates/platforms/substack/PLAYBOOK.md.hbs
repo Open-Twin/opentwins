@@ -41,6 +41,8 @@ If browser fails -> log "Subscriber check: browser unavailable" and **continue t
 - Strategy Adjustments: data-based changes
 - Subscriber Tracking: current count, milestones
 
+🚨 **Stale target pruning (MANDATORY).** Walk the `## Key Relationships` section. For each `@handle` without activity observed in the last 7 days (grep the handle across `memory/*.md` for this week): demote it to a `## Key Relationships (watching — silent 7+d)` subsection. Watching entries are not used as `priority_targets` in daily browse_and_engage tasks — they get a weekly check at most. Remove handles with 14+ days silence entirely. Annotate every Key Relationship entry with its most recent activity date (format: `last seen: YYYY-MM-DD`) so next retro has clean timestamps. Undated entries MUST get a date appended during this pass.
+
 ### Step 4: Cleanup tracking files
 
 - Remove entries >7 days old from tracking files
