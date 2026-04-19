@@ -33,7 +33,7 @@ export const DEFAULT_LIMITS: Record<PlatformType, PlatformLimits> = {
     },
     weekly: {
       posts: { limit: 3 },
-      articles: { limit: 1 },
+      articles: { limit: 2 },
       carousels: { limit: 0 },
       connection_requests: { limit: 25 },
       reposts: { limit: 1 },
@@ -54,7 +54,7 @@ export const DEFAULT_LIMITS: Record<PlatformType, PlatformLimits> = {
       comments: { limit: 6 },
     },
     weekly: {
-      posts: { limit: 2 },
+      posts: { limit: 5 },
       quotes: { limit: 3 },
     },
   },
@@ -74,6 +74,7 @@ export const DEFAULT_LIMITS: Record<PlatformType, PlatformLimits> = {
     },
     weekly: {
       newsletters: { limit: 1 },
+      recommendations: { limit: 6 },
     },
   },
   devto: {
@@ -82,7 +83,7 @@ export const DEFAULT_LIMITS: Record<PlatformType, PlatformLimits> = {
       reactions: { limit: 8 },
     },
     weekly: {
-      articles: { limit: 1 },
+      articles: { limit: 2 },
       tag_follows: { limit: 2 },
     },
   },
