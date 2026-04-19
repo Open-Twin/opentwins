@@ -336,6 +336,32 @@ Theme: [today's theme]
 
 **Voice:** Builder-to-builder. Messy, real numbers, honest failures. "I" not "we." Half-thoughts OK. Self-review gate: "Would I think AI wrote this?" If yes, rewrite messier.
 
+**Title rules (hard):**
+- ≤55 chars. Count before writing body. Rewrite if over.
+- Must contain ≥1 digit (0-9). Spelled-out numbers don't count.
+- No announcement framing. Ban openers: "Shipped", "Released", "Launched", "Just X", "Introducing", "Announcing", "New:", "v1.0/vN", "Update:". Outcomes or questions only.
+
+**Body structure (hard):**
+- First paragraph: lead with the takeaway, number, or outcome. Not the anecdote.
+- Middle: story, framework, or context that backs it up.
+- Final paragraph alone: one question ending with `?`. Nothing after.
+
+**Frontmatter fields (per post):** `status: pending` · `title: <title>` · `group: <name>`.
+
+**Group routing (pick one joined IH group, else `none`):**
+- `AI Tools` — AI agents, LLM tooling
+- `Artificial Intelligence` — AI strategy, broad AI discussion
+- `Building in Public` — build-log, progress updates, honest failures
+- `Developers` — technical deep-dives, code snippets, tooling
+- `Growth` — distribution, marketing, finding users
+- `Ideas and Validation` — user research, feature feedback asks
+- `Product Launch` — launch announcements, milestone posts
+- `Show IH` — product showcase, "built this" reveals
+- `Solo Entrepreneurship` — constraint-driven solo work
+- `none` — general feed if no clear match OR group not joined
+
+Group name in `group:` must match EXACTLY (case + spacing). If unsure → `none`.
+
 ### 14. `linkedin-carousel.spec.json` + `linkedin-carousel.md` — LinkedIn document post (PDF carousel)
 
 🚨 **Only emit if LinkedIn `weekly.carousels.limit > 0`.** When disabled, skip entirely — `linkedin-post.md` + `linkedin-article.md` are the LinkedIn surface.

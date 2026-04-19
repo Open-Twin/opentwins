@@ -41,12 +41,13 @@ Read these two sources:
 | Day | Tasks |
 |-----|-------|
 | Mon-Sat | 10:00 + 15:00 Kyiv (browse/engage) |
-| 🚨 **Wed 15:00** | **+ publish_post (MANDATORY)** |
-| 🚨 **Sat 15:00** | **+ publish_post (MANDATORY)** |
+| 🚨 **Wed 15:00** | **+ publish_post** |
+| 🚨 **Thu 15:00** | **+ publish_post** |
+| 🚨 **Sat 15:00** | **+ publish_post (only if even ISO week)** |
 | Sun | 14:00 only |
 | 🚨 **Every day** | **22:00 update_memory** |
 
-🚨 **Posts: MANDATORY per `weekly.posts.limit` from limits.json.** Wednesday + Saturday. Always include `publish_post` task — do NOT skip. If `weekly.posts.current >= weekly.posts.limit` → skip the task but keep other tasks.
+🚨 **Posts.** Wed + Thu MANDATORY every week. Sat publish only if `iso_week % 2 == 0` (alternating). If `weekly.posts.current >= weekly.posts.limit` → skip but keep other tasks.
    - 🚨 MUST include `content_source` in `publish_post` config:
      ```json
      "config": {

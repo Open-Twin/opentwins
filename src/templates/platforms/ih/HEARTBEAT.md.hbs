@@ -132,7 +132,7 @@ if daily.comments.current >= limit: mark_done("daily limit reached")
 **No spacing rule.** Execute tasks back-to-back when due.
 
 1. Browse feed -- extract posts: BROWSER-engage.md S 2. DO NOT navigate individually for stats.
-2. Filter in memory: Post Quality Filter from TOOLS.md (2-15 comments, relevant, fresh)
+2. Filter in memory: Post Quality Filter from TOOLS.md
 3. 🚨 **MANDATORY: Grep pre-check against tracking file** — for each candidate post, extract its ID:
    - URL has `?post=XXX` → ID = the `XXX` part
    - URL is `/post/slug-hash` → extract BOTH the full `slug-hash` AND just the trailing hash after last `-`
@@ -172,8 +172,8 @@ if Wednesday: use_weekly_template(TOOLS.md), read_mem(last_7d)
 Write post (real data + numbers). Self-review (SOUL.md). Then follow these EXACT steps:
 ```
 
-**Post creation — 4 evaluates total (steps are in BROWSER-post.md S 7):**
-Use BROWSER-post.md S 7 (Steps 1-4: navigate → set title → set body → submit → verify). All curl commands are in that file.
+**Post creation — 5 evaluates total (steps in BROWSER-post.md S 7 + S 7.5):**
+Use BROWSER-post.md S 7 (navigate → title → body) → S 7.5 (optional group select) → S 7 (submit → verify). Group select is non-blocking: skip on 'none' or any error, fallback to general feed.
 6. If `isPublished: true`: update `weekly.posts.current++`, log `Type="Post Published"`, mark_done()
 7. If `isPublished: false`: retry evaluate 3 once. Still false → HEARTBEAT_BLOCKED
 
