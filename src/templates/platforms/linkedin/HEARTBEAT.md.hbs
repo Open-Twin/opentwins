@@ -103,7 +103,7 @@ Filter `schedule.json`: `status=pending` AND `time <= now`. Sort earliest first.
 
 **No spacing rule.** Execute tasks back-to-back when due.
 
-🚨 **Per-author daily cap: 1 comment/author/day.** Before commenting, skip candidates whose author is in today's `daily.comments.history`. Applies to search_and_comment, browse_and_engage, priority_targets.
+🚨 **Per-author daily cap: 1 comment/author/day.** Before commenting, skip candidates whose author is in today's `daily.comments.history`. Applies to search_and_comment and priority_targets.
 
 ### Content-Ready Override (publish tasks only)
 
@@ -169,19 +169,6 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
 9. **After each successful comment:** `echo "{post_id}" >> memory/commented_posts.txt`
 10. If no qualifying posts, try up to 2 more queries from different categories
 11. **Task completion:** Mark "completed" only when `comments_done >= config.max_comments`. If 0 posted, stays "pending"
-
-### browse_and_engage
-
-1. Navigate `https://www.linkedin.com/feed/`
-2. Extract using BROWSER-engage.md SS 3 (has embedded 3s wait — NO separate wait needed)
-3. **Get post URLs for comment candidates** — for each post with `postUrl: null`, run BROWSER-engage.md SS 3b (overflow menu → "Copy link to post" → clipboard → extract postId). This is 1 evaluate per post instead of 4-6 steps navigating to author profiles.
-4. 🚨 **MANDATORY: Batch grep pre-check** — check ALL postIds at once:
-   ```bash
-   printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/commented_posts.txt || true
-   ```
-   Only navigate to posts NOT in tracking file.
-5. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) before writing comment. 🚨 Use the `content` field from SS 3 extraction to inform your comment — your comment MUST directly address the post's topic.
-6. Navigate to unchecked post URL. Like + read content via BROWSER-engage.md SS 3c. Comment via BROWSER-engage.md SS 4b. After success: `echo "{post_id}" >> memory/commented_posts.txt`
 
 ### publish_article
 
