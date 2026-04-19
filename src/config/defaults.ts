@@ -30,7 +30,6 @@ export const DEFAULT_LIMITS: Record<PlatformType, PlatformLimits> = {
   linkedin: {
     daily: {
       comments: { limit: 3 },
-      reactions: { limit: 8 },
     },
     weekly: {
       posts: { limit: 3 },

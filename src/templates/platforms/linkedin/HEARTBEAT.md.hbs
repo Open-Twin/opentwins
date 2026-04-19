@@ -174,15 +174,14 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
 
 1. Navigate `https://www.linkedin.com/feed/`
 2. Extract using BROWSER-engage.md SS 3 (has embedded 3s wait — NO separate wait needed)
-3. Like + verify using BROWSER-engage.md SS 6 (ONE evaluate: batch like + 2s wait + verify)
-4. **Get post URLs for comment candidates** — for each post with `postUrl: null`, run BROWSER-engage.md SS 3b (overflow menu → "Copy link to post" → clipboard → extract postId). This is 1 evaluate per post instead of 4-6 steps navigating to author profiles.
-5. 🚨 **MANDATORY: Batch grep pre-check** — check ALL postIds at once:
+3. **Get post URLs for comment candidates** — for each post with `postUrl: null`, run BROWSER-engage.md SS 3b (overflow menu → "Copy link to post" → clipboard → extract postId). This is 1 evaluate per post instead of 4-6 steps navigating to author profiles.
+4. 🚨 **MANDATORY: Batch grep pre-check** — check ALL postIds at once:
    ```bash
    printf '%s\n' "ID1" "ID2" "ID3" | grep -vxF -f memory/commented_posts.txt || true
    ```
    Only navigate to posts NOT in tracking file.
-6. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) before writing comment. 🚨 Use the `content` field from SS 3 extraction to inform your comment — your comment MUST directly address the post's topic.
-7. Navigate to unchecked post URL, 🚨 **MANDATORY: Read post content** (BROWSER-engage.md SS 3c), then use BROWSER-notifications.md SS 5 for comment. After success: `echo "{post_id}" >> memory/commented_posts.txt`
+5. 🚨 **MANDATORY: Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) before writing comment. 🚨 Use the `content` field from SS 3 extraction to inform your comment — your comment MUST directly address the post's topic.
+6. Navigate to unchecked post URL, 🚨 **MANDATORY: Read post content** (BROWSER-engage.md SS 3c), then use BROWSER-notifications.md SS 5 for comment. After success: `echo "{post_id}" >> memory/commented_posts.txt`
 
 ### publish_article
 
@@ -237,7 +236,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
 - **repost_with_commentary:** Read BROWSER-post.md SS 11. 🚨 **Browse the home feed** (`/feed/`) to find repostable posts — do NOT search (search returns Pulse articles). Click Repost directly on the feed post → "Repost with your thoughts" → type 2-4 sentences in shadow DOM editor → Post. Self-review before posting.
 - **publish_newsletter:** "Weekend Builder" digest
 
-**General rules:** Like before commenting (Type A buttons). Type -> submit -> verify appeared. Don't log until confirmed. Update `comments_done`, `likes_done`. Mark "done" when `>= config.max_*`, else "pending".
+**General rules:** Like before commenting (Type A buttons — per-post, no daily cap). Type -> submit -> verify appeared. Don't log until confirmed. Update `comments_done`. Mark "done" when `>= config.max_comments`, else "pending".
 🚨 **Comment Submit:** ALWAYS use `button[data-view-name="comment-post"]`. NEVER iterate buttons by text "Comment" — the toggle (`feed-comment-button`) matches first and does NOT submit!
 🚨 **Comment Verify:** ALWAYS check editor is EMPTY (`editor.textContent.trim().length === 0` AND `innerText.indexOf(snippet) > -1`). NEVER check only `innerText` — text in editor gives false positive!
 
@@ -263,7 +262,6 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
 
 2. Update `limits.json` after each action:
    - Comment: `daily.comments.current += 1`, append history
-   - Reaction: `daily.reactions.current += 1`
    - Connection Request: `weekly.connection_requests.current += 1`, append history
    - Post/Article/Poll/Newsletter/Repost: weekly counter += 1
 
@@ -274,7 +272,7 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
    Output as text (gateway routes to Slack automatically). Do NOT use `message` tool with `target` parameter — it will error.
    ```
    LinkedIn HB{N}: {actions_summary}
-   Comments: {current}/{limit} | Reactions: {current}/{limit}
+   Comments: {current}/{limit}
    Replies: {count} (unlimited)
    Next: {next_task_time or "nothing scheduled"}
    ```
