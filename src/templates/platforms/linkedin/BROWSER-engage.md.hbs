@@ -129,9 +129,16 @@ If `verified: false`: retry ONCE. Still fails → skip to next post.
 
 ---
 
-## SS 4b. Comment on Pulse Article (Quill Editor)
+## SS 4b. Comment via Quill Editor (Pulse + Post Detail Page)
 
-🚨 **Pulse articles use QUILL editor, NOT TipTap.** `execCommand('insertText')` leaves Quill's Delta state empty → submit silently rejected. Must use Quill API.
+🚨 **Pulse articles AND post detail pages (`/feed/update/urn:li:activity:*`) both use QUILL editor, NOT TipTap.** `execCommand('insertText')` leaves Quill's Delta state empty → submit silently rejected. Must use Quill API.
+
+Step 2 submit button differs by surface:
+- Pulse: `aria-label` starts with `"post comment on"`
+- Post detail page: class `comments-comment-box__submit-button--cr` (no aria-label)
+- Feed inline (standardization fallback): `data-view-name="comment-post"`
+
+Step 2 tries all three in order.
 
 ### Step 1: Scroll to comments + insert via Quill API
 
@@ -149,7 +156,7 @@ If `textInserted: false` → skip this target.
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { var composer = document.querySelector('.ql-editor[contenteditable=\"true\"]'); var form = composer ? composer.closest('form') : null; if (!form) return { error: 'no_form' }; var btns = Array.from(form.querySelectorAll('button')); var submitBtn = btns.find(function(b) { var label = (b.getAttribute('aria-label') || '').toLowerCase(); return label.indexOf('post comment on') === 0; }); if (!submitBtn) submitBtn = form.querySelector('button[data-view-name=\"comment-post\"]'); if (!submitBtn) return { error: 'no_submit_button' }; if (submitBtn.disabled || submitBtn.getAttribute('aria-disabled') === 'true') return { error: 'submit_disabled' }; submitBtn.click(); await new Promise(r => setTimeout(r, 5000)); var snippet = window.__data.snippet; var ourLinks = Array.from(document.querySelectorAll('a[href*=\"/in/{{handle_slug}}\"]')); var ourCommentFound = false; for (var i = 0; i < ourLinks.length; i++) { if (ourLinks[i].href.includes('sidebar_menu') || ourLinks[i].href.includes('author')) continue; var parent = ourLinks[i].closest('article') || ourLinks[i].closest('[class*=\"comment-entity\"]') || ourLinks[i].closest('[data-urn*=\"comment\"]'); if (!parent) parent = ourLinks[i].parentElement; for (var hops = 0; hops < 8 && parent; hops++) { if (parent.innerText && parent.innerText.indexOf(snippet) > -1 && !parent.querySelector('[role=\"textbox\"]') && !parent.querySelector('.ql-editor')) { ourCommentFound = true; break; } parent = parent.parentElement; } if (ourCommentFound) break; } var editorAfter = document.querySelector('.ql-editor[contenteditable=\"true\"]'); var editorEmpty = !editorAfter || (editorAfter.innerText || '').trim().length === 0; return { submitted: true, editorEmpty: editorEmpty, ourCommentFound: ourCommentFound, verified: ourCommentFound }; }", "data": {"snippet": "first 35 chars of comment"}}
+{"fn":"async () => { var composer = document.querySelector('.ql-editor[contenteditable=\"true\"]'); var form = composer ? composer.closest('form') : null; if (!form) return { error: 'no_form' }; var btns = Array.from(form.querySelectorAll('button')); var submitBtn = btns.find(function(b) { var label = (b.getAttribute('aria-label') || '').toLowerCase(); return label.indexOf('post comment on') === 0; }); if (!submitBtn) submitBtn = form.querySelector('button.comments-comment-box__submit-button--cr'); if (!submitBtn) submitBtn = form.querySelector('button[data-view-name=\"comment-post\"]'); if (!submitBtn) return { error: 'no_submit_button' }; if (submitBtn.disabled || submitBtn.getAttribute('aria-disabled') === 'true') return { error: 'submit_disabled' }; submitBtn.click(); await new Promise(r => setTimeout(r, 5000)); var snippet = window.__data.snippet; var ourLinks = Array.from(document.querySelectorAll('a[href*=\"/in/{{handle_slug}}\"]')); var ourCommentFound = false; for (var i = 0; i < ourLinks.length; i++) { if (ourLinks[i].href.includes('sidebar_menu') || ourLinks[i].href.includes('author')) continue; var parent = ourLinks[i].closest('article') || ourLinks[i].closest('[class*=\"comment-entity\"]') || ourLinks[i].closest('[data-urn*=\"comment\"]'); if (!parent) parent = ourLinks[i].parentElement; for (var hops = 0; hops < 8 && parent; hops++) { if (parent.innerText && parent.innerText.indexOf(snippet) > -1 && !parent.querySelector('[role=\"textbox\"]') && !parent.querySelector('.ql-editor')) { ourCommentFound = true; break; } parent = parent.parentElement; } if (ourCommentFound) break; } var editorAfter = document.querySelector('.ql-editor[contenteditable=\"true\"]'); var editorEmpty = !editorAfter || (editorAfter.innerText || '').trim().length === 0; return { submitted: true, editorEmpty: editorEmpty, ourCommentFound: ourCommentFound, verified: ourCommentFound }; }", "data": {"snippet": "first 35 chars of comment"}}
 ENDJSON
 ```
 
