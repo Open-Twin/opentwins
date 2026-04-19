@@ -116,6 +116,48 @@ ENDJSON
 # 🚨 NEVER use bare [data-testid="tweetTextarea_0"] — home page has TWO textareas (feed + dialog)
 ```
 
+## § 7b — Compose with Image
+
+Use when `content-ready/{today}/linkedin-post-image.spec.json` exists. Inserts image upload between compose-open and Post click.
+
+### Step 0: Render spec to PNG
+
+```bash
+mkdir -p /tmp/opentwins-uploads
+node {{pipeline_workspace}}/content-writer/templates/render-post-image.mjs \
+  {{pipeline_workspace}}/content-ready/{today}/linkedin-post-image.spec.json \
+  /tmp/opentwins-uploads/linkedin-post-image.png
+```
+
+🚨 If render exits non-zero, skip image stage. Fall through to § 7 text-only. Never block the post.
+
+### Step 1: Open compose (§ 7), wait 1s
+### Step 2: Type tweet text (BROWSER-core.md § 1)
+
+### Step 3: Attach image via selector-mode upload
+
+```bash
+curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/upload -H 'Content-Type: application/json' \
+  -d '{"filePath":"/tmp/opentwins-uploads/linkedin-post-image.png","selector":"[role=\"dialog\"] [data-testid=\"fileInput\"]","timeoutMs":10000}'
+```
+
+Wait 3s.
+
+### Step 4: Verify attach
+
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"() => !!document.querySelector('[role=\"dialog\"] [data-testid=\"attachments\"]')"}
+ENDJSON
+```
+
+If `false` → dismiss dialog (click close X, confirm Discard), fall through to § 7 text-only.
+
+### Step 5: Click Post (§ 7 existing flow)
+### Step 6: Verify post + extract tweet ID (§ 7 existing flow)
+
+🚨 **Failure recovery:** any failure in Step 0, 3, or 4 → fall through to § 7 text-only. Log as `Image: false, Reason: <why>`.
+
 ## § 8 — Quote Tweet
 
 ```bash
