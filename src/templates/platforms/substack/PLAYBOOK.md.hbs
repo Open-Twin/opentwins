@@ -65,8 +65,8 @@ Keep INSIGHTS.md under 100 lines. Replace outdated entries vs appending.
    - Σ(max_comments across all tasks) MUST = `daily.comments.limit` from limits.json
    - Σ(max_likes across all tasks) MUST = `daily.likes.limit` from limits.json
    - If mismatch → adjust task configs until they match exactly. Do NOT skip.
-   - **Weekly recommendations:** If `weekly.recommendations.current < weekly.recommendations.limit`, add a `recommend` task on Wednesday (per TOOLS.md Schedule Templates). Choose candidate based on recent engagement logs and `queries.json` topics. Check `memory/recommended_publications.txt` to avoid duplicates.
-   - **🚨 Newsletter:** Tuesday and Thursday `publish_newsletter` at 19:00 are MANDATORY — never skip unless `weekly.newsletters.current >= limit`.
+   - **Weekly recommendations (Mon–Sat):** If `weekly.recommendations.current < weekly.recommendations.limit` AND today is Mon-Sat, add a `recommend` task at 20:00 with `config.candidate_handle = <handle>`. Pick `<handle>` = first writer in `INSIGHTS.md → Key Relationships` active section (NOT "watching — silent 7+d") whose handle is not in `memory/recommended_publications.txt` (grep `@<handle>|` — trailing `|` prevents substring collisions). If all active KRs already recommended → skip.
+   - **🚨 Newsletter (Tue only):** Tuesday `publish_newsletter` at 16:00 is MANDATORY — never skip unless `weekly.newsletters.current >= limit`. (Tue-only: early-stage growth via Notes beats newsletter volume. Send time 16:00 Kyiv = 09:00 EDT, US East prime open window. Reassess at 100 email subs.)
      - 🚨 MUST include `content_source` in `publish_newsletter` config:
        ```json
        "config": {

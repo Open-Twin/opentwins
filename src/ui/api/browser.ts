@@ -155,15 +155,16 @@ export async function handleBrowserUpload(req: Request, res: Response): Promise<
   const profile = req.params.profile as string;
   const filePath = req.body?.filePath;
   const timeoutMs = typeof req.body?.timeoutMs === 'number' ? req.body.timeoutMs : 60000;
+  const selector = typeof req.body?.selector === 'string' ? req.body.selector : undefined;
   if (!filePath) { res.status(400).json({ error: 'filePath is required' }); return; }
   if (!existsSync(filePath)) { res.status(400).json({ error: `File not found: ${filePath}` }); return; }
   try {
     await ensureChrome(profile);
-    const result = JSON.parse(await uploadFile(profile, filePath, timeoutMs));
-    fileLog('browser', 'upload', { profile, filePath });
+    const result = JSON.parse(await uploadFile(profile, filePath, timeoutMs, selector));
+    fileLog('browser', 'upload', { profile, filePath, selector });
     res.json(result);
   } catch (err) {
-    fileError('browser', 'upload failed', { profile, filePath, error: err instanceof Error ? err.message : String(err) });
+    fileError('browser', 'upload failed', { profile, filePath, selector, error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to upload' });
   }
 }

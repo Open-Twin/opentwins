@@ -214,10 +214,12 @@ export async function getTabInfo(profileName: string): Promise<string> {
   return JSON.stringify(pages.map((t) => ({ id: t.id, title: t.title, url: t.url })));
 }
 
-// Arm file-chooser interception, wait for the chooser to open, deliver the file.
-// Caller triggers the chooser (e.g. by clicking a <label for="fileInput">) after this
-// function starts listening. Resolves when the file is delivered or the timeout fires.
-export async function uploadFile(profileName: string, filePath: string, timeoutMs = 60000): Promise<string> {
+// Upload a file to the current page. Two modes:
+//   - No selector: arms Page.setInterceptFileChooserDialog and waits for the caller
+//     to trigger a file-chooser (e.g. by clicking <label for="fileInput">).
+//   - With selector: finds the <input type="file"> matching the selector and sets
+//     files directly via DOM.setFileInputFiles — no chooser, no caller click.
+export async function uploadFile(profileName: string, filePath: string, timeoutMs = 60000, selector?: string): Promise<string> {
   const port = getProfilePort(profileName);
   const tab = await getActivePage(port);
   if (!tab.webSocketDebuggerUrl) throw new Error('No WebSocket URL for active tab');
@@ -240,7 +242,9 @@ export async function uploadFile(profileName: string, filePath: string, timeoutM
   return new Promise<string>((resolve, reject) => {
     const timer = setTimeout(() => {
       cleanup();
-      reject(new Error(`Upload timeout after ${timeoutMs}ms: no file chooser opened`));
+      reject(new Error(selector
+        ? `Upload timeout after ${timeoutMs}ms: selector ${selector} not resolved`
+        : `Upload timeout after ${timeoutMs}ms: no file chooser opened`));
     }, timeoutMs);
 
     let resolved = false;
@@ -249,10 +253,25 @@ export async function uploadFile(profileName: string, filePath: string, timeoutM
       try { ws.close(); } catch { /* ignore */ }
     }
 
+    async function directSet(): Promise<void> {
+      // DOM.getDocument → querySelector → setFileInputFiles on the resolved nodeId.
+      const doc = await send('DOM.getDocument', { depth: 0 }) as { root: { nodeId: number } };
+      const node = await send('DOM.querySelector', { nodeId: doc.root.nodeId, selector }) as { nodeId: number };
+      if (!node.nodeId) throw new Error(`selector matched no element: ${selector}`);
+      await send('DOM.setFileInputFiles', { files: [filePath], nodeId: node.nodeId });
+      resolved = true;
+      cleanup();
+      resolve(JSON.stringify({ ok: true, filePath, selector, nodeId: node.nodeId }));
+    }
+
     ws.on('open', async () => {
       try {
-        await send('Page.enable');
-        await send('Page.setInterceptFileChooserDialog', { enabled: true });
+        if (selector) {
+          await directSet();
+        } else {
+          await send('Page.enable');
+          await send('Page.setInterceptFileChooserDialog', { enabled: true });
+        }
       } catch (err) {
         cleanup();
         reject(err instanceof Error ? err : new Error(String(err)));
@@ -272,8 +291,8 @@ export async function uploadFile(profileName: string, filePath: string, timeoutM
         return;
       }
 
-      // Async event
-      if (msg.method === 'Page.fileChooserOpened' && !resolved) {
+      // Async event (intercept mode only)
+      if (!selector && msg.method === 'Page.fileChooserOpened' && !resolved) {
         resolved = true;
         const backendNodeId = msg.params?.backendNodeId;
         if (backendNodeId === undefined) {

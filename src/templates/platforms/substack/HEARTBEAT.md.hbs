@@ -137,7 +137,7 @@ Filter: `status="pending" AND time<=now`, sort by time.
 Before executing any `publish_newsletter` or `publish_note` task:
 
 1. Read the file at `config.content_source`
-2. For notes: Find the first post with `status: pending`, use that content
+2. For notes: Find the first post with `status: pending`, use that content. **If no pending posts → skip task gracefully, log `Type=Note skipped, reason=no_pending_in_source`, return early.**
 3. For newsletters: Use the full newsletter content
 4. After verified publish → update the file: change `status: pending` to `status: published` for that post
 
@@ -152,6 +152,7 @@ Before executing any `publish_newsletter` or `publish_note` task:
      printf '%s\n' "slug1" "slug2" "slug3" | while read line; do grep -qF "$line" memory/commented_posts.txt && echo "SKIP: $line" || echo "OK: $line"; done
      ```
      Only navigate to "OK:" posts.
+  3b. 🚨 **Cold breadth (MANDATORY)** — of `max_comments` posts to engage this task, **≥1 MUST be from an author whose @handle is NOT in `config.priority_targets` AND NOT in `INSIGHTS.md → Key Relationships`** (neither active nor watching sections). Pick from the "OK:" candidates — extract @handle from URL (`substack.com/@handle/...`). Cold breadth drives the audience-overlap signal that surfaces you to NEW readers. If zero non-KR candidates remain → skip cold breadth this task, log `cold_breadth: no_fresh_candidate`.
   4. Per selected post (grep returned "OK"): Navigate to `{post_url}/comments` directly. Then **paywall probe + dedup check (ONE evaluate):**
      ```bash
      exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
@@ -160,7 +161,7 @@ Before executing any `publish_newsletter` or `publish_note` task:
      ```
      If `paywall: true` → skip immediately. If `alreadyCommented: true` → backfill tracking, skip.
      Otherwise: Like post (BROWSER-engage.md SS 4, scroll up) -> 🚨 **Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) -> comment (BROWSER-core.md SS 3, textarea already visible) -> **after commenting: subscribe** if not already subscribed and `daily.subscribes.current < limit` (BROWSER-engage.md SS 6) -> restack with a note if high-quality and `daily.restacks.current < limit` (BROWSER-restack.md SS 10)
-  4b. **🚨 Restack at least 1 post per browse_and_engage task** if restack limit not reached. Pick the best post from the batch. A restack with a quote note puts your take into the original author's audience feed — free visibility.
+  4b. **🚨 Restack at least 1 post per browse_and_engage task** if restack limit not reached. Pick the best post from the batch. A restack with a quote note puts your take into the original author's audience feed — free visibility. **🚨 Across the day, ≥1 of `daily.restacks.limit` SHOULD be on a cold-breadth author (non-KR), when a quality cold post is available.** Pair it with the cold-breadth comment from this task — comment + like + restack on the same fresh writer maximizes audience-overlap signal. If no cold post meets restack quality, restack KR posts as usual; don't force.
   4c. **🚨 Subscribe is tied to commenting.** Every time you comment on a post, subscribe to that author's publication (if not already subscribed and limit not reached). The author sees both notifications — comment + subscribe — which signals genuine engagement.
   5. 🚨 **ONLY append to `commented_posts.txt` AFTER a verified posted comment.**
      ```bash
@@ -171,16 +172,25 @@ Before executing any `publish_newsletter` or `publish_note` task:
 
 - **notes_engagement** -> Browse Substack Notes feed, like and reply to relevant notes. Short, punchy replies. Log Type=Note.
 
-- **publish_note** -> Write and publish a short-form note to the Substack feed. Workflow:
+- **publish_note** -> Publish a short-form note to the Substack feed. Workflow:
   1. Read queries.json topics, INSIGHTS.md for what resonates
-  2. Draft note (100-500 chars, punchy, conversational - NOT article-length). Add 3-5 hashtags at end (read from `queries.json → hashtags` array — refreshed daily).
+  2. Use content from `config.content_source` (per Content-Ready Override — content-writer drafts the note in right length/format/voice). 🚨 **NO hashtags** — Substack Notes have no functional hashtag system.
   3. Self-review (TOOLS.md SS Self-Review Gate)
+  3b. **🖼️ Render note image (if spec exists):** if `{{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json` exists, run:
+      ```bash
+      node {{pipeline_workspace}}/content-writer/templates/render-note-image.mjs \
+        {{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json \
+        /tmp/opentwins-uploads/substack-note-{today_date}.png
+      ```
+      On success: `image_path = /tmp/opentwins-uploads/substack-note-{today_date}.png`.
+      On failure OR missing spec: log `Type=Note image_render_failed` (or `image_spec_missing`), set `image_path = null`, continue text-only (never blocks the Note).
   4. Click "New post" button in nav (opens Notes composer, NOT article editor)
   5. Type into `div[contenteditable="true"]` (paste approach)
+  5b. **🖼️ Attach image (if image_path set):** follow BROWSER-note.md SS 9b (selector-mode upload). If `attached: false` → log `Type=Note image_attach_failed`, continue text-only.
   6. Verify "Anyone can reply" is set (button visible in composer)
   7. Click "Post" button (enabled after content typed)
   8. Verify: composer closes, note visible in feed
-  9. Log Type=Note, content snippet, URL
+  9. Log Type=Note, content snippet, URL, Image={image_path or "none"}
   10. Update `limits.json -> daily.notes_posted.current++`
   🚨 **"New post" button opens Notes composer.** Dashboard "Create post" opens article editor. Different flows.
   🚨 **Notes composer uses contenteditable** (same as note replies). Paste approach.
@@ -208,7 +218,7 @@ Before executing any `publish_newsletter` or `publish_note` task:
   1. During browse_and_engage or notes_engagement, identify high-quality content worth restacking
   2. Click "Restack" button on the note/post -> menu appears with "Restack" (simple) and "Restack with a note" (quote)
   3. Prefer "Restack with a note" (menuitem) - adds our perspective, builds brand
-  4. Notes composer opens with original embedded -> type quote text + 3-5 hashtags from `queries.json → hashtags` into `div[contenteditable="true"]` (paste approach)
+  4. Notes composer opens with original embedded -> type quote text into `div[contenteditable="true"]` (paste approach). 🚨 **NO hashtags** — restacks-with-quote use the Notes composer; same no-hashtag rule.
   5. Click "Post" button
   6. Verify: composer closes
   7. Log Type=Restack, original author, our note snippet
@@ -217,17 +227,19 @@ Before executing any `publish_newsletter` or `publish_note` task:
   🚨 **Quote composer is identical to Notes composer** - same contenteditable + Post button.
   🚨 **Prefer "Restack with a note"** over plain restack - adds value and visibility.
 
-- **recommend** -> Recommend a relevant publication. Workflow:
+- **recommend** -> Recommend a Key Relationship publication. Workflow:
   1. Read BROWSER-recommend.md
-  2. Read `memory/recommended_publications.txt` for already-recommended publications
-  3. Choose candidate: check recent `memory/{date}.md` for writers we've engaged with, cross-reference `queries.json` topics. Prefer writers with reciprocal comment exchanges, active posting, and audience-relevant content.
-  4. Dedup check: `grep -qF "{publication_name}" memory/recommended_publications.txt`
+  2. Candidate handle: read `config.candidate_handle` (schedule generator picked from active KRs in INSIGHTS.md).
+  3. Dedup safety check: `grep -qF '@{candidate_handle}|' memory/recommended_publications.txt` (trailing `|` anchors against `@handle|name|...` row format). If found → skip task.
+  4. Draft reason (1-2 sentences): specific benefit to your audience. Use INSIGHTS.md context.
   5. Navigate to recommendations dashboard (BROWSER-recommend.md SS 2 Step 0)
-  6. Add recommendation with search + reason (BROWSER-recommend.md SS 2 Steps 1-3)
-  7. After verified success: append to tracking file
-  8. Log: Type=Recommend, Publication, Reason (100 chars)
+  6. Add recommendation with search + reason (BROWSER-recommend.md SS 2 Steps 1-3 + search strategy note)
+  7. After verified success: append to `memory/recommended_publications.txt`:
+     ```bash
+     printf '%s\n' '@{handle}|{publication_name}|{url}|{reason_snippet_30chars}|{ISO_TIMESTAMP}' >> memory/recommended_publications.txt
+     ```
+  8. Log: Type=Recommend, Handle=@{handle}, Publication, Reason (100 chars)
   9. Update limits: `recommendations.current++`
-  🚨 **Reason must be specific and relevant** — explain why your PM/AI audience will benefit. Not generic praise.
   🚨 **Read BROWSER-recommend.md ON-DEMAND** only when a `recommend` task is due.
 
 - **update_memory** -> PLAYBOOK.md SS Memory Update

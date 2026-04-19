@@ -84,6 +84,18 @@ Write these files (follow per-platform voice rules in AGENT.md):
 
 Per AGENT.md section 14: if LinkedIn `weekly.carousels.limit > 0` and today's theme is carousel-eligible, emit `linkedin-carousel.spec.json` + `linkedin-carousel.md` into `content-ready/{today_date}/`. Universal voice rules apply to every string in the spec. If not eligible, emit only `linkedin-carousel.md` with a single line `skipped: {reason}`.
 
+## Step 4c: Substack note image sanity-check
+
+After emitting `substack-note.md` + `substack-note-image.spec.json`, dry-run the renderer:
+
+```bash
+node {{pipeline_workspace}}/content-writer/templates/render-note-image.mjs \
+  {{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json \
+  /tmp/note-image-check.png
+```
+
+Non-zero exit → fix spec, re-run. Invalid spec on disk means substack agent falls back to text-only.
+
 ## Step 5: Handle Amplification (if in brief)
 
 If the brief includes an **Amplification** section:

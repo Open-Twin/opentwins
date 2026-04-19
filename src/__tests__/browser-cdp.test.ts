@@ -282,6 +282,48 @@ describe('cdp uploadFile', () => {
     expect(lastWs!.closed).toBe(true);
   });
 
+  it('selector mode: DOM.getDocument → querySelector → setFileInputFiles, no intercept', async () => {
+    (fetchMock as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(okResponse([
+      { id: 'a', type: 'page', title: 'Home', url: 'https://a', webSocketDebuggerUrl: 'ws://x' },
+    ]));
+    const { uploadFile } = await import('../browser/cdp.js');
+    const promise = uploadFile('ot-substack', '/tmp/note.png', 5000, 'input[type="file"]');
+
+    const doc = await waitForSend(0);
+    expect(doc.method).toBe('DOM.getDocument');
+    lastWs!.emit('message', Buffer.from(JSON.stringify({ id: doc.id, result: { root: { nodeId: 1 } } })));
+
+    const qs = await waitForSend(1);
+    expect(qs.method).toBe('DOM.querySelector');
+    expect(qs.params).toMatchObject({ nodeId: 1, selector: 'input[type="file"]' });
+    lastWs!.emit('message', Buffer.from(JSON.stringify({ id: qs.id, result: { nodeId: 42 } })));
+
+    const setFiles = await waitForSend(2);
+    expect(setFiles.method).toBe('DOM.setFileInputFiles');
+    expect(setFiles.params).toMatchObject({ files: ['/tmp/note.png'], nodeId: 42 });
+    lastWs!.emit('message', Buffer.from(JSON.stringify({ id: setFiles.id, result: {} })));
+
+    const result = JSON.parse(await promise);
+    expect(result).toEqual({ ok: true, filePath: '/tmp/note.png', selector: 'input[type="file"]', nodeId: 42 });
+    // Never enables Page.setInterceptFileChooserDialog in selector mode.
+    expect(lastWs!.sent.find((m) => m.method === 'Page.setInterceptFileChooserDialog')).toBeUndefined();
+  });
+
+  it('selector mode: rejects when querySelector returns nodeId 0', async () => {
+    (fetchMock as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(okResponse([
+      { id: 'a', type: 'page', title: 'Home', url: 'https://a', webSocketDebuggerUrl: 'ws://x' },
+    ]));
+    const { uploadFile } = await import('../browser/cdp.js');
+    const promise = uploadFile('ot-substack', '/tmp/note.png', 5000, 'input.missing');
+
+    const doc = await waitForSend(0);
+    lastWs!.emit('message', Buffer.from(JSON.stringify({ id: doc.id, result: { root: { nodeId: 1 } } })));
+    const qs = await waitForSend(1);
+    lastWs!.emit('message', Buffer.from(JSON.stringify({ id: qs.id, result: { nodeId: 0 } })));
+
+    await expect(promise).rejects.toThrow(/selector matched no element/);
+  });
+
   it('rejects when fileChooserOpened event is missing backendNodeId', async () => {
     (fetchMock as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(okResponse([
       { id: 'a', type: 'page', title: 'Home', url: 'https://a', webSocketDebuggerUrl: 'ws://x' },

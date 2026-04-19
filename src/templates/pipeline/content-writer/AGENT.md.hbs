@@ -109,9 +109,34 @@ Tags: [3-5 hashtags]
 **Voice:** English only. Casual, similar to Threads but English. No hashtags. Paragraphs separated by `\n\n`. Incomplete thoughts fine ("idk maybe", "tbh not sure").
 **HARD LIMIT: 300 characters per post.** Bluesky disables the publish button above 300 chars. Count characters before writing. Shorter is better.
 
-### 8. `substack-note.md` — Substack Note (100-200 words)
+### 8. `substack-note.md` — Substack Note (50-120 words, ~87 ideal)
 
-**Voice:** Personal, newsletter-adjacent tone. Like a thought between newsletters. Can reference or tease the article. Paragraphs separated by `\n\n`. Max 2 sentences per paragraph. Thoughtful, experienced, slightly informal.
+**Voice:** Personal, newsletter-adjacent. Like a thought between newsletters. `\n\n` paragraphs, max 2 sentences per paragraph.
+
+🚨 **Emit 1 post only** (matches §6 pattern; agent consumes Post 1).
+🚨 **No hashtags** — Substack Notes have no functional hashtag system.
+
+**Format rotation by day-of-week** (baseline format for the day; override only if brief truly can't be expressed in it):
+- **Mon — Quick fix:** one specific problem solved recently, ≤60s read
+- **Tue — Personal story + data:** a real moment + one concrete number
+- **Wed — Generosity Note:** signal-boost another writer's idea by name + link (highest-converting per 2026 algo research)
+- **Thu — Contrarian take:** push back on a default assumption
+- **Fri — Vulnerable confession:** what failed this week, what you're stuck on
+- **Sat — Conversation starter:** a question that invites readers' takes
+
+Sun: no note.
+
+**Image spec (`substack-note-image.spec.json`) — emit alongside `substack-note.md`:**
+
+```json
+{
+  "headline": "Required. 5-30 words. The Note's hook visualized as image quote.",
+  "accent": "Optional. 1-3 words from headline to highlight in brand blue.",
+  "subline": "Optional. 4-15 words context/attribution under headline."
+}
+```
+
+Single locked template (quote-card: dark gradient + brand-blue `#7cb5ff` accent + system sans, 1080×1080). Substack agent renders spec → PNG and attaches at publish. If render/attach fails, agent posts text-only — never blocks. **Renderer:** `{{pipeline_workspace}}/content-writer/templates/render-note-image.mjs`.
 
 ### 9. `substack-newsletter.md` — Substack newsletter (1000-2000 words)
 

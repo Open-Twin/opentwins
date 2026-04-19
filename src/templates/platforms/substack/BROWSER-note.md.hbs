@@ -22,4 +22,29 @@ exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evalu
 ENDJSON
 ```
 
-Note content: 100-500 chars, conversational, punchy. Not article-length.
+Note content: 50–120 words (per content-writer §8); content comes from `config.content_source`, never drafted here. NO hashtags.
+
+---
+
+## SS 9b. Attach Image to Note
+
+🚨 **Pre-conditions:** (1) PNG exists at a filesystem path; (2) **composer MUST be open** — the hidden `<input type="file">` only exists in the DOM when the Notes composer is mounted. HEARTBEAT publish_note runs this AFTER Step 2 (type + post preparation) to match.
+
+Direct-set on hidden file input via the upload endpoint's `selector` mode (no button click needed — setting files fires the input's `change` event and the image attaches, showing a blob preview):
+
+```bash
+curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/upload -H 'Content-Type: application/json' \
+  -d "{\"filePath\":\"${PNG}\",\"selector\":\"input[type=\\\"file\\\"][accept*=\\\"image\\\"]\",\"timeoutMs\":10000}"
+```
+
+Expected result: `{"ok":true, ...}`. If the selector doesn't match (no composer / no file input) → the endpoint errors; agent logs and falls back to text-only.
+
+**Verify image attached:**
+
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); var dialog = document.querySelector('[role=\"dialog\"]') || document.body; var blobImg = Array.from(dialog.querySelectorAll('img')).find(function(i) { return (i.src || '').startsWith('blob:'); }); return { attached: !!blobImg }; }"}
+ENDJSON
+```
+
+If `attached: false` → return error to HEARTBEAT; fall back to text-only.
