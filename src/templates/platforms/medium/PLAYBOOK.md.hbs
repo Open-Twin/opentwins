@@ -75,7 +75,7 @@ Keep INSIGHTS.md under 100 lines. Replace outdated entries vs appending.
    - Σ(max_responses across all tasks) MUST = `daily.responses.limit` from limits.json
    - Σ(max_claps across all tasks) MUST = `daily.clap_sessions.limit` from limits.json
    - If mismatch → adjust task configs until they match exactly. Do NOT skip.
-5. 🚨 **Articles: MANDATORY per `weekly.articles.limit` from limits.json (if configured).** Wednesday + Saturday. Always include `publish_article` task at 10:00 on those days — do NOT skip. Article must be written and published via `/new-story` URL. 800-1500 words, personal experience, story-driven. Tags: max 5, prefer #ai, #project-management, #software-development. If no article in 14+ days → ALERT in Slack report.
+5. 🚨 **Articles: MANDATORY 1/week — Saturday only.** Include `publish_article` at 10:00 on Saturday. Published manually via `/new-story` URL (Medium API closed since Jan 2025). 800-1500 words, personal experience, story-driven. Tags: max 5. No article in 10+ days → ALERT.
    - 🚨 MUST include `content_source` in `publish_article` config:
      ```json
      "config": {
@@ -83,6 +83,7 @@ Keep INSIGHTS.md under 100 lines. Replace outdated entries vs appending.
        ...
      }
      ```
+   - 🚨 If `content_source` contains only `skipped: not-saturday`, skip the publish task. Do NOT fabricate an article.
 6. Adjustments (only if 2+ pattern occurrences)
 7. Jitter (±30min), collision (10min spacing), hours (08:00-23:00)
 8. **Write:** `schedule.json` with metadata.for_date = target date (TODAY), all tasks

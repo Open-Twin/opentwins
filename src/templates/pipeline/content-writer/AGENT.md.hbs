@@ -28,6 +28,31 @@ Write to `content-ready/{date}/` with ALL of the following files every run. Plat
 
 ### 1. `medium-article.md` — Medium article (1000-1500 words)
 
+🚨 **Saturday-only.** Non-Sat: write single-line `skipped: not-saturday` and skip to Step 3 (use the brief directly as anchor for Substack/Dev.to/Twitter variants). Sat: produce the full article.
+
+🚨 **Frontmatter header (optional but recommended on Sat articles).** When publishing to a Medium publication, open with a YAML block the Medium agent can parse:
+
+```markdown
+---
+suggested_publication: none
+publication_handle: none
+publication_reason: [why this pub OR why none — e.g. "no accepted pub for P2 today"]
+subtitle: "[50-70 chars. Primary SEO keyword + named entity. Pasted into Medium's subtitle field.]"
+---
+
+# [Title]
+...
+```
+
+🚨 **SEO rule:**
+- `subtitle` = 50-70 chars, contains the primary keyword from the brief's `SEO keywords` section (first entry) + one named entity.
+- Primary keyword must appear ≥2× in the first 3 paragraphs, naturally placed.
+- If brief has no SEO keywords section → fall back to the theme's primary noun phrase.
+
+🚨 **Publication routing:** Medium publications require prior writer acceptance — "Add to publication" only works if the user is already an accepted writer. Only suggest pubs the user has explicitly listed as accepted. Default to `suggested_publication: none` (publish to user's own timeline) unless the user has maintained an accepted-pub list per pillar.
+
+The user copies the article body (from `# [Title]` down to end of file — skip the frontmatter block) into Medium's editor.
+
 ```markdown
 # [Title]
 

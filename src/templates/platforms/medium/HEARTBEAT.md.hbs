@@ -164,10 +164,15 @@ Filter: `status="pending" AND time<=now`, sort by time.
 
   Before executing any `publish_article` task:
 
-  1. Read the file at `config.content_source`
-  2. Use the article content for the markdown file (save to `memory/articles/YYYY-MM-DD-slug.md`)
-  3. The content-ready file already has title, body, tags, and image prompt in the correct format
-  4. After saving -> mark task done
+  1. Read the file at `config.content_source`.
+  2. If file body is `skipped: not-saturday` → mark task done, no publish. Do NOT fabricate an article.
+  3. Parse frontmatter (optional): if first line is exactly `---`, read until next `---` and extract `suggested_publication`, `publication_handle`, `publication_reason`, `subtitle`. Save the full file (frontmatter included) to `memory/articles/YYYY-MM-DD-slug.md`.
+  4. Mark task done.
+  5. 🚨 **Publish alert (MANDATORY).** Log + surface to the user:
+     - Title, subtitle, file path, tags.
+     - If `suggested_publication` set → include pub name + handle + reason + reminder ("Only 'Add to publication' if already an accepted writer").
+     - If `suggested_publication: none` or frontmatter omitted → publish to own timeline.
+     - If `subtitle: none` or missing → flag "Handwrite a 50-70 char SEO subtitle before pasting."
 
   **Standard publish_article flow:**
   1. Read INSIGHTS.md + queries.json for topic ideas. Verify key facts via `web_search` if referencing real people/events.
