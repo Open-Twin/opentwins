@@ -159,7 +159,7 @@ Before executing any `original_tweet` or `article` task:
 1. Read INSIGHTS.md for content ideas
 2. Write multi-line tweet, time-of-day voice (SOUL.md). **Format: hook line first, body lines with text bullets (-, →, •), hashtags last.** No emojis as bullets (Draft.js strips them on submit).
 3. Add 0-1 hashtag at END (read from `queries.json → hashtags` array — refreshed daily). Zero is default; one only if it genuinely routes discovery.
-4. If `{{pipeline_workspace}}/content-ready/{today_date}/twitter-post-image.spec.json` exists → use **BROWSER-engage.md § 7b** (compose + image). Else § 7 (text-only). On any image-stage failure, fall through to text-only.
+4. Image rule: attach ONLY when posting `## Post 1` from twitter-thread.md AND `{{pipeline_workspace}}/content-ready/{today_date}/twitter-post-image.spec.json` exists → use **BROWSER-engage.md § 7b**. Post 2/3 always text-only (§ 7) — image is tied to the day's flagship framing, reusing it dilutes the visual. On image-stage failure, fall through to § 7 text-only.
 5. Update: `weekly.original_tweets.current += 1`
 6. Log: `Type: "Original Tweet", Image: <true|false>, Hashtags: [list]`. Done.
 
@@ -175,7 +175,7 @@ Before executing any `original_tweet` or `article` task:
 2. Plan thread: hook tweet (curiosity + numbers + promise value) + 3 body tweets + CTA tweet. Max 280 chars each.
 3. Add 0-1 hashtag to hook tweet ONLY (read from `queries.json → hashtags` array)
 4. 🚨 **Use BROWSER-engage.md § 10 (hook-then-reply pattern).** NEVER use the multi-textarea thread composer — the multi-textarea approach is broken.
-5. Post hook: if `{{pipeline_workspace}}/content-ready/{today_date}/twitter-post-image.spec.json` exists → § 7b (compose + image); else § 7 (text-only). Image on hook tweet ONLY — body/CTA replies stay text. Get URL from profile, then reply sequentially.
+5. Post hook: attach image ONLY when posting `## Post 1` from twitter-thread.md AND `{{pipeline_workspace}}/content-ready/{today_date}/twitter-post-image.spec.json` exists → § 7b. Post 2/3 hooks: § 7 text-only. Image on hook tweet only — body/CTA replies always text. Get URL from profile, then reply sequentially.
 6. Update: `weekly.original_tweets.current += 1`
 7. Log: `Type: "Thread", Image: <true|false>, Hook: status/ID, Tweets: N`. Done.
 
