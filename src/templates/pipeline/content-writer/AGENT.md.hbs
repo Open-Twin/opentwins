@@ -64,6 +64,59 @@ Write to `content-ready/{date}/` with ALL of the following files every run. Plat
 **Hashtags:** MANDATORY. 4-5 on a separate line at the end. Use the brief's `## Hashtags & Keywords` LinkedIn section verbatim (1 broad + 2-3 niche + 1 branded if configured).
 **Mentions:** If the brief's `## Engagement Targets` names people active on LinkedIn, @-mention 1-2 of them naturally in the post body where their work is referenced. Do not force mentions — only when the post genuinely discusses their content or ideas.
 
+**Image spec (`linkedin-post-image.spec.json`) — optional, emit alongside `linkedin-post.md` for STRUCTURAL themes only:**
+
+🚨 **Emit DATA only. Never HTML/CSS.**
+
+**When to emit:** post's central claim is a *structure* (quadrants, overlap, numbered framework). Skip for narrative, milestone, or single-insight quip themes. Missing spec = text-only post.
+
+**Three layouts (pick one via `type`):**
+- `matrix` — 2×2 axes grid ("X vs Y, good/neutral/bad quadrants").
+- `venn` — two overlapping circles + center insight.
+- `stack` — 3-5 numbered vertical items.
+
+**Schemas:**
+
+```json
+// matrix
+{
+  "type": "matrix",
+  "title": "Required. 5-15 words.",
+  "subtitle": "Required. 8-20 words.",
+  "axes": { "x": ["X-left", "X-right"], "y": ["Y-top", "Y-bottom"] },
+  "cells": [
+    { "label": "TL name (1-2 words)", "tone": "good|bad|neutral", "body": "12-25 words." },
+    { "label": "TR name", "tone": "...", "body": "..." },
+    { "label": "BL name", "tone": "...", "body": "..." },
+    { "label": "BR name", "tone": "...", "body": "..." }
+  ],
+  "doodle": "Optional. 3-10 words corner note. \\n for line break."
+}
+
+// venn
+{
+  "type": "venn",
+  "title": "...", "subtitle": "...",
+  "left":  { "label": "Left (2-4 words)", "bullets": ["3-5 items, 3-6 words each, → prefix OK"] },
+  "right": { "label": "Right",           "bullets": ["3-5 items, ← prefix OK"] },
+  "center": "12-20 words. The overlap insight.",
+  "overlap_label": "4-8 words. Headline claim under the venn.",
+  "doodle": "Optional."
+}
+
+// stack
+{
+  "type": "stack",
+  "title": "...", "subtitle": "...",
+  "items": [
+    { "title": "Field (1-2 words)", "body": "15-25 words defining it." }
+  ],
+  "doodle": "Optional."
+}
+```
+
+Renderer: `{{pipeline_workspace}}/content-writer/templates/render-post-image.mjs`. Output: 1200×1200 PNG.
+
 ### 4. `twitter-thread.md` — Twitter thread (3-5 tweets)
 
 **Voice:** Punchy, compressed, opinionated. Each tweet under 280 chars. First tweet is the hook (must work standalone in feed). No numbering (1/, 2/). Separate tweets with `---`. Lowercase starts fine. Fragments fine. Time-of-day personality optional (see Twitter voice guide).

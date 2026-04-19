@@ -134,6 +134,7 @@ try {
     '--disable-gpu',
     '--no-sandbox',
     '--hide-scrollbars',
+    '--force-device-scale-factor=2',
     '--default-background-color=00000000',
     `--screenshot=${outPath}`,
     '--window-size=1080,1080',
