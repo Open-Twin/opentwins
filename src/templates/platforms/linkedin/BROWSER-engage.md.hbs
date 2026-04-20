@@ -81,11 +81,13 @@ ENDJSON
 
 ## SS 3c. Like + Extract Post Content
 
-Run BEFORE commenting on a post you navigated to. Clicks top-level post Like (null-safe: only matches `aria-label="React Like"`; already-liked posts skip). Returns `{ liked, author, text }`. Your comment MUST directly address the returned `text`.
+Run BEFORE commenting on a post you navigated to. Returns `{ liked, author, text }`. Your comment MUST directly address the returned `text`.
+
+🚨 **Like selector covers feed AND Pulse surfaces.** Feed posts use exact `aria-label="React Like"`. Pulse articles use `aria-label="React Like to {Author}’s post"` (curly quote U+2019, not ASCII). Match both, reject `...'s comment` variants. If `liked: false` is returned, log Error — do NOT rationalize it as surface-specific behavior.
 
 ```bash
 exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-{"fn":"async () => { var likeBtn = Array.from(document.querySelectorAll('button')).find(function(b) { return b.getAttribute('aria-label') === 'React Like'; }); var liked = false; if (likeBtn) { likeBtn.click(); liked = true; } await new Promise(r => setTimeout(r, 3000)); var authorEl = document.querySelector('.update-components-actor__title span span'); var author = authorEl ? authorEl.innerText.trim().split(String.fromCharCode(10))[0] : ''; var postEl = document.querySelector('.feed-shared-update-v2__description') || document.querySelector('.update-components-text'); var text = postEl ? postEl.innerText.trim().slice(0, 500) : ''; return { liked, author, text }; }"}
+{"fn":"async () => { var likeBtn = Array.from(document.querySelectorAll('button')).find(function(b) { var a = b.getAttribute('aria-label') || ''; if (a === 'React Like') return true; return a.startsWith('React Like to ') && a.endsWith(' post'); }); var liked = false; if (likeBtn) { likeBtn.click(); liked = true; } await new Promise(r => setTimeout(r, 3000)); var authorEl = document.querySelector('.update-components-actor__title span span'); var author = authorEl ? authorEl.innerText.trim().split(String.fromCharCode(10))[0] : ''; var postEl = document.querySelector('.feed-shared-update-v2__description') || document.querySelector('.update-components-text'); var text = postEl ? postEl.innerText.trim().slice(0, 500) : ''; return { liked, author, text }; }"}
 ENDJSON
 ```
 
