@@ -249,6 +249,7 @@ Read PLAYBOOK.md -> "Memory Update"
    Format: `## {date} {time} - {Type}` + Article URL + Tags + Style + text. Types: Heartbeat, Comment, Reply, Reaction, Article Published, Tag Follow, Seed Comment, Error.
    🚨 **Comment/Reply entries MUST include:**
    - `Style: {insight|short|personal|disagree}` — which style was used
+   - `Replying to: "{first 80 chars of the article/comment you're responding to}"`
    - `Our comment: "{full text posted}"` — actual text, not topic summary. Min 120 chars.
 
 2. Update limits.json: current+=1 per action.
