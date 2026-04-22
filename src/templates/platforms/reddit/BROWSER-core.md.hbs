@@ -47,8 +47,10 @@ exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/close
 - Title: `faceplate-textarea-input[name="title"]` -> `.shadowRoot.querySelector('textarea')`
 - Body: visible `div[data-lexical-editor="true"]` (check `getBoundingClientRect()`)
 - Submit: `r-post-form-submit-button#submit-post-button` -> `.shadowRoot.querySelector('#inner-post-submit-button')`
-- Flair button: `button#edit-post-flair-button`
-- Flair modal: `r-post-flairs-modal`, radio: `faceplate-radio-input[id^="post-flair-radio-input-"]`
+- Flair button: `r-post-flairs-modal` shadow → `#reddit-post-flair-button`.
+- Select flair: `snapshot --selector 'r-post-flairs-modal'` → click radio ref → click "Add" ref. Label clicks don't stick.
+- Some subs hide AI/LLM flair behind "View all flairs" in the modal — click it first if the target flair isn't visible.
+- Ignore hidden `input[name="link"]` invalidity on TEXT submits (0×0 rect, submit stays enabled).
 
 ## Recovery Rules
 
