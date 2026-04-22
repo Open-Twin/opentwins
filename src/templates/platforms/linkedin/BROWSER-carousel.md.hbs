@@ -8,7 +8,7 @@
 
 **Outputs:** PDF at `/tmp/opentwins-uploads/{today_date}-linkedin-carousel.pdf`, published post, memory log, `weekly.carousels.current += 1`.
 
-**Renderer:** image-core CLI at `{{pipeline_workspace}}/image-core/cli.mjs`. Renders carousel spec directly to PDF — no intermediate HTML step. Template + CSS locked in `templates/carousel/template.mjs`.
+**Renderer:** `{{pipeline_workspace}}/image-core/cli.mjs`. Template + CSS locked in `templates/carousel/template.mjs`.
 
 ---
 
@@ -41,9 +41,7 @@ Tue/Fri = mandatory: any missing/skipped fires Alert (day has no primary publish
 
 ---
 
-## SS-C1. Render spec → PDF (one step)
-
-image-core renders carousel PDF directly — no intermediate HTML. Chrome is invoked internally by image-core.
+## SS-C1. Render spec → PDF
 
 ```bash
 node "$RENDERER" render --platform linkedin --layout carousel \

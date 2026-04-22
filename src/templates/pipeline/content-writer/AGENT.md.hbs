@@ -140,7 +140,7 @@ The user copies the article body (from `# [Title]` down to end of file — skip 
 }
 ```
 
-Renderer: `{{pipeline_workspace}}/image-core/cli.mjs` (platform agents invoke it with `--platform` + `--layout` from spec `type`). Output: 1200×1200 PNG.
+Renderer: `{{pipeline_workspace}}/image-core/cli.mjs`. Output: 1200×1200 PNG.
 
 ### 4. `twitter-thread.md` — Twitter thread (3-5 tweets)
 
@@ -222,7 +222,7 @@ Tags: [0-1 hashtag]
 
 **Rule:** Post 1 is the hook. Each later post is a reply to the previous one. No numbering (1/N).
 
-**Image spec (`bluesky-post-image.spec.json`) — emit alongside `bluesky-thread.md` on Mon+Sat.** Same schema as `twitter-post-image.spec.json` (type: `stack` | `matrix` | `venn`), rendered via `{{pipeline_workspace}}/image-core/cli.mjs` by the Bluesky agent. Add top-level `"alt"` field (80–200 chars, accessibility). Attached to **Post 1 only**; replies stay text-only. Render/attach failure → agent publishes text-only (never blocks).
+**Image spec (`bluesky-post-image.spec.json`) — emit alongside `bluesky-thread.md` on Mon+Sat.** Same schema as `twitter-post-image.spec.json` (type: `stack` | `matrix` | `venn`). Add top-level `"alt"` field (80–200 chars, accessibility). Attached to **Post 1 only**; replies stay text-only. Render/attach failure → agent publishes text-only (never blocks).
 
 ### 8. `substack-note.md` — Substack Note (50-120 words, ~87 ideal)
 

@@ -161,7 +161,7 @@ Before executing any `original_post` task:
    ```
    If `publish_button_disabled` → text is likely over 300 chars. Shorten and retry.
 5b. **Image attach (only if `{{pipeline_workspace}}/content-ready/{today_date}/bluesky-post-image.spec.json` exists).** Runs between typing and publish. Any failure → remove pending image, continue text-only. Never block.
-   a. Render PNG. `--layout` comes from spec's `type` field (stack|matrix|venn):
+   a. Render PNG:
       ```bash
       mkdir -p /tmp/opentwins-uploads
       SPEC={{pipeline_workspace}}/content-ready/{today_date}/bluesky-post-image.spec.json
