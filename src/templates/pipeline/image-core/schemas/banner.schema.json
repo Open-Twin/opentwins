@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "opentwins-image-core/banner",
   "title": "Banner layout data",
-  "description": "Wide cover image for article platforms. Dev.to renders at 1000×420, Medium at 1500×600 — the banner template scales proportionally via canvas size.",
+  "description": "Wide cover image for article platforms. Medium renders at 1500×600; the banner template scales proportionally via canvas size.",
   "type": "object",
   "required": ["title"],
   "properties": {
