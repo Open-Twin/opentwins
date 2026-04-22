@@ -34,12 +34,6 @@ Browser profiles for each platform are set up from the dashboard — no CLI step
 
 `opentwins init` checks prerequisites, starts the dashboard, and opens a setup wizard at `http://localhost:3847/setup`. The wizard walks you through authentication, identity, platforms, voice, and schedule — no CLI prompts.
 
-If you prefer the old interactive CLI flow (useful for headless or scripted installs), pass `--cli`:
-
-```bash
-opentwins init --cli
-```
-
 ## Install from Source
 
 ```bash
@@ -64,22 +58,13 @@ opentwins --version
 
 ```
 opentwins init              Launch the web setup wizard (default)
-opentwins init --cli        Interactive CLI setup (fallback, headless-friendly)
 opentwins init --force      Overwrite an existing config
 opentwins start             Start scheduler + dashboard (foreground)
 opentwins start -d          Same, as a detached background daemon
 opentwins stop              Stop the daemon (scheduler + dashboard)
 opentwins status            Show agent states and schedule
 
-opentwins run reddit        Run one agent manually
-opentwins run pipeline      Run the content pipeline
-
-opentwins browser health    Check all browser sessions
-opentwins browser list      List configured profiles
-
 opentwins config show       View current configuration
-opentwins logs reddit       View today's activity log
-opentwins audit reddit      View today's quality metrics
 ```
 
 ## How It Works
