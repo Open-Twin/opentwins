@@ -16,7 +16,13 @@ import { fontsBlock } from './fonts.mjs';
 const REF_SIZE = 1200;
 
 export function pageHead({ width, height, extraCss = '' }) {
-  const scale = Math.min(width, height) / REF_SIZE;
+  // Square canvases: virtual 1200×1200 scaled to fit (existing behavior).
+  // Non-square canvases: body matches actual viewport — templates author
+  // for the real dimensions (e.g. banner 1000×420).
+  const isSquare = width === height;
+  const scale = isSquare ? Math.min(width, height) / REF_SIZE : 1;
+  const bodyWidth = isSquare ? REF_SIZE : width;
+  const bodyHeight = isSquare ? REF_SIZE : height;
   return `
 <meta charset="utf-8">
 ${fontsBlock()}
@@ -27,15 +33,11 @@ ${fontsBlock()}
     width: ${width}px;
     height: ${height}px;
     overflow: hidden;
-    /* Match body bg so any uncovered area (non-square canvases) blends. */
     background: transparent;
   }
   body {
-    /* Always render at the 1200×1200 virtual canvas; templates write their
-       CSS as if the canvas were always 1200. The transform below scales it
-       to fit the real viewport dimensions. */
-    width: ${REF_SIZE}px;
-    height: ${REF_SIZE}px;
+    width: ${bodyWidth}px;
+    height: ${bodyHeight}px;
     margin: 0;
     transform-origin: top left;
     transform: scale(${scale});

@@ -61,6 +61,8 @@
     "substack/compare":   { "template": "compare",  "format": "png", "width": 1080, "height": 1080 },
     "substack/checklist": { "template": "checklist","format": "png", "width": 1080, "height": 1080 },
     "substack/timeline":  { "template": "timeline", "format": "png", "width": 1080, "height": 1080 },
-    "substack/faq":       { "template": "faq",      "format": "png", "width": 1080, "height": 1080 }
+    "substack/faq":       { "template": "faq",      "format": "png", "width": 1080, "height": 1080 },
+
+    "devto/banner":       { "template": "banner",   "format": "png", "width": 1000, "height": 420 }
   }
 }

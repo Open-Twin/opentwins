@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opentwins-image-core/banner",
+  "title": "Banner layout data",
+  "description": "Wide cover image for article platforms (Dev.to, Medium). Designed native for 1000×420.",
+  "type": "object",
+  "required": ["title"],
+  "properties": {
+    "kicker": {
+      "type": "string",
+      "description": "Optional tiny mono caps line above the title."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Required headline. Serif display, sized to fit 2 lines on 1000×420."
+    },
+    "subline": {
+      "type": "string",
+      "description": "Optional supporting line below title."
+    }
+  }
+}
