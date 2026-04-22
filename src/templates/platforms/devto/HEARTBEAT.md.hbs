@@ -8,7 +8,7 @@
 
 ### Step Budget (MANDATORY)
 - **Target: <35 steps.** 50+ = runaway. Budget: ~12 setup/reply + ~4 per reaction + ~5 per comment.
-- **MAX 3 search iterations per task.** After 3 failed tag rotations → give up, keep task pending.
+- **MAX 3 search iterations per task.** After 3 failed tag rotations → mark task `done` (search exhausted, no retry). Next heartbeat skips it.
 - **NEVER navigate to an article without checking BOTH tracking files first** (`commented_posts.txt` AND `reacted_articles.txt`).
 - **Slug format: ALWAYS just the slug** (last URL path segment, NO author prefix). `dev.to/author/slug-123` → `slug-123`.
 
@@ -142,7 +142,7 @@ For each due task:
 - Check limits before acting
 - Tags: from task config, else 2-3 from queries.json (all fresh daily)
 - Search: `{{opentwins_home}}/agent-devto/scripts/devto-api.sh search {tag} 10`
-- 🚨 **MAX 3 search iterations per task.** Track with a counter variable. If no qualifying target after 3 tag rotations → mark task "failed". Do NOT keep searching — each search + navigate cycle costs 4+ steps.
+- 🚨 **MAX 3 search iterations per task.** Track with a counter variable. If no qualifying target after 3 tag rotations → mark task `done` (log reason "search exhausted"). Next heartbeat skips it. Do NOT keep searching — each search + navigate cycle costs 4+ steps.
 - **Filter BEFORE navigating:**
   1. Quality: reactions>=5 OR comments>=3; comments<=50; sweet spot 3-20
   2. Sort: `(reactions + comments_count * 2)`
@@ -244,7 +244,7 @@ Fires ~2h after publish on Wed/Fri. Kickstarts thread if empty. **Exempt from `d
    - Rewrite line 1 of `config.seed_source` to `status: published`.
    - Log Type="Seed Comment" to `memory/{today}.md` with article URL + comment body.
    - Do NOT increment `limits.daily.comments.current`.
-8. On submit failure: retry next heartbeat. After 1 retry, mark failed + log Error.
+8. On submit failure: retry next heartbeat. After 1 retry (2 total attempts), mark task `done` and log Error.
 
 ### update_memory
 Read PLAYBOOK.md -> "Memory Update"
