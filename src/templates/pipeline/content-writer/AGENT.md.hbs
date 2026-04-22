@@ -155,16 +155,17 @@ Structure:
 Tags: [0-1 hashtag]
 ```
 
-### 6. `threads-post.md` — Threads single post (max 500 characters)
+### 6. `threads-post.md` — Threads single post (≤500 characters HARD CAP)
 
-**Voice:** Casual, text-a-friend. Paragraphs separated by `\n\n`. Lowercase starts fine. Half-thoughts, tangents OK. Ukrainian allowed if brief suggests it. Masculine verb forms always. End with ONE topic tag on its own line — **use the FIRST entry from the brief's `## Hashtags & Keywords` Threads section**. No body hashtags.
-**HARD LIMIT: 500 characters.** Shorter is better — ~300 chars reads more native.
+🚨 **500 chars MAX including topic tag and `\n\n`. Count before saving.** Over the cap → emit `threads-thread.md` instead.
+
+**Voice:** Casual, text-a-friend. Paragraphs separated by `\n\n`. Lowercase starts fine. Half-thoughts, tangents OK. End with ONE topic tag on its own line — **use the FIRST entry from the brief's `## Hashtags & Keywords` Threads section**. No body hashtags.
 
 🚨 **Emit 1 post only** (exception to Rule 2 — agent consumes Post 1, variants unused).
 
 ### 6b. `threads-thread.md` — Threads multi-post thread (3-5 connected posts)
 
-**Voice:** Same as §6. Each post 100-200 words, `\n\n` paragraphs.
+**Voice:** Same as §6. 🚨 **Each post ≤500 chars HARD CAP. Count before saving.**
 
 **Format:** `## Post 1` ... `## Post N` sections separated by `---`, each with `status: pending` header.
 
