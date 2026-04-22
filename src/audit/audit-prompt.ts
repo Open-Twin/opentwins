@@ -219,6 +219,8 @@ Date: ${inputs.today}
 - Keep output tight — this gets read, not skimmed.
 - Score is directional — don't over-interpret single-day numbers.
 - If data is missing for a dimension, mark N/A and adjust the max accordingly (don't zero-pad).
+- **Fixes must not push voice toward AI-like.** Reject any fix that adds structure, polish, or grammatical completeness the audience would read as AI-written. Human voice uses punchy fragments, mid-sentence dashes, contractions, speechy closers. If a fix would sanitize those, either narrow its scope or drop it. When unsure, skip the fix — a penalty on the score is cheaper than sterilized voice.
+- **Heartbeats are stateless.** Agent has no memory of previous heartbeats' styles. Fixes must be self-contained within a single comment's drafting — do not propose "rotate from yesterday" or "vary from last run" rules.
 
 ---
 
