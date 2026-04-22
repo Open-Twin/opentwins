@@ -69,13 +69,15 @@ The user copies the article body (from `# [Title]` down to end of file — skip 
 ---
 
 *Tags: [5 relevant tags]*
-
----
-
-**Generate image:** [1-2 sentence prompt for a hook image. Specific style, mood, visual metaphor.]
 ```
 
 **Voice:** Narrative, experience-driven. "What I learned doing X" not "5 tips for X." First person. Short paragraphs (2-3 sentences). Real numbers, real failures. Medium rewards storytelling and personal takes over listicles.
+
+**Cover image spec (`medium-cover-image.spec.json`) — emit alongside Medium articles:**
+
+Layout: `banner` (1500×600 wide cover). Data shape: `{ title, kicker?, subline? }`. See `{{pipeline_workspace}}/image-core/schemas/banner.schema.json`. Medium has no publish API, so the Medium agent renders the PNG and surfaces its path in the publish alert for manual paste. Render failure → publish without cover (fail-soft).
+
+Keep `title` ≤60 chars, `kicker` ≤30 chars, `subline` ≤80 chars so text fits the banner at 1500×600.
 
 ### 2. `linkedin-article.md` — LinkedIn article (800-1500 words)
 
