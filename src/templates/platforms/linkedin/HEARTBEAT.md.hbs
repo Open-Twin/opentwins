@@ -154,12 +154,13 @@ ALWAYS use `past-week` in URL — NEVER `past-24h` (returns 0-3 posts).
      ENDJSON
      ```
      If `alreadyCommented` → backfill trackId, skip. Otherwise comment using TipTap editor on the post page.
-   - **Pulse articles (`isPulse: true`):** Navigate to `postUrl` directly. Then run ONE evaluate for dedup + content read:
+   - **Pulse articles (`isPulse: true`):** Navigate to `postUrl` directly. Then run ONE evaluate for dedup + like + content read (SS 3c inlined for the Pulse surface):
      ```bash
      exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
-     {"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var ourLinks = Array.from(document.querySelectorAll('a[href*=\"/in/{{handle_slug}}\"]')); var alreadyCommented = ourLinks.filter(function(a) { return !a.href.includes('sidebar_menu'); }).length > 0; if (alreadyCommented) return { alreadyCommented: true }; var article = document.querySelector('article') || document.querySelector('.reader-article-content'); var content = article ? article.innerText.slice(0, 1200) : document.body.innerText.slice(0, 1200); var title = (document.querySelector('h1') || {}).innerText || ''; return { alreadyCommented: false, title: title, content: content }; }"}
+     {"fn":"async () => { await new Promise(r => setTimeout(r, 3000)); var ourLinks = Array.from(document.querySelectorAll('a[href*=\"/in/{{handle_slug}}\"]')); var alreadyCommented = ourLinks.filter(function(a) { return !a.href.includes('sidebar_menu'); }).length > 0; if (alreadyCommented) return { alreadyCommented: true }; var likeBtn = Array.from(document.querySelectorAll('button')).find(function(b) { var a = b.getAttribute('aria-label') || ''; if (a === 'React Like') return true; return a.startsWith('React Like to ') && a.endsWith(' post'); }); var liked = false; if (likeBtn) { likeBtn.click(); liked = true; } var article = document.querySelector('article') || document.querySelector('.reader-article-content'); var content = article ? article.innerText.slice(0, 1200) : document.body.innerText.slice(0, 1200); var title = (document.querySelector('h1') || {}).innerText || ''; return { alreadyCommented: false, liked: liked, title: title, content: content }; }"}
      ENDJSON
      ```
+     🚨 **If `liked: false`: log Error — the selector should cover both surfaces. Do NOT rationalize the miss as "OK for Pulse" and proceed.**
      🚨 **If `alreadyCommented: true` → MUST backfill tracking file immediately** (previous heartbeat may have commented but got cut off before tracking):
      ```bash
      grep -qF "{trackId}" memory/commented_posts.txt || echo "{trackId}" >> memory/commented_posts.txt
