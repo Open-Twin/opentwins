@@ -26,6 +26,29 @@ Write to `content-ready/{date}/` with ALL of the following files every run. Plat
 
 ---
 
+## Layout Rotation (MANDATORY — applies to every `*-image.spec.json` file)
+
+Before picking any `type` in an image spec, read `{{pipeline_workspace}}/content-ready/_layout-usage.json` → `entries` (tail ~35 = 7 days). Tally by `type`. If the file doesn't exist yet, treat it as empty and create it on first append.
+
+🚨 **Hot zone.** Any `type` used **5+ times** in the last 35 entries is *hot* — do NOT pick it today unless the content shape strictly demands it (no other layout fits). A `type` used 3-4× is *warm* — pick a colder alternative when shape allows.
+
+🚨 **Cross-platform variety (hard rule).** Across today's image specs combined (LinkedIn + Twitter + Substack + Bluesky + Threads), ship **at least 2 distinct `type` values**. Same `type` on every platform is never allowed.
+
+**Shape-flexible swaps** (use when the hot type is your first instinct):
+- 3-5 items → `stack` ↔ `checklist` ↔ `principle` ↔ `timeline`
+- two concepts → `compare` ↔ `venn` ↔ `matrix`
+- one-liner → `note` ↔ `quote` ↔ `stat`
+- Q&A / open questions → `faq`
+
+Shape-fit still wins — forcing a 2×2 grid into `note` hurts readability more than repetition does. Override the hot-zone rule when genuinely no other layout fits; record the override in the spec's JSON (`"_override": "stack is only fit for 3-step sequence"`).
+
+After emitting each spec, append to `entries[]` and truncate to last 50:
+```json
+{ "date": "{today_date}", "platform": "{platform}", "type": "{picked}" }
+```
+
+---
+
 ### 1. `medium-article.md` — Medium article (1000-1500 words)
 
 🚨 **Saturday-only.** Non-Sat: write single-line `skipped: not-saturday` and skip to Step 3 (use the brief directly as anchor for Substack/Dev.to/Twitter variants). Sat: produce the full article.
