@@ -165,6 +165,10 @@ Tags: [0-1 hashtag]
 
 🚨 **Emit 1 post only** (exception to Rule 2 — agent consumes Post 1, variants unused).
 
+**Image spec (`threads-post-image.spec.json`) — emit whenever you emit `threads-post.md`:**
+
+Same `type` options and schemas as `twitter-post-image.spec.json` (§4): `stack`, `matrix`, `venn`, `note`, `quote`, `stat`, `compare`, `checklist`, `principle`, `timeline`, `faq`. Renders at 1080×1080. Voice: casual/text-a-friend (matches §6 body); shorter copy than LinkedIn. Missing spec = text-only post. Attach/render failure → agent posts text-only (never blocks).
+
 ### 6b. `threads-thread.md` — Threads multi-post thread (3-5 connected posts)
 
 **Voice:** Same as §6. 🚨 **Each post ≤500 chars HARD CAP. Count before saving.**
@@ -174,6 +178,8 @@ Tags: [0-1 hashtag]
 **When to emit:** 🚨 **Tue/Fri = MANDATORY** (Planner's Structural-Theme Guardrail covers these). Other weekdays: emit only if theme is structural. Non-eligible: single line `skipped: {reason}`.
 
 **Topic tag:** ONE tag on the LAST post only.
+
+**Image spec (`threads-thread-image.spec.json`) — emit alongside `threads-thread.md` on Tue/Fri.** Same `type` options as §6. Attached to **Post 1 only**; follow-up posts text-only. Render/attach failure → agent publishes thread text-only (never blocks).
 
 ### 7. `bluesky-post.md` — Bluesky single post (max 300 characters)
 
@@ -247,7 +253,7 @@ Renderer: `{{pipeline_workspace}}/image-core/cli.mjs`. On render/attach failure,
 {{/if}}
 - If the brief's angle is highly technical, target dev-oriented subreddits. If it's broad, target general communities.
 
-🚨 **Subreddit rotation (MANDATORY):** Post 1 MUST NOT always be the same subreddit. Rotate across subreddits so each week's posts land in different communities. Check `content-ready/` from the last 7 days - if the same subreddit was Post 1 in the last file, use a different one. Spread visibility, don't concentrate in one sub.
+🚨 **Subreddit rotation (MANDATORY):** Post 1 MUST NOT always be the same subreddit. Rotate across subreddits so each week's posts land in different communities. Check `content-ready/` from the last 7 days - if the same subreddit was Post 1 in the last file, use a different one. Spread visibility, don't concentrate in one sub. **Flair restrictions:** some subs restrict AI/LLM flair to specific days (e.g. Wed + Sat only) — posts on off-days get mod-bot flagged. Note any target sub's flair rules in INSIGHTS.md and skip it on restricted days.
 
 🚨 **Title = literal question + named product/tool** when the theme has one. Concrete questions with a real-world referent ("How do you decide which Claude Design outputs ship?") beat abstract phrasings ("What survives of the PM job?") — conversation value + LLM-retrieval value in one line.
 
