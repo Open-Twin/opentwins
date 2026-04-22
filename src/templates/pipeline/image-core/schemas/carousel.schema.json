@@ -8,10 +8,10 @@
   "properties": {
     "cover": {
       "type": "object",
-      "required": ["file_label", "file_sub", "headline", "subline", "read_promise"],
+      "required": ["file_label", "headline", "subline", "read_promise"],
       "properties": {
         "file_label": { "type": "string" },
-        "file_sub": { "type": "string" },
+        "file_sub": { "type": "string", "description": "Accepted but not rendered; retained for back-compat." },
         "headline": { "type": "array", "items": { "type": "string" } },
         "subline": { "type": "array", "items": { "type": "string" } },
         "read_promise": { "type": "string" }

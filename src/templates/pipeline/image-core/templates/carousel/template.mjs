@@ -7,7 +7,7 @@ import { escapeHtml } from '../../lib/escape.mjs';
 import { corporateHead } from '../_shared/corporate.mjs';
 import T from '../_shared/tokens.mjs';
 
-export const TEMPLATE_VERSION = '2026-04-20-c';
+export const TEMPLATE_VERSION = '2026-04-21-a';
 
 // HTML-contract fields. These accept inline HTML (<b>, <span class="c1">,
 // etc.) per Content Writer convention. Everything else is treated as plain
@@ -93,8 +93,7 @@ h2 { font-size: 66px; font-weight: 800; line-height: 1.06; letter-spacing: -1.8p
 .file-icon { width: 300px; height: 360px; background: white; border-radius: 14px; position: relative; box-shadow: 0 40px 100px rgba(10,102,194,0.35); transform: rotate(-4deg); }
 .file-icon::before { content: ""; position: absolute; top: 0; right: 0; width: 82px; height: 82px; background: ${T.corporate.border}; border-top-right-radius: 14px; clip-path: polygon(0 0, 100% 100%, 100% 0); }
 .file-icon::after { content: ""; position: absolute; top: 0; right: 0; width: 82px; height: 82px; background: linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.04) 50%); border-top-right-radius: 14px; }
-.fi-label { position: absolute; top: 128px; left: 0; right: 0; text-align: center; font-family: ${T.fonts.monoSystem}; font-size: 42px; font-weight: 800; color: ${T.brand.blue}; }
-.fi-sub { position: absolute; top: 188px; left: 0; right: 0; text-align: center; font-family: ${T.fonts.monoSystem}; font-size: 19px; color: ${T.corporate.textDim}; letter-spacing: 0.3px; }
+.fi-label { position: absolute; top: 148px; left: 0; right: 0; text-align: center; font-family: ${T.fonts.monoSystem}; font-size: 38px; font-weight: 800; color: ${T.brand.blue}; white-space: nowrap; overflow: hidden; text-overflow: clip; padding: 0 14px; }
 .fi-dots { position: absolute; top: 230px; left: 30px; right: 30px; display: flex; flex-direction: column; gap: 12px; }
 .fi-dots span { height: 6px; background: ${T.corporate.border}; border-radius: 3px; display: block; }
 .fi-dots span:nth-child(1) { width: 68%; } .fi-dots span:nth-child(2) { width: 84%; }
@@ -170,7 +169,6 @@ const renderCover = (s) => `<section class="cover">
   <div class="cover-grid">
     <div class="file-icon">
       <div class="fi-label">${escapeHtml(s.cover.file_label)}</div>
-      <div class="fi-sub">${escapeHtml(s.cover.file_sub)}</div>
       <div class="fi-dots"><span></span><span></span><span></span><span></span></div>
     </div>
     <div>
