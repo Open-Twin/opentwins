@@ -112,7 +112,7 @@ Before any scheduled tasks. No exceptions.
    - **After successful reply:** `printf '%s\n' '{commentId}_{date}' >> memory/replied_notifications.txt`
 6. Language: Cyrillic text = Ukrainian (masculine forms). Latin = English.
 7. Apply SOUL.md anti-AI guidelines
-8. Log: `memory/{today}.md` -> `Type="Reply" | User | URL | text(100 chars)`
+8. Log: `memory/{today}.md` -> `Type="Reply" | User | URL | Replying to="first 80 chars of their comment" | text(100 chars)`
 9. No limits update (replies unlimited)
 
 Finish ALL replies before schedule.
@@ -150,7 +150,7 @@ if daily.comments.current >= limit: mark_done("daily limit reached")
    - 🚨 If `skipped: true, reason: 'already_commented_on_page'`: skip comment, append post_id to tracking file, and move on
 6. **After each successful comment:** `echo "{post_id}" >> memory/commented_posts.txt`
 7. After comment: `daily.comments.current++` in limits.json
-8. Log: `memory/{today}.md` -> `Type="Comment" | URL | text(100 chars)`
+8. Log: `memory/{today}.md` -> `Type="Comment" | URL | Replying to="first 80 chars of the post you're responding to" | text(100 chars)`
 9. 1 comment/heartbeat max. Upvotes unlimited (3-5).
 10. `comments_done++`. If `>= max_comments`: mark "done", else "pending"
 

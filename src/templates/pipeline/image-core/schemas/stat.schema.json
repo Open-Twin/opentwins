@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opentwins-image-core/stat",
+  "title": "Stat layout data",
+  "description": "Big number hero. One dominant tabular numeral (~300px), unit line, explanation paragraph.",
+  "type": "object",
+  "required": ["label", "value", "unit", "explanation"],
+  "properties": {
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Small caps context line (e.g. 'Q1 2026 · measured across 47 tickets')."
+    },
+    "value": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8,
+      "description": "The hero number. Keep short: '10×', '47%', '3 wks', '$2M', etc."
+    },
+    "unit": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What the number measures ('faster delivery cycles', 'fewer bugs', etc.)."
+    },
+    "explanation": {
+      "type": "string",
+      "minLength": 1,
+      "description": "1-2 line explanation grounding the stat."
+    },
+    "source": {
+      "type": "string",
+      "description": "Optional methodology / source line. Defaults to 'Kolya · AI-Native PM'."
+    }
+  }
+}

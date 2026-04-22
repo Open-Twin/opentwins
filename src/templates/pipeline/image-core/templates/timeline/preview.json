@@ -1,0 +1,25 @@
+{
+  "title": "How my spec-writing evolved",
+  "entries": [
+    {
+      "when": "Q1 2024",
+      "what": "One-line tickets, lots of rework",
+      "detail": "Agents guessed intent. Half the PRs got rewritten on review."
+    },
+    {
+      "when": "Q3 2024",
+      "what": "Four-field template",
+      "detail": "Outcome, constraint, slice, acceptance. Rework dropped by half."
+    },
+    {
+      "when": "Q1 2025",
+      "what": "Acceptance test written first",
+      "detail": "Test becomes the spec. If an agent's output passes, we ship."
+    },
+    {
+      "when": "Q1 2026",
+      "what": "Specs reviewed before agents run",
+      "detail": "One PM checkpoint eliminates 80% of post-draft rework."
+    }
+  ]
+}

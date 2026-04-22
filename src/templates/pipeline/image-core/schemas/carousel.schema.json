@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opentwins-image-core/carousel",
+  "title": "Carousel layout data",
+  "description": "LinkedIn document carousel, 10 pages (cover + hook + code + 4 fields + pattern + cta + bonus). Corporate aesthetic. Renders to PDF.",
+  "type": "object",
+  "required": ["cover", "hook", "code", "fields", "pattern", "cta", "bonus"],
+  "properties": {
+    "cover": {
+      "type": "object",
+      "required": ["file_label", "headline", "subline", "read_promise"],
+      "properties": {
+        "file_label": { "type": "string" },
+        "file_sub": { "type": "string", "description": "Accepted but not rendered; retained for back-compat." },
+        "headline": { "type": "array", "items": { "type": "string" } },
+        "subline": { "type": "array", "items": { "type": "string" } },
+        "read_promise": { "type": "string" }
+      }
+    },
+    "hook": {
+      "type": "object",
+      "required": ["eyebrow", "headline_lines", "support_html", "swipe"],
+      "properties": {
+        "eyebrow": { "type": "string" },
+        "headline_lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["text"],
+            "properties": {
+              "text": { "type": "string" },
+              "accent": { "type": "boolean" }
+            }
+          }
+        },
+        "support_html": { "type": "string", "description": "Inline HTML allowed (e.g. <b>)." },
+        "swipe": { "type": "string" }
+      }
+    },
+    "code": {
+      "type": "object",
+      "required": ["eyebrow", "title", "filename", "body_lines", "swipe"],
+      "properties": {
+        "eyebrow": { "type": "string" },
+        "title": { "type": "string" },
+        "filename": { "type": "string" },
+        "body_lines": { "type": "array", "items": { "type": "string" }, "description": "Inline HTML with .c1-.c5 color classes allowed." },
+        "swipe": { "type": "string" }
+      }
+    },
+    "fields": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": ["name", "icon", "definition", "eng", "pm", "takeaway_html", "swipe"],
+        "properties": {
+          "name": { "type": "string" },
+          "icon": { "type": "string", "enum": ["target", "lock", "notebook", "alarm", "lightning", "shield", "spark", "map"] },
+          "definition": { "type": "string" },
+          "eng": { "type": "string" },
+          "pm": { "type": "string" },
+          "takeaway_html": { "type": "string" },
+          "swipe": { "type": "string" }
+        }
+      }
+    },
+    "pattern": {
+      "type": "object",
+      "required": ["eyebrow", "title", "card_left", "card_right", "connector", "closer_html", "swipe"],
+      "properties": {
+        "eyebrow": { "type": "string" },
+        "title": { "type": "string" },
+        "card_left": {
+          "type": "object",
+          "required": ["date", "lab", "feature", "desc"],
+          "properties": {
+            "date": { "type": "string" },
+            "lab": { "type": "string" },
+            "feature": { "type": "string" },
+            "desc": { "type": "string" }
+          }
+        },
+        "card_right": {
+          "type": "object",
+          "required": ["date", "lab", "feature", "desc"],
+          "properties": {
+            "date": { "type": "string" },
+            "lab": { "type": "string" },
+            "feature": { "type": "string" },
+            "desc": { "type": "string" }
+          }
+        },
+        "connector": { "type": "string" },
+        "closer_html": { "type": "string" },
+        "swipe": { "type": "string" }
+      }
+    },
+    "cta": {
+      "type": "object",
+      "required": ["eyebrow", "question", "options", "closer", "swipe"],
+      "properties": {
+        "eyebrow": { "type": "string" },
+        "question": { "type": "string" },
+        "options": { "type": "array", "items": { "type": "string" } },
+        "closer": { "type": "string" },
+        "swipe": { "type": "string" }
+      }
+    },
+    "bonus": {
+      "type": "object",
+      "required": ["eyebrow", "title", "intro", "template_lines", "outro_html"],
+      "properties": {
+        "eyebrow": { "type": "string" },
+        "title": { "type": "string" },
+        "intro": { "type": "string" },
+        "template_lines": { "type": "array", "items": { "type": "string" } },
+        "outro_html": { "type": "string" }
+      }
+    }
+  }
+}

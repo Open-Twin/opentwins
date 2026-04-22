@@ -1,0 +1,24 @@
+{
+  "name": "opentwins-image-core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Platform-agnostic image rendering service. Takes {platform, layout, data} and returns a PNG/PDF at the correct dimensions. Parallel to legacy render-*.mjs scripts in workspace/content-writer/templates/ during migration.",
+  "type": "module",
+  "main": "server.mjs",
+  "bin": {
+    "opentwins-image": "./cli.mjs"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "NODE_ENV=development PORT=47293 node server.mjs",
+    "cli": "node cli.mjs",
+    "test": "node test/smoke.mjs",
+    "preview": "node cli.mjs preview",
+    "cleanup-cache": "bash scripts/cleanup-cache.sh",
+    "download-fonts": "bash scripts/download-fonts.sh"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}

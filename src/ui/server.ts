@@ -9,7 +9,7 @@ import { isDaemonRunning } from '../scheduler/daemon.js';
 import { getQualityMetrics, getDisagreementRatio } from './api/quality.js';
 import { handlePipelineStageFiles } from './api/pipeline.js';
 import { handleUpdateConfig } from './api/config.js';
-import { handleListAgents, handleGetAgent, handleRunAgent, handleStopAgent, handleUpdateLimits, handleUpdateAgent, handleGetAgentFeed, handleBrowserSetup, handleBrowserConfirm } from './api/agents.js';
+import { handleListAgents, handleGetAgent, handleRunAgent, handleStopAgent, handleUpdateLimits, handleUpdateAgent, handleGetAgentFeed, handleBrowserSetup, handleBrowserConfirm, handleAuditAgent } from './api/agents.js';
 import { handleSetup, handleSetupStatus, handleValidateAuth } from './api/setup.js';
 import { handleHealth } from './api/health.js';
 import { handleBrowserStart, handleBrowserStop, handleBrowserOpen, handleBrowserNavigate, handleBrowserClose, handleBrowserEvaluate, handleBrowserClick, handleBrowserSnapshot, handleBrowserTabs, handleBrowserUpload } from './api/browser.js';
@@ -246,6 +246,7 @@ export async function startDashboard(port: number): Promise<void> {
   app.post('/api/agents/:platform/browser-setup', (req, res) => { handleBrowserSetup(req, res); });
   app.post('/api/agents/:platform/browser-confirm', (req, res) => { handleBrowserConfirm(req, res); });
   app.post('/api/agents/:platform/run', (req, res) => { handleRunAgent(req, res); });
+  app.post('/api/agents/:platform/audit', (req, res) => { handleAuditAgent(req, res); });
   app.post('/api/agents/:platform/stop', (req, res) => handleStopAgent(req, res));
   app.put('/api/agents/:platform/limits', (req, res) => handleUpdateLimits(req, res));
   app.put('/api/agents/:platform', (req, res) => handleUpdateAgent(req, res));

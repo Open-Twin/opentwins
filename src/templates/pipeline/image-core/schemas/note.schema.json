@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opentwins-image-core/note",
+  "title": "Note layout data",
+  "description": "Substack Note image. Dark gradient, sans-serif, optional accent highlight.",
+  "type": "object",
+  "required": ["headline"],
+  "properties": {
+    "headline": {
+      "type": "string",
+      "minLength": 1,
+      "description": "10-25 words recommended. Will fit comfortably at 104px.",
+      "x-word-range": [5, 30]
+    },
+    "accent": {
+      "type": "string",
+      "description": "Substring of headline to highlight in brand-blue. First case-insensitive match is wrapped."
+    },
+    "subline": {
+      "type": "string",
+      "description": "Optional secondary line below headline."
+    }
+  }
+}

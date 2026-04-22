@@ -1,0 +1,10 @@
+{
+  "title": "Four moves that turn a PM brief into shippable code",
+  "items": [
+    { "title": "Frame the outcome", "body": "One sentence. Who benefits, what changes for them, how you'll know it shipped." },
+    { "title": "Name the constraints", "body": "Budget, deadline, risk tolerance, things the team has already ruled out." },
+    { "title": "Draft the slice", "body": "Smallest real thing that proves the outcome. No scaffolding, no side quests." },
+    { "title": "Write the acceptance test", "body": "The exact check the agent's output must pass. Write it before prompting." }
+  ],
+  "doodle": "try this on your\nnext ticket →"
+}

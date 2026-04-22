@@ -318,6 +318,19 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
   const [browserSetupError, setBrowserSetupError] = useState<string | null>(null);
   const [showInsightsModal, setShowInsightsModal] = useState(false);
   const [showFeed, setShowFeed] = useState(true);
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [auditRunning, setAuditRunning] = useState(false);
+  const [auditReport, setAuditReport] = useState<string | null>(null);
+  const [auditError, setAuditError] = useState<string | null>(null);
+  const [auditStartedAt, setAuditStartedAt] = useState<number | null>(null);
+  const [auditElapsedMs, setAuditElapsedMs] = useState(0);
+  const auditAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!auditRunning || !auditStartedAt) return;
+    const id = setInterval(() => { setAuditElapsedMs(Date.now() - auditStartedAt); }, 250);
+    return () => clearInterval(id);
+  }, [auditRunning, auditStartedAt]);
 
   const state = summary.state;
 
@@ -355,6 +368,35 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
       setFlash('Agent started');
       setTimeout(() => { setFlash(null); onRefresh(); refetch(); }, 2000);
     }
+  };
+
+  const handleAudit = async () => {
+    setAuditModalOpen(true);
+    setAuditRunning(true);
+    setAuditReport(null);
+    setAuditError(null);
+    setAuditStartedAt(Date.now());
+    setAuditElapsedMs(0);
+    const ctrl = new AbortController();
+    auditAbortRef.current = ctrl;
+    try {
+      const res = await fetch(`/api/agents/${platform}/audit`, { method: 'POST', signal: ctrl.signal });
+      const data = await res.json() as { ok?: boolean; report?: string; error?: string };
+      if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      setAuditReport(data.report || '');
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return;
+      setAuditError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setAuditRunning(false);
+      auditAbortRef.current = null;
+    }
+  };
+
+  const handleAuditCancel = () => {
+    auditAbortRef.current?.abort();
+    setAuditRunning(false);
+    setAuditModalOpen(false);
   };
 
   const handleStop = async () => {
@@ -516,6 +558,9 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
               {state === 'running' && <ActionBtn onClick={handleStop} loading={stopping} danger>Stop</ActionBtn>}
               {(state === 'ready' || state === 'completed' || state === 'failed') && (
                 <ActionBtn onClick={handleRun} loading={starting} accent disabled={!agentsEnabled}>▶ Run Now</ActionBtn>
+              )}
+              {state !== 'needs_setup' && (
+                <ActionBtn onClick={handleAudit} loading={auditRunning}>📊 Audit</ActionBtn>
               )}
               <button onClick={() => { if (confirm(`Remove ${platform}?`)) onRemove(platform); }} disabled={agentCount <= 1}
                 className="mono text-[12px] px-2 py-1 rounded opacity-40 hover:opacity-100 disabled:opacity-15 disabled:cursor-not-allowed transition-all"
@@ -899,6 +944,21 @@ function AgentPanel({ platform, summary, onRefresh, onRemove, agentCount }: { pl
             </div>
           </div>
         </div>,
+        document.body
+      )}
+
+      {/* Audit modal — 9-dimension daily audit for this agent */}
+      {auditModalOpen && createPortal(
+        <AuditModal
+          platform={platform}
+          running={auditRunning}
+          elapsedMs={auditElapsedMs}
+          report={auditReport}
+          error={auditError}
+          onClose={() => setAuditModalOpen(false)}
+          onCancel={handleAuditCancel}
+          onRetry={handleAudit}
+        />,
         document.body
       )}
 
@@ -1531,4 +1591,141 @@ function HeroStat({ label, value, sub, warn }: { label: string; value: string | 
       {sub && <div className="mono text-[12px] mt-1.5" style={{ color: 'var(--c-text-muted)' }}>{sub}</div>}
     </div>
   );
+}
+
+// ── Audit modal ───────────────────────────────────────────────
+// Shows running state (spinner + elapsed), then rendered markdown report
+// with a grade badge pulled from the report header.
+
+function AuditModal({ platform, running, elapsedMs, report, error, onClose, onCancel, onRetry }:
+  { platform: string; running: boolean; elapsedMs: number; report: string | null; error: string | null;
+    onClose: () => void; onCancel: () => void; onRetry: () => void }) {
+  const elapsedStr = `${Math.floor(elapsedMs / 1000)}s`;
+  const grade = report ? (report.match(/Grade:\s*([A-F][+-]?)/)?.[1] || null) : null;
+  const totalMatch = report ? report.match(/Total:\s*(\d+)\s*\/\s*(\d+)/) : null;
+  const totalScore = totalMatch ? `${totalMatch[1]}/${totalMatch[2]}` : null;
+  const gradeColor = grade
+    ? (grade.startsWith('A') ? 'var(--c-green)'
+      : grade.startsWith('B') ? 'var(--c-teal)'
+      : grade.startsWith('C') ? 'var(--c-amber)'
+      : 'var(--c-red)')
+    : 'var(--c-text-muted)';
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-6"
+      style={{ background: 'rgba(6,8,13,0.85)', backdropFilter: 'blur(8px)' }}
+      onClick={!running ? onClose : undefined}
+    >
+      <div
+        className="panel noise max-w-4xl w-full max-h-[85vh] flex flex-col animate-fade-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="panel-header flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <span>// Daily audit - {PLATFORM_LABELS[platform] || platform}</span>
+            {grade && totalScore && (
+              <span className="mono text-[12px] px-2 py-0.5 rounded-full" style={{ color: gradeColor, background: 'rgba(255,255,255,0.04)', border: `1px solid ${gradeColor}` }}>
+                {grade} · {totalScore}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {running && <span className="mono text-[12px]" style={{ color: 'var(--c-text-muted)' }}>{elapsedStr}</span>}
+            {running ? (
+              <button onClick={onCancel} className="mono text-[13px] opacity-70 hover:opacity-100 transition-all" style={{ color: 'var(--c-red)' }}>✕ cancel</button>
+            ) : (
+              <button onClick={onClose} className="mono text-[13px] opacity-50 hover:opacity-100 transition-all" style={{ color: 'var(--c-text-muted)' }}>✕ close</button>
+            )}
+          </div>
+        </div>
+
+        <div className="p-6 overflow-y-auto flex-1">
+          {running && (
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <div className="w-10 h-10 rounded-full animate-spin" style={{ border: '3px solid var(--c-border)', borderTopColor: 'var(--c-teal)' }} />
+              <div className="mono text-[13px]" style={{ color: 'var(--c-text-dim)' }}>Scoring 9 dimensions…</div>
+              <div className="mono text-[11px]" style={{ color: 'var(--c-text-muted)' }}>This usually takes 30–90 seconds</div>
+            </div>
+          )}
+
+          {!running && error && (
+            <div className="flex flex-col gap-3">
+              <div className="mono text-[13px]" style={{ color: 'var(--c-red)' }}>Audit failed</div>
+              <div className="mono text-[12px] whitespace-pre-wrap" style={{ color: 'var(--c-text-dim)' }}>{error}</div>
+              <div>
+                <button onClick={onRetry} className="mono text-[12px] px-3 py-1.5 rounded hover:opacity-80 transition-all" style={{ color: 'var(--c-teal)', border: '1px solid var(--c-teal)' }}>↻ retry</button>
+              </div>
+            </div>
+          )}
+
+          {!running && !error && report && (
+            <div
+              className="mono text-[13px] leading-relaxed"
+              style={{ color: 'var(--c-text-dim)' }}
+              dangerouslySetInnerHTML={{ __html: renderAuditMarkdown(report) }}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Minimal markdown renderer tuned for the audit output shape.
+// Handles: # H1, ## H2, ### H3, **bold**, tables, code fences, bullet lists.
+function renderAuditMarkdown(md: string): string {
+  const lines = md.split('\n');
+  const out: string[] = [];
+  let inCode = false;
+  let inTable = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith('```')) {
+      if (inCode) { out.push('</pre>'); inCode = false; }
+      else { out.push('<pre style="background:rgba(255,255,255,0.03);border:1px solid var(--c-border-dim);padding:10px;border-radius:4px;overflow-x:auto;margin:10px 0;font-size:12px">'); inCode = true; }
+      continue;
+    }
+    if (inCode) { out.push(escapeHtml(line)); continue; }
+
+    // Table detection
+    if (line.startsWith('|') && line.includes('|', 1)) {
+      if (!inTable) {
+        out.push('<table style="border-collapse:collapse;width:100%;margin:10px 0;font-size:12px">');
+        inTable = true;
+      }
+      // Skip separator row
+      if (/^\|\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$/.test(line)) continue;
+      const cells = line.split('|').slice(1, -1).map((c) => c.trim());
+      const tag = out[out.length - 1] === '<table style="border-collapse:collapse;width:100%;margin:10px 0;font-size:12px">' ? 'th' : 'td';
+      const row = cells.map((c) => `<${tag} style="padding:6px 10px;border-bottom:1px solid var(--c-border-dim);text-align:left;color:${tag === 'th' ? 'var(--c-text)' : 'var(--c-text-dim)'}">${inlineMd(c)}</${tag}>`).join('');
+      out.push(`<tr>${row}</tr>`);
+      continue;
+    }
+    if (inTable) { out.push('</table>'); inTable = false; }
+
+    if (line.startsWith('### ')) { out.push(`<h3 style="color:var(--c-text);font-size:13px;font-weight:600;margin:14px 0 6px">${escapeHtml(line.slice(4))}</h3>`); continue; }
+    if (line.startsWith('## ')) { out.push(`<h2 style="color:var(--c-teal);font-size:14px;font-weight:600;margin:18px 0 6px">${escapeHtml(line.slice(3))}</h2>`); continue; }
+    if (line.startsWith('# ')) { out.push(`<h1 style="color:var(--c-text);font-size:16px;font-weight:700;margin:0 0 8px">${escapeHtml(line.slice(2))}</h1>`); continue; }
+    if (line.startsWith('- ')) { out.push(`<div style="padding-left:14px;margin:3px 0;position:relative"><span style="position:absolute;left:0;color:var(--c-text-muted)">•</span>${inlineMd(line.slice(2))}</div>`); continue; }
+    if (/^\d+\.\s/.test(line)) {
+      const m = line.match(/^(\d+)\.\s(.*)$/);
+      if (m) { out.push(`<div style="padding-left:20px;margin:3px 0;position:relative"><span style="position:absolute;left:0;color:var(--c-text-muted);font-variant-numeric:tabular-nums">${m[1]}.</span>${inlineMd(m[2])}</div>`); continue; }
+    }
+    if (line.trim() === '') { out.push('<div style="height:6px"></div>'); continue; }
+    out.push(`<div style="margin:3px 0">${inlineMd(line)}</div>`);
+  }
+  if (inCode) out.push('</pre>');
+  if (inTable) out.push('</table>');
+  return out.join('\n');
+}
+
+function inlineMd(s: string): string {
+  return escapeHtml(s)
+    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--c-text)">$1</strong>')
+    .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:3px;font-size:11px">$1</code>');
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

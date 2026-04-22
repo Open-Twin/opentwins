@@ -8,6 +8,8 @@ import { loadConfig, configExists } from '../../config/loader.js';
 import { findLatestSessionFile, extractEventsFromSession } from '../../util/session-parser.js';
 import { setupProfile, confirmProfile } from '../../browser/manager.js';
 import { fileLog, fileError } from '../../util/logger.js';
+import { gatherAuditInputs, buildAuditPrompt } from '../../audit/audit-prompt.js';
+import { runClaudeAgent } from '../../util/claude.js';
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -509,5 +511,63 @@ export function handleBrowserConfirm(req: Request, res: Response): void {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Confirm failed' });
+  }
+}
+
+// ── POST /api/agents/:platform/audit ──────────────────────────
+// Runs the 9-dimension daily audit for the given agent using Claude (sonnet).
+// Reads agent workspace + today's content-ready files, inlines them into the
+// prompt, returns the full markdown report. Synchronous — short-lived Claude call.
+
+export async function handleAuditAgent(req: Request, res: Response): Promise<void> {
+  const platform = req.params.platform as string;
+  if (!PLATFORM_TYPES.includes(platform as any)) {
+    res.status(400).json({ error: `Unknown platform: ${platform}` });
+    return;
+  }
+
+  try {
+    const config = loadConfig();
+    const inputs = gatherAuditInputs(platform);
+    if (!inputs.memoryToday.trim()) {
+      res.json({
+        ok: true,
+        platform,
+        date: inputs.today,
+        report: `# Agent Audit: ${platform}\nDate: ${inputs.today}\n\nAgent has no activity today.`,
+        durationMs: 0,
+      });
+      return;
+    }
+
+    const prompt = buildAuditPrompt(platform, inputs);
+    const workspaceDir = getPlatformWorkspaceDir(platform);
+
+    fileLog('agent', 'Audit started', { platform, date: inputs.today });
+    const result = await runClaudeAgent({
+      workingDir: workspaceDir,
+      model: 'sonnet',
+      prompt,
+      timeoutMs: 300000, // 5 min
+      auth: config.auth,
+    });
+
+    if (result.exitCode !== 0) {
+      fileError('agent', 'Audit failed', { platform, exitCode: result.exitCode, output: result.output.slice(0, 500) });
+      res.status(500).json({ error: `Audit failed (exit ${result.exitCode}): ${result.output.slice(0, 500)}` });
+      return;
+    }
+
+    fileLog('agent', 'Audit completed', { platform, durationMs: result.durationMs });
+    res.json({
+      ok: true,
+      platform,
+      date: inputs.today,
+      report: result.output,
+      durationMs: result.durationMs,
+    });
+  } catch (err) {
+    fileError('agent', 'Audit error', { platform, error: err instanceof Error ? err.message : String(err) });
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Audit failed' });
   }
 }

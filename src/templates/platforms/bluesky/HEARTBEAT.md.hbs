@@ -164,9 +164,12 @@ Before executing any `original_post` task:
    a. Render PNG:
       ```bash
       mkdir -p /tmp/opentwins-uploads
-      node {{pipeline_workspace}}/content-writer/templates/render-post-image.mjs \
-        {{pipeline_workspace}}/content-ready/{today_date}/bluesky-post-image.spec.json \
-        /tmp/opentwins-uploads/bluesky-post-image.png
+      SPEC={{pipeline_workspace}}/content-ready/{today_date}/bluesky-post-image.spec.json
+      LAYOUT=$(jq -r .type "$SPEC")
+      node {{pipeline_workspace}}/image-core/cli.mjs render \
+        --platform bluesky --layout "$LAYOUT" \
+        --data "$SPEC" \
+        --out /tmp/opentwins-uploads/bluesky-post-image.png
       ```
    b. Click "Add media to post" button inside dialog (evaluate), wait 800ms.
    c. Upload via selector-mode:
@@ -222,6 +225,7 @@ Run AFTER Post 1 verified (step 6 captured its `permalink`) and BEFORE step 7.
 - Post: {url}
 - Author: {author}
 - Style: {insight|reaction|personal|disagree}
+- Replying to: "{first 80 chars of the post/comment you're responding to}"
 - Our comment: "{full text of what was posted}"
 ```
 

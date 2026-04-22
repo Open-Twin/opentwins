@@ -161,7 +161,7 @@ Before executing any `publish_newsletter` or `publish_note` task:
      ```
      If `paywall: true` → skip immediately. If `alreadyCommented: true` → backfill tracking, skip.
      Otherwise: Like post (BROWSER-engage.md SS 4, scroll up) -> 🚨 **Apply Comment Quality Rules** (BROWSER-engage.md §A/B/C/D/E/F) -> comment (BROWSER-core.md SS 3, textarea already visible) -> **after commenting: subscribe** if not already subscribed and `daily.subscribes.current < limit` (BROWSER-engage.md SS 6) -> restack with a note if high-quality and `daily.restacks.current < limit` (BROWSER-restack.md SS 10)
-  4b. **🚨 Restack at least 1 post per browse_and_engage task** if restack limit not reached. Pick the best post from the batch. A restack with a quote note puts your take into the original author's audience feed — free visibility. **🚨 Across the day, ≥1 of `daily.restacks.limit` SHOULD be on a cold-breadth author (non-KR), when a quality cold post is available.** Pair it with the cold-breadth comment from this task — comment + like + restack on the same fresh writer maximizes audience-overlap signal. If no cold post meets restack quality, restack KR posts as usual; don't force.
+  4b. **🚨 Restack at least 1 post per browse_and_engage task** if restack limit not reached. Pick the best post from the batch. A restack with a quote note puts your take into the original author's audience feed — free visibility. **🚨 If you cold-commented on a non-KR author this heartbeat (per step 3b), you MUST restack the SAME post.** The fact that you commented already proves the post was worth engaging — that IS the quality bar; do NOT re-judge it. The restack happens on the post page you are already on (right after the comment + subscribe, before navigating away). Only skip if the restack button mechanically fails (Radix dropdown won't open after 2 attempts → gracefully skip per BROWSER-restack.md, log `Type=Restack Skipped, Reason=button_failed`).
   4c. **🚨 Subscribe is tied to commenting.** Every time you comment on a post, subscribe to that author's publication (if not already subscribed and limit not reached). The author sees both notifications — comment + subscribe — which signals genuine engagement.
   5. 🚨 **ONLY append to `commented_posts.txt` AFTER a verified posted comment.**
      ```bash
@@ -176,11 +176,14 @@ Before executing any `publish_newsletter` or `publish_note` task:
   1. Read queries.json topics, INSIGHTS.md for what resonates
   2. Use content from `config.content_source` (per Content-Ready Override — content-writer drafts the note in right length/format/voice). 🚨 **NO hashtags** — Substack Notes have no functional hashtag system.
   3. Self-review (TOOLS.md SS Self-Review Gate)
-  3b. **🖼️ Render note image (if spec exists):** if `{{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json` exists, run:
+  3b. **🖼️ Render note image:** if `{{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json` exists, render PNG:
       ```bash
-      node {{pipeline_workspace}}/content-writer/templates/render-note-image.mjs \
-        {{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json \
-        /tmp/opentwins-uploads/substack-note-{today_date}.png
+      SPEC={{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json
+      LAYOUT=$(jq -r .type "$SPEC")
+      node {{pipeline_workspace}}/image-core/cli.mjs render \
+        --platform substack --layout "$LAYOUT" \
+        --data "$SPEC" \
+        --out  /tmp/opentwins-uploads/substack-note-{today_date}.png
       ```
       On success: `image_path = /tmp/opentwins-uploads/substack-note-{today_date}.png`.
       On failure OR missing spec: log `Type=Note image_render_failed` (or `image_spec_missing`), set `image_path = null`, continue text-only (never blocks the Note).
@@ -257,6 +260,7 @@ cat >> memory/YYYY-MM-DD.md <<'EOF'
 - Post: URL
 - Writer: @name
 - Style: insight
+- Replying to: "first 80 chars of the post/note/comment you're responding to"
 - Our comment: "text..."
 
 EOF

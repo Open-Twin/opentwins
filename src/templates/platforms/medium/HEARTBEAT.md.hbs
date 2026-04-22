@@ -167,9 +167,18 @@ Filter: `status="pending" AND time<=now`, sort by time.
   1. Read the file at `config.content_source`.
   2. If file body is `skipped: not-saturday` → mark task done, no publish. Do NOT fabricate an article.
   3. Parse frontmatter (optional): if first line is exactly `---`, read until next `---` and extract `suggested_publication`, `publication_handle`, `publication_reason`, `subtitle`. Save the full file (frontmatter included) to `memory/articles/YYYY-MM-DD-slug.md`.
-  4. Mark task done.
-  5. 🚨 **Publish alert (MANDATORY).** Log + surface to the user:
+  4. Render cover image if `{{pipeline_workspace}}/content-ready/{today_date}/medium-cover-image.spec.json` exists (fail-soft):
+     ```bash
+     node {{pipeline_workspace}}/image-core/cli.mjs render \
+       --platform medium --layout banner \
+       --data {{pipeline_workspace}}/content-ready/{today_date}/medium-cover-image.spec.json \
+       --out /tmp/opentwins-uploads/medium-cover-{today_date}.png
+     ```
+     Non-zero exit → no cover line in the publish alert. Never block the publish.
+  5. Mark task done.
+  6. 🚨 **Publish alert (MANDATORY).** Log + surface to the user:
      - Title, subtitle, file path, tags.
+     - If cover rendered → include the cover path (paste as Medium's "feature image" before the title).
      - If `suggested_publication` set → include pub name + handle + reason + reminder ("Only 'Add to publication' if already an accepted writer").
      - If `suggested_publication: none` or frontmatter omitted → publish to own timeline.
      - If `subtitle: none` or missing → flag "Handwrite a 50-70 char SEO subtitle before pasting."
@@ -208,6 +217,7 @@ cat >> memory/YYYY-MM-DD.md <<'EOF'
 - Article: URL
 - Writer: @name
 - Style: insight
+- Replying to: "first 80 chars of the article/comment you're responding to"
 - Our response: "text..."
 
 EOF

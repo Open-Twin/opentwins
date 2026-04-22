@@ -38,6 +38,8 @@ exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evalu
 ENDJSON
 ```
 
+🚨 **On retry: close compose dialog (Esc) and reopen before re-inputting.** Never re-fire input into a dialog that already received text — Draft.js can re-emit each layer as a separate post (causes duplicate publish).
+
 **Format rules for original tweets:**
 - Hook line first (standalone, punchy)
 - Blank line between sections (`\n\n`)

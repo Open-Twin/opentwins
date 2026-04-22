@@ -6,9 +6,9 @@
 - `linkedin-carousel.spec.json` — per-slide DATA (schema in content-writer AGENT.md §14)
 - `linkedin-carousel.md` — frontmatter (`status: pending`, `title:`, `spec_source:`) + 150-250 word commentary + hashtags. If writer skipped, this file is just `skipped: {reason}` and spec.json won't exist.
 
-**Outputs:** HTML + PDF at `/tmp/opentwins-uploads/{today_date}-linkedin-carousel.{html,pdf}`, published post, memory log, `weekly.carousels.current += 1`.
+**Outputs:** PDF at `/tmp/opentwins-uploads/{today_date}-linkedin-carousel.pdf`, published post, memory log, `weekly.carousels.current += 1`.
 
-**Renderer:** `{{pipeline_workspace}}/content-writer/templates/render-carousel.mjs` (Node, zero deps).
+**Renderer:** `{{pipeline_workspace}}/image-core/cli.mjs`. Template + CSS locked in `templates/carousel/template.mjs`.
 
 ---
 
@@ -19,9 +19,8 @@ DATE=$(date +%Y-%m-%d)
 DOW=$(date +%u)   # 1=Mon … 2=Tue … 5=Fri … 7=Sun
 SPEC={{pipeline_workspace}}/content-ready/${DATE}/linkedin-carousel.spec.json
 DOC={{pipeline_workspace}}/content-ready/${DATE}/linkedin-carousel.md
-HTML=/tmp/opentwins-uploads/${DATE}-linkedin-carousel.html
 PDF=/tmp/opentwins-uploads/${DATE}-linkedin-carousel.pdf
-RENDERER={{pipeline_workspace}}/content-writer/templates/render-carousel.mjs
+RENDERER={{pipeline_workspace}}/image-core/cli.mjs
 
 # Tue (2) + Fri (5) = MANDATORY carousel days per PLAYBOOK. Anything missing on these days is an Alert, not a routine skip.
 is_mandatory_day() { [ "$DOW" = "2" ] || [ "$DOW" = "5" ]; }
@@ -42,28 +41,15 @@ Tue/Fri = mandatory: any missing/skipped fires Alert (day has no primary publish
 
 ---
 
-## SS-C1. Render spec → HTML → PDF (two steps, one block)
-
-Chrome is already installed at `/Applications/Google Chrome.app`. Node is at `/opt/homebrew/bin/node`. No npm install, no new dependency.
+## SS-C1. Render spec → PDF
 
 ```bash
-# Step 1: spec.json → HTML via renderer (validates spec shape and applies locked visual template)
-node "$RENDERER" "$SPEC" "$HTML" 2>&1
+node "$RENDERER" render --platform linkedin --layout carousel \
+  --data "$SPEC" --out "$PDF" 2>&1
 RENDER_RC=$?
 if [ $RENDER_RC -ne 0 ]; then
   echo "renderer failed rc=$RENDER_RC — log Type=Error Reason=spec_render_failed"; exit 1
 fi
-test -f "$HTML" || { echo "renderer produced no HTML — log Type=Error Reason=no_html_output"; exit 1; }
-
-# Step 2: HTML → PDF via headless Chrome
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-  --headless \
-  --disable-gpu \
-  --no-pdf-header-footer \
-  --no-margins \
-  --virtual-time-budget=3000 \
-  --print-to-pdf="$PDF" \
-  "file://$HTML" 2>&1
 ```
 
 🚨 **Verify PDF output:**

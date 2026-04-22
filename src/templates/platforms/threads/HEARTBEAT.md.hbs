@@ -130,6 +130,7 @@ Filter `schedule.json`: `status="pending"` AND `time <= now`
    - Run BROWSER-engage.md S 3 (3s embedded wait — NO separate wait step)
    - Collect results into a shared `allCandidates[]` array, deduping by `postId`
    - After all queries: sort by score = `likes * 2 + replies` descending, take top 10
+   - 🚨 **If `allCandidates` < `config.max_comments` after merge → retry with up to 2 queries from `queries.json` (same category) not in `config.search_queries`.** Don't zero the slot when assigned queries are thin.
 3. Filter candidates: prefer 1-20 likes, <10 replies. Bio signal: deprioritize bios with "brand", "official", "news", "media" — prioritize bios mentioning PM, AI, dev, tech, manager, engineer
    - 🚨 **Skip `isMemeLikely: true` posts** (image/video + text < 80 chars). These are memes/screenshots — you can't see the image and will reply with wrong tone.
 4. 🚨 **MANDATORY: Batch grep pre-check** — check ALL candidate post IDs at once:
@@ -156,7 +157,7 @@ Filter `schedule.json`: `status="pending"` AND `time <= now`
 **Read BROWSER-engage.md first** (if not already read for engagement task above).
 
 1. If `weekly.quotes.current >= limit` -> mark done, skip
-2. Multi-query search + filter (same as engagement steps 2-4 — run all assigned queries, merge candidates)
+2. Multi-query search + filter (same as engagement steps 2-4 — run all assigned queries, merge candidates). 🚨 **If 0 viable candidates after merge → retry with up to 2 queries from `queries.json` (same category) not in `config.search_queries`.** Don't zero the slot when assigned queries are thin.
 3. Navigate to post, wait 3s
 4. Run BROWSER-engage.md S 6 (Click Quote)
 5. 🚨 **MANDATORY: Apply Quote Post Quality Rules** (PLAYBOOK.md §C) — must include personal experience, specific detail, or strong opinion. NO abstract reframes.
@@ -182,10 +183,29 @@ Compose dialog is identical to reply/quote dialog. Same `[role="dialog"]`, same 
 1. If `weekly.posts.current >= limit` -> mark done, skip
 2. Publish content from `config.content_source` (first `status: pending` post). If missing/empty → mark `skipped`, log `Reason=no_content_source`. No drafting.
 3. Navigate to `https://www.threads.net` (home page — Create button is in left nav)
-4. Run BROWSER-engage.md S 8 (opens compose dialog)
-5. Run BROWSER-core.md **S 5b** (multiline paste flow — NOT S 5 which collapses newlines)
-6. Log: Type = "Post", content snippet. Increment `weekly.posts.current`
-7. Mark done
+4. Run BROWSER-engage.md S 8 (opens compose dialog). Then run BROWSER-core.md **S 5d** with `topicTag = queries.json.hashtags[0].replace('#','')` — sets native topic tag. Failure = skip, never block.
+5. **Image attach (only if `{{pipeline_workspace}}/content-ready/{today_date}/threads-post-image.spec.json` exists).** Runs between S 8 and S 5b. Any failure → continue text-only (never block).
+   a. Render PNG:
+      ```bash
+      mkdir -p /tmp/opentwins-uploads
+      SPEC={{pipeline_workspace}}/content-ready/{today_date}/threads-post-image.spec.json
+      LAYOUT=$(jq -r .type "$SPEC")
+      node {{pipeline_workspace}}/image-core/cli.mjs render \
+        --platform threads --layout "$LAYOUT" \
+        --data "$SPEC" \
+        --out /tmp/opentwins-uploads/threads-post-image.png
+      ```
+      Non-zero exit → skip image, go to step 6.
+   b. Upload (file input already in compose dialog, no attach-button click needed):
+      ```bash
+      curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/upload -H 'Content-Type: application/json' \
+        -d '{"filePath":"/tmp/opentwins-uploads/threads-post-image.png","selector":"input[type=\"file\"]","timeoutMs":10000}'
+      ```
+      Wait 3s.
+   c. Verify attach via evaluate: `!!document.querySelector('[role="dialog"] img[src^="blob:"]')`. If false → proceed text-only (no preview = no image in post, harmless).
+6. Run BROWSER-core.md **S 5b** (multiline paste flow — NOT S 5 which collapses newlines)
+7. 🚨 **MANDATORY: Run BROWSER-core.md S 5c (profile verify)** with first 30 chars of post text. If `verified: false` → revert content-ready status to `pending`, log `Type=Error, Reason=publish_silent_failure`, do NOT increment counter, mark task `failed`. Stop.
+8. On verified: Log Type = "Post", content snippet, image: {true|false}. Increment `weekly.posts.current`. Mark done.
 
 ### Original thread task (multi-post thread)
 
@@ -193,11 +213,22 @@ Compose dialog is identical to reply/quote dialog. Same `[role="dialog"]`, same 
 2. Read `config.content_source` (threads-thread.md). If file starts with `skipped:` OR no `status: pending` posts → mark `skipped`, log `Reason=no_thread_content`. No fallback.
 3. Parse posts: split on `---`, extract body of each `## Post N` with `status: pending`. Collect into ordered array (3-5 items).
 4. Navigate to `https://www.threads.net`
-5. Run BROWSER-engage.md S 8 (opens compose dialog)
-6. **Read BROWSER-thread.md.** Run S T with posts array.
-7. On `submitted: true` → update threads-thread.md: mark ALL posts `status: published`.
-8. Log: Type = "Thread", count N, first post snippet. Increment `weekly.posts.current` by 1 (thread = 1 publication event).
-9. Mark done.
+5. Run BROWSER-engage.md S 8 (opens compose dialog). Then run BROWSER-core.md **S 5d** with `topicTag = queries.json.hashtags[0].replace('#','')` — sets native topic tag on Post 1. Failure = skip, never block.
+6. **Image attach to Post 1 only (only if `{{pipeline_workspace}}/content-ready/{today_date}/threads-thread-image.spec.json` exists).** Runs AFTER S 8 and BEFORE S T — image stays pinned to Post 1 when S T adds subsequent textboxes. Any failure → continue text-only.
+   a. Render PNG:
+      ```bash
+      SPEC={{pipeline_workspace}}/content-ready/{today_date}/threads-thread-image.spec.json
+      LAYOUT=$(jq -r .type "$SPEC")
+      node {{pipeline_workspace}}/image-core/cli.mjs render \
+        --platform threads --layout "$LAYOUT" \
+        --data "$SPEC" \
+        --out /tmp/opentwins-uploads/threads-thread-image.png
+      ```
+   b. Upload + verify: same as Original post step 5b/5c, swap filename to `threads-thread-image.png`.
+7. **Read BROWSER-thread.md.** Run S T with posts array.
+8. On `submitted: true` → update threads-thread.md: mark ALL posts `status: published`.
+9. Log: Type = "Thread", count N, first post snippet, image: {true|false}. Increment `weekly.posts.current` by 1 (thread = 1 publication event).
+10. Mark done.
 
 ### Other tasks
 
@@ -214,7 +245,7 @@ Compose dialog is identical to reply/quote dialog. Same `[role="dialog"]`, same 
 **Log format for comments/replies:**
 ```
 ## Heartbeat — {time}
-- Type: Comment | Post: {postId} | Author: {author} | Style: {insight|short|personal|disagree} | Text: "{full text}"
+- Type: Comment | Post: {postId} | Author: {author} | Style: {insight|short|personal|disagree} | Replying to: "{first 80 chars of the post/comment you're responding to}" | Text: "{full text}"
 ```
 
 **Update limits.json ONCE at end:**

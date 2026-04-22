@@ -6,6 +6,7 @@ import { handleAction } from '../error-handler.js';
 import { loadConfig } from '../../config/loader.js';
 import { createScheduler, setActiveScheduler } from '../../scheduler/index.js';
 import { startDaemon, stopDaemon, isDaemonRunning } from '../../scheduler/daemon.js';
+import { startImageCore, stopImageCore, isImageCoreAvailable } from '../../scheduler/image-core-process.js';
 import { resetLimitsIfNeeded } from '../../scheduler/limits-reset.js';
 import { getPidFile } from '../../util/paths.js';
 import * as log from '../../util/logger.js';
@@ -58,6 +59,11 @@ program
     setActiveScheduler(scheduler);
     log.success('Scheduler running');
 
+    if (config.pipeline_enabled && isImageCoreAvailable()) {
+      const proc = startImageCore();
+      if (proc) log.success(`image-core rendering service running (PID: ${proc.pid})`);
+    }
+
     const { startDashboard } = await import('../../ui/server.js');
     await startDashboard(parseInt(opts.port));
 
@@ -75,6 +81,7 @@ program
     const shutdown = async () => {
       console.log('');
       log.info('Shutting down...');
+      await stopImageCore();
       await scheduler.stop();
       setActiveScheduler(null);
       // Clean up PID file if we wrote one

@@ -1,0 +1,23 @@
+{
+  "title": "Two ways to run agents",
+  "left": {
+    "label": "Before",
+    "tone": "bad",
+    "headline": "Ad-hoc prompts, hope for the best",
+    "points": [
+      "Vague outcome, hard to verify",
+      "Rework on every review pass",
+      "Ships in week 3, maybe"
+    ]
+  },
+  "right": {
+    "label": "After",
+    "tone": "good",
+    "headline": "Sharp specs, predictable output",
+    "points": [
+      "Acceptance test written first",
+      "Agent ships draft day 1",
+      "Ships in week 1, consistently"
+    ]
+  }
+}

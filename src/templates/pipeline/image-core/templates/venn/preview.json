@@ -1,0 +1,14 @@
+{
+  "title": "Where PM meets agent",
+  "left": {
+    "label": "what PMs do",
+    "bullets": ["frame outcomes", "judge tradeoffs", "hold the room", "write the spec"]
+  },
+  "right": {
+    "label": "what agents do",
+    "bullets": ["draft fast", "grind detail", "never tire", "follow the spec"]
+  },
+  "center": "a PM who writes specs sharp enough for an agent to execute",
+  "overlap_label": "the 10× move",
+  "doodle": "most PMs\nlive here →"
+}

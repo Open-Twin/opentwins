@@ -1,0 +1,14 @@
+{
+  "title": "Where agents help, where they hurt",
+  "axes": {
+    "x": ["Clear spec", "Fuzzy spec"],
+    "y": ["High stakes", "Low stakes"]
+  },
+  "cells": [
+    { "label": "SHIP IT", "body": "Well-scoped tickets, reversible. Let the agent draft, human approves.", "tone": "good" },
+    { "label": "DRAFT", "body": "Exploratory work where speed matters more than being right.", "tone": "neutral" },
+    { "label": "REVIEW", "body": "Stakes are real. Agent proposes, human decides. No auto-merge.", "tone": "neutral" },
+    { "label": "DON'T", "body": "High-stakes and fuzzy. Write the spec yourself first. Then revisit.", "tone": "bad" }
+  ],
+  "doodle": "the map\nchanges\nweekly"
+}

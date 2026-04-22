@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opentwins-image-core/matrix",
+  "title": "Matrix layout data",
+  "description": "2×2 axes grid with tone-coded cells. Notebook aesthetic.",
+  "type": "object",
+  "required": ["title", "axes", "cells"],
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "axes": {
+      "type": "object",
+      "required": ["x", "y"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 2 },
+        "y": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 2 }
+      }
+    },
+    "cells": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "description": "Order: top-left, top-right, bottom-left, bottom-right.",
+      "items": {
+        "type": "object",
+        "required": ["label", "body"],
+        "additionalProperties": false,
+        "properties": {
+          "label": { "type": "string", "minLength": 1 },
+          "body": { "type": "string", "minLength": 1 },
+          "tone": { "type": "string", "enum": ["good", "bad", "neutral"], "default": "neutral" }
+        }
+      }
+    },
+    "doodle": { "type": "string" }
+  }
+}

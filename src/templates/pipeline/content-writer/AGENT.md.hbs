@@ -26,6 +26,29 @@ Write to `content-ready/{date}/` with ALL of the following files every run. Plat
 
 ---
 
+## Layout Rotation (MANDATORY — applies to every `*-image.spec.json` file)
+
+Before picking any `type` in an image spec, read `{{pipeline_workspace}}/content-ready/_layout-usage.json` → `entries` (tail ~35 = 7 days). Tally by `type`. If the file doesn't exist yet, treat it as empty and create it on first append.
+
+🚨 **Hot zone.** Any `type` used **5+ times** in the last 35 entries is *hot* — do NOT pick it today unless the content shape strictly demands it (no other layout fits). A `type` used 3-4× is *warm* — pick a colder alternative when shape allows.
+
+🚨 **Cross-platform variety (hard rule).** Across today's image specs combined (LinkedIn + Twitter + Substack + Bluesky + Threads), ship **at least 2 distinct `type` values**. Same `type` on every platform is never allowed.
+
+**Shape-flexible swaps** (use when the hot type is your first instinct):
+- 3-5 items → `stack` ↔ `checklist` ↔ `principle` ↔ `timeline`
+- two concepts → `compare` ↔ `venn` ↔ `matrix`
+- one-liner → `note` ↔ `quote` ↔ `stat`
+- Q&A / open questions → `faq`
+
+Shape-fit still wins — forcing a 2×2 grid into `note` hurts readability more than repetition does. Override the hot-zone rule when genuinely no other layout fits; record the override in the spec's JSON (`"_override": "stack is only fit for 3-step sequence"`).
+
+After emitting each spec, append to `entries[]` and truncate to last 50:
+```json
+{ "date": "{today_date}", "platform": "{platform}", "type": "{picked}" }
+```
+
+---
+
 ### 1. `medium-article.md` — Medium article (1000-1500 words)
 
 🚨 **Saturday-only.** Non-Sat: write single-line `skipped: not-saturday` and skip to Step 3 (use the brief directly as anchor for Substack/Dev.to/Twitter variants). Sat: produce the full article.
@@ -69,13 +92,15 @@ The user copies the article body (from `# [Title]` down to end of file — skip 
 ---
 
 *Tags: [5 relevant tags]*
-
----
-
-**Generate image:** [1-2 sentence prompt for a hook image. Specific style, mood, visual metaphor.]
 ```
 
 **Voice:** Narrative, experience-driven. "What I learned doing X" not "5 tips for X." First person. Short paragraphs (2-3 sentences). Real numbers, real failures. Medium rewards storytelling and personal takes over listicles.
+
+**Cover image spec (`medium-cover-image.spec.json`) — emit alongside Medium articles:**
+
+Layout: `banner` (1500×600 wide cover). Data shape: `{ title, kicker?, subline? }`. See `{{pipeline_workspace}}/image-core/schemas/banner.schema.json`. Medium has no publish API, so the Medium agent renders the PNG and surfaces its path in the publish alert for manual paste. Render failure → publish without cover (fail-soft).
+
+Keep `title` ≤60 chars, `kicker` ≤30 chars, `subline` ≤80 chars so text fits the banner at 1500×600.
 
 ### 2. `linkedin-article.md` — LinkedIn article (800-1500 words)
 
@@ -89,58 +114,29 @@ The user copies the article body (from `# [Title]` down to end of file — skip 
 **Hashtags:** MANDATORY. 4-5 on a separate line at the end. Use the brief's `## Hashtags & Keywords` LinkedIn section verbatim (1 broad + 2-3 niche + 1 branded if configured).
 **Mentions:** If the brief's `## Engagement Targets` names people active on LinkedIn, @-mention 1-2 of them naturally in the post body where their work is referenced. Do not force mentions — only when the post genuinely discusses their content or ideas.
 
-**Image spec (`linkedin-post-image.spec.json`) — optional, emit alongside `linkedin-post.md` for STRUCTURAL themes only:**
+**Image spec (`linkedin-post-image.spec.json`) — emit alongside `linkedin-post.md` when the theme has a visual structure:**
 
 🚨 **Emit DATA only. Never HTML/CSS.**
 
-**When to emit:** post's central claim is a *structure* (quadrants, overlap, numbered framework). Skip for narrative, milestone, or single-insight quip themes. Missing spec = text-only post.
+**Layout (pick one via `type`)** — match the content shape to the layout. Full data schema for each is at `{{pipeline_workspace}}/image-core/schemas/{type}.schema.json`; read it to know required fields, length caps, and allowed values.
 
-**Three layouts (pick one via `type`):**
-- `matrix` — 2×2 axes grid ("X vs Y, good/neutral/bad quadrants").
-- `venn` — two overlapping circles + center insight.
-- `stack` — 3-5 numbered vertical items.
+| `type` | Use when the content is… |
+|---|---|
+| `stack` | 3-5 numbered sequential steps or fields |
+| `matrix` | 2×2 classification with two axes |
+| `venn` | overlap of two concepts with a center insight |
+| `note` | one bold, quotable statement |
+| `quote` | attributed pull-quote |
+| `stat` | one striking number (10×, 47%, 3 wks) |
+| `compare` | before/after or A-vs-B contrast |
+| `checklist` | 4-7 do/don't action items |
+| `principle` | one numbered declarative rule |
+| `timeline` | 3-5 dated progressions over time |
+| `faq` | 2-4 question/answer pairs |
 
-**Schemas:**
+Missing spec = text-only post.
 
-```json
-// matrix
-{
-  "type": "matrix",
-  "title": "Required. 5-15 words.",
-  "subtitle": "Required. 8-20 words.",
-  "axes": { "x": ["X-left", "X-right"], "y": ["Y-top", "Y-bottom"] },
-  "cells": [
-    { "label": "TL name (1-2 words)", "tone": "good|bad|neutral", "body": "12-25 words." },
-    { "label": "TR name", "tone": "...", "body": "..." },
-    { "label": "BL name", "tone": "...", "body": "..." },
-    { "label": "BR name", "tone": "...", "body": "..." }
-  ],
-  "doodle": "Optional. 3-10 words corner note. \\n for line break."
-}
-
-// venn
-{
-  "type": "venn",
-  "title": "...", "subtitle": "...",
-  "left":  { "label": "Left (2-4 words)", "bullets": ["3-5 items, 3-6 words each, → prefix OK"] },
-  "right": { "label": "Right",           "bullets": ["3-5 items, ← prefix OK"] },
-  "center": "12-20 words. The overlap insight.",
-  "overlap_label": "4-8 words. Headline claim under the venn.",
-  "doodle": "Optional."
-}
-
-// stack
-{
-  "type": "stack",
-  "title": "...", "subtitle": "...",
-  "items": [
-    { "title": "Field (1-2 words)", "body": "15-25 words defining it." }
-  ],
-  "doodle": "Optional."
-}
-```
-
-Renderer: `{{pipeline_workspace}}/content-writer/templates/render-post-image.mjs`. Output: 1200×1200 PNG.
+Renderer: `{{pipeline_workspace}}/image-core/cli.mjs`. Output: 1200×1200 PNG.
 
 ### 4. `twitter-thread.md` — Twitter thread (3-5 tweets)
 
@@ -150,11 +146,7 @@ Used for both `original_tweet` tasks (agent picks one thread) and general Twitte
 
 **Image spec (`twitter-post-image.spec.json`) — emit whenever you emit `linkedin-post-image.spec.json`:**
 
-Same schema (matrix/venn/stack) and same renderer as §3. Differences from LinkedIn:
-- Title: 4-10 words (vs 5-15)
-- Subtitle: 5-12 words (vs 8-20)
-- Cell/item body: 8-15 words (vs 12-25)
-- Doodle: skip or 3-5 words
+Same `type` options and schemas (see §3). Shorter copy than LinkedIn: trim titles ~30% and bodies ~40%. Drop `doodle` or keep it to 3-5 words.
 - Voice: punchier, hot-take flavor. Drop audience-labeling setup — Twitter readers don't need it.
 
 Skip this file on days you skip `linkedin-post-image.spec.json`.
@@ -188,22 +180,29 @@ Structure:
 Tags: [0-1 hashtag]
 ```
 
-### 6. `threads-post.md` — Threads single post (max 500 characters)
+### 6. `threads-post.md` — Threads single post (≤500 characters HARD CAP)
 
-**Voice:** Casual, text-a-friend. Paragraphs separated by `\n\n`. Lowercase starts fine. Half-thoughts, tangents OK. Ukrainian allowed if brief suggests it. Masculine verb forms always. End with ONE topic tag on its own line — **use the FIRST entry from the brief's `## Hashtags & Keywords` Threads section**. No body hashtags.
-**HARD LIMIT: 500 characters.** Shorter is better — ~300 chars reads more native.
+🚨 **500 chars MAX. Count before saving.** Over the cap → emit `threads-thread.md` instead.
+
+**Voice:** Casual, text-a-friend. Paragraphs separated by `\n\n`. Lowercase starts fine. Half-thoughts, tangents OK. No hashtags anywhere in body — topic tag is set natively by the agent at publish time from `queries.json → hashtags[0]`.
 
 🚨 **Emit 1 post only** (exception to Rule 2 — agent consumes Post 1, variants unused).
 
+**Image spec (`threads-post-image.spec.json`) — emit whenever you emit `threads-post.md`:**
+
+Same `type` options and schemas as `twitter-post-image.spec.json` (§4): `stack`, `matrix`, `venn`, `note`, `quote`, `stat`, `compare`, `checklist`, `principle`, `timeline`, `faq`. Renders at 1080×1080. Voice: casual/text-a-friend (matches §6 body); shorter copy than LinkedIn. Missing spec = text-only post. Attach/render failure → agent posts text-only (never blocks).
+
 ### 6b. `threads-thread.md` — Threads multi-post thread (3-5 connected posts)
 
-**Voice:** Same as §6. Each post 100-200 words, `\n\n` paragraphs.
+**Voice:** Same as §6. 🚨 **Each post ≤500 chars HARD CAP. Count before saving.**
 
 **Format:** `## Post 1` ... `## Post N` sections separated by `---`, each with `status: pending` header.
 
 **When to emit:** 🚨 **Tue/Fri = MANDATORY** (Planner's Structural-Theme Guardrail covers these). Other weekdays: emit only if theme is structural. Non-eligible: single line `skipped: {reason}`.
 
-**Topic tag:** ONE tag on the LAST post only.
+**No hashtags anywhere.** Agent sets native topic tag on Post 1 at publish time from `queries.json → hashtags[0]`.
+
+**Image spec (`threads-thread-image.spec.json`) — emit alongside `threads-thread.md` on Tue/Fri.** Same `type` options as §6. Attached to **Post 1 only**; follow-up posts text-only. Render/attach failure → agent publishes thread text-only (never blocks).
 
 ### 7. `bluesky-post.md` — Bluesky single post (max 300 characters)
 
@@ -222,7 +221,7 @@ Tags: [0-1 hashtag]
 
 **Rule:** Post 1 is the hook. Each later post is a reply to the previous one. No numbering (1/N).
 
-**Image spec (`bluesky-post-image.spec.json`) — emit alongside `bluesky-thread.md` on Mon+Sat.** Same schema as `twitter-post-image.spec.json` (type: `stack` | `matrix` | `venn`), rendered via `{{pipeline_workspace}}/content-writer/templates/render-post-image.mjs`. Add top-level `"alt"` field (80–200 chars, accessibility). Attached to **Post 1 only**; replies stay text-only. Render/attach failure → agent publishes text-only (never blocks).
+**Image spec (`bluesky-post-image.spec.json`) — emit alongside `bluesky-thread.md` on Mon+Sat.** Same `type` options as `twitter-post-image.spec.json`. Add top-level `"alt"` field (80–200 chars, accessibility). Attached to **Post 1 only**; replies stay text-only. Render/attach failure → agent publishes text-only (never blocks).
 
 ### 8. `substack-note.md` — Substack Note (50-120 words, ~87 ideal)
 
@@ -243,15 +242,23 @@ Sun: no note.
 
 **Image spec (`substack-note-image.spec.json`) — emit alongside `substack-note.md`:**
 
-```json
-{
-  "headline": "Required. 5-30 words. The Note's hook visualized as image quote.",
-  "accent": "Optional. 1-3 words from headline to highlight in brand blue.",
-  "subline": "Optional. 4-15 words context/attribution under headline."
-}
-```
+Pick layout via `type` (required). Any of the image-core layouts below renders at 1080×1080 for Substack. Shape is defined per-layout at `{{pipeline_workspace}}/image-core/schemas/{type}.schema.json`.
 
-Single locked template (quote-card: dark gradient + brand-blue `#7cb5ff` accent + system sans, 1080×1080). Substack agent renders spec → PNG and attaches at publish. If render/attach fails, agent posts text-only — never blocks. **Renderer:** `{{pipeline_workspace}}/content-writer/templates/render-note-image.mjs`.
+| `type` | Use when the content is… |
+|---|---|
+| `note` | one bold quotable statement |
+| `quote` | attributed pull-quote |
+| `stack` | 3-5 numbered steps |
+| `matrix` | 2×2 classification |
+| `venn` | overlap of two concepts |
+| `stat` | one striking number |
+| `compare` | before/after or A-vs-B |
+| `checklist` | 4-7 do/don't items |
+| `principle` | one numbered declarative rule |
+| `timeline` | 3-5 dated progressions |
+| `faq` | 2-4 Q/A pairs |
+
+Renderer: `{{pipeline_workspace}}/image-core/cli.mjs`. On render/attach failure, agent posts text-only — never blocks the Note.
 
 ### 9. `substack-newsletter.md` — Substack newsletter (1000-2000 words)
 
@@ -269,7 +276,7 @@ Single locked template (quote-card: dark gradient + brand-blue `#7cb5ff` accent 
 {{/if}}
 - If the brief's angle is highly technical, target dev-oriented subreddits. If it's broad, target general communities.
 
-🚨 **Subreddit rotation (MANDATORY):** Post 1 MUST NOT always be the same subreddit. Rotate across subreddits so each week's posts land in different communities. Check `content-ready/` from the last 7 days - if the same subreddit was Post 1 in the last file, use a different one. Spread visibility, don't concentrate in one sub.
+🚨 **Subreddit rotation (MANDATORY):** Post 1 MUST NOT always be the same subreddit. Rotate across subreddits so each week's posts land in different communities. Check `content-ready/` from the last 7 days - if the same subreddit was Post 1 in the last file, use a different one. Spread visibility, don't concentrate in one sub. **Flair restrictions:** some subs restrict AI/LLM flair to specific days (e.g. Wed + Sat only) — posts on off-days get mod-bot flagged. Note any target sub's flair rules in INSIGHTS.md and skip it on restricted days.
 
 🚨 **Title = literal question + named product/tool** when the theme has one. Concrete questions with a real-world referent ("How do you decide which Claude Design outputs ship?") beat abstract phrasings ("What survives of the PM job?") — conversation value + LLM-retrieval value in one line.
 
@@ -297,6 +304,12 @@ tags: [relevant, topic, tags, from, pillars]
 
 [content]
 ```
+
+**Cover image spec (`devto-cover-image.spec.json`) — emit alongside `devto-article.md` on publish days:**
+
+Layout: `banner` (1000×420 wide cover). Data shape: `{ title, kicker?, subline? }`. See `{{pipeline_workspace}}/image-core/schemas/banner.schema.json`. The Dev.to agent renders this via image-core, uploads to Dev.to's `/api/images`, and sets the returned URL as `main_image`. Render/upload failure → article publishes without cover (fail-soft).
+
+Keep `title` ≤60 chars, `kicker` ≤30 chars, `subline` ≤80 chars to fit the banner.
 
 ### 11b. `devto-seed-comment.md` — self-seed comment for Dev.to article
 
@@ -371,7 +384,7 @@ Group name in `group:` must match EXACTLY (case + spacing). If unsure → `none`
 🚨 **Emit DATA only. Never HTML/CSS.** The visual is locked in a renderer; you produce structured JSON.
 
 **Two files:**
-- `linkedin-carousel.spec.json` — per-slide data. Full shape in `{{pipeline_workspace}}/content-writer/templates/linkedin-carousel-spec.example.json` — copy the shape, replace values with today's topic.
+- `linkedin-carousel.spec.json` — per-slide data. Carousel template + schema locked at `{{pipeline_workspace}}/image-core/templates/carousel/` and `{{pipeline_workspace}}/image-core/schemas/carousel.schema.json`; `{{pipeline_workspace}}/image-core/templates/carousel/preview.json` shows a full worked example — copy the shape, replace values with today's topic.
 - `linkedin-carousel.md` — title + 150-250-word commentary + hashtags. Voice rules identical to `linkedin-post.md`. Frontmatter: `status: pending`, `title: <100 chars`, `spec_source: <path>`.
 
 **Hard schema constraints (renderer validates and errors on violations):**
@@ -387,7 +400,7 @@ Group name in `group:` must match EXACTLY (case + spacing). If unsure → `none`
 
 **Skip path:** write single-line `linkedin-carousel.md` with `skipped: {reason}`, no spec file. On Tue/Fri a skip fires an Alert at the LinkedIn agent (no fallback post) — only use if reframing genuinely fails.
 
-**Post-emit sanity check:** run `node {{pipeline_workspace}}/content-writer/templates/render-carousel.mjs {spec} /tmp/check.html`. If non-zero exit, fix spec before continuing.
+**Post-emit sanity check:** run `node {{pipeline_workspace}}/image-core/cli.mjs render --platform linkedin --layout carousel --data {spec} --out /tmp/check.pdf`. If non-zero exit, fix spec before continuing.
 
 ---
 

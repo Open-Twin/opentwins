@@ -66,15 +66,16 @@ Check if mention author has Follow button → click (evaluate). Log: `Type: "Fol
 
 ### 3d. Reply to each unreplied mention
 
-1. Navigate to tweet URL, wait 1.5s
-2. **Combined thread context + like:** BROWSER-notifications.md § 2b (single evaluate — extracts text, likes, checks already-replied)
+1. 🚨 **Per-author daily cap:** before navigating, count today's replies to this author: `grep -c "@{author}" memory/$(date +%Y-%m-%d).md`. If ≥ 2 → skip (no new audience, drains budget on one account).
+2. Navigate to tweet URL, wait 1.5s
+3. **Combined thread context + like:** BROWSER-notifications.md § 2b (single evaluate — extracts text, likes, checks already-replied)
    - If `alreadyReplied` → track and skip
    - If `tooDeep` (ourReplyCount >= 3) → track and skip (deep back-and-forth, no new audience)
-3. Compose reply using tweet text context (SOUL.md)
-4. Post reply using BROWSER-core.md § 1 (clipboard paste + submit in one evaluate)
-5. 🚨 **MANDATORY: Verify** (BROWSER-notifications.md § 6). If reply silently fails, you'd track a phantom reply.
-6. 🚨 Track: `printf '%s\n' '${tweetUrl}' >> memory/replied_tweets.txt`
-7. Log to memory via `cat >> memory/YYYY-MM-DD.md`
+4. Compose reply using tweet text context (SOUL.md)
+5. Post reply using BROWSER-core.md § 1 (clipboard paste + submit in one evaluate)
+6. 🚨 **MANDATORY: Verify** (BROWSER-notifications.md § 6). If reply silently fails, you'd track a phantom reply.
+7. 🚨 Track: `printf '%s\n' '${tweetUrl}' >> memory/replied_tweets.txt`
+8. Log to memory via `cat >> memory/YYYY-MM-DD.md`
 
 Language: ALWAYS English (Ukrainian only if mention is Ukrainian). Apply SOUL.md time-of-day voice.
 Finish ALL mentions before schedule.
@@ -98,7 +99,7 @@ Promo pre-check: `current >= limit` → mark done.
 2. Product rotation (fewest today)
 3. Search queries.json topics. Extract tweets: BROWSER-engage.md § 3. DO NOT navigate to individual tweets for stats.
    🚨 **Always use `f=top` with `since:{2_days_ago}`** (e.g. `?q=query+since%3A2026-03-20&f=top`). Compute date from current time. `f=live` returns tweets with 0-5 likes — unusable with a 20+ filter. `f=top` alone returns month-old posts. Combined = fresh tweets with proven engagement.
-   🚨 **MAX 5 search queries per promo task.** If no qualifying target after 5 searches → mark task "failed" with note "No targets found in 5 searches". Do NOT keep searching — each search costs 3 steps (~$0.06). 11 searches = $0.65 wasted.
+   🚨 **MAX 5 search queries per promo task.** If 0 qualifying after the assigned 5 → retry with up to 2 broader queries from `queries.json` not in `config.queries` (different niche keywords) before marking "failed". Do NOT exceed 7 total searches per task.
    **Query order:** Try broadest queries first (broad topic before niche subtopic). Broad queries surface more qualifying targets within the 5-search cap.
 4. Pick the FRESHEST qualifying tweet. Qualifying = `ageMin < 120` with 2+ likes, OR `ageMin < 60` with any likes. Fall back to 20+ likes + any age only if no fresh candidates after 5 searches.
 5. 🚨 **MANDATORY: Grep pre-check** — extract tweet ID from URL (the numeric string after `/status/`, e.g. `2023716964955550168`):
@@ -129,7 +130,7 @@ Promo pre-check: `current >= limit` → mark done.
 1. Check `strategic_replies.current < strategic_replies.limit`
 2. Pick target niche from task config
 3. 🚨 ONE advanced search — NEVER profile-hop:
-   `from:X OR from:Y OR from:Z min_faves:100 since:{2_days_ago}` → search URL → extract (BROWSER-engage.md § 4)
+   `from:X OR from:Y OR from:Z min_faves:10 since:{2_days_ago}` → search URL → extract (BROWSER-engage.md § 4)
    🚨 **Use 48h window** (`since:` = 2 days ago). 24h is too narrow for strategic accounts — they don't all post daily.
 4. 0 results → skip immediately. No fallback.
 5. Pick best tweet (highest likes, <50 replies, relevant)
@@ -214,6 +215,7 @@ Read PLAYBOOK.md → "Memory Update". Done.
 - Target: @{handle} {url}
 - Target Likes: {N}
 - Style: {insight|punch|personal|disagree}
+- Replying to: "{first 80 chars of their tweet}"
 - Reply: "{full text of what was posted}"
 ```
 2. 🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).

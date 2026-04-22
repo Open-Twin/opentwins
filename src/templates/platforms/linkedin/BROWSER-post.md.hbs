@@ -146,9 +146,12 @@ Same as SS 10 but inserts a media-upload stage between editor open and Post clic
 
 ```bash
 mkdir -p /tmp/opentwins-uploads
-node {{pipeline_workspace}}/content-writer/templates/render-post-image.mjs \
-  {{pipeline_workspace}}/content-ready/{today}/linkedin-post-image.spec.json \
-  /tmp/opentwins-uploads/linkedin-post-image.png
+SPEC={{pipeline_workspace}}/content-ready/{today}/linkedin-post-image.spec.json
+LAYOUT=$(jq -r .type "$SPEC")
+node {{pipeline_workspace}}/image-core/cli.mjs render \
+  --platform linkedin --layout "$LAYOUT" \
+  --data "$SPEC" \
+  --out /tmp/opentwins-uploads/linkedin-post-image.png
 ```
 
 🚨 If render exits non-zero, skip image stage and fall through to SS 10 (text-only). Never block the post.

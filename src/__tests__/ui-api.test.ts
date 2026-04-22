@@ -470,6 +470,73 @@ describe('ui/api/agents', () => {
     handleGetAgentFeed(mockReq({ params: { platform: 'linkedin' } }) as any, res as any);
     expect(res.body).toEqual({ events: [], sessionFile: null });
   });
+
+  it('handleAuditAgent 400s on unknown platform', async () => {
+    const { handleAuditAgent } = await import('../ui/api/agents.js');
+    const res = mockRes();
+    await handleAuditAgent(mockReq({ params: { platform: 'myspace' } }) as any, res as any);
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('handleAuditAgent returns empty-activity report when memory/today.md is missing', async () => {
+    writeFileSync(resolve(tmpDir, 'config.json'), JSON.stringify(VALID_CONFIG), 'utf-8');
+    const claudeMod = await import('../util/claude.js');
+    const runSpy = claudeMod.runClaudeAgent as unknown as ReturnType<typeof vi.fn>;
+    runSpy.mockClear();
+
+    const { handleAuditAgent } = await import('../ui/api/agents.js');
+    const res = mockRes();
+    await handleAuditAgent(mockReq({ params: { platform: 'linkedin' } }) as any, res as any);
+    const body = res.body as { ok: boolean; report: string; durationMs: number };
+    expect(body.ok).toBe(true);
+    expect(body.report).toContain('Agent has no activity today.');
+    expect(body.durationMs).toBe(0);
+    expect(runSpy).not.toHaveBeenCalled();
+  });
+
+  it('handleAuditAgent invokes Claude and returns the report on success', async () => {
+    writeFileSync(resolve(tmpDir, 'config.json'), JSON.stringify(VALID_CONFIG), 'utf-8');
+    const today = new Date().toISOString().slice(0, 10);
+    const ws = resolve(tmpDir, 'workspaces', 'agent-linkedin');
+    mkdirSync(resolve(ws, 'memory'), { recursive: true });
+    writeFileSync(resolve(ws, 'memory', `${today}.md`), '## 10:00 - Comment\n- Style: insight', 'utf-8');
+
+    const claudeMod = await import('../util/claude.js');
+    const runSpy = claudeMod.runClaudeAgent as unknown as ReturnType<typeof vi.fn>;
+    runSpy.mockClear();
+    runSpy.mockResolvedValueOnce({ output: '# Agent Audit: linkedin\n## Summary\n- Total: 56/70', durationMs: 1234, exitCode: 0 });
+
+    const { handleAuditAgent } = await import('../ui/api/agents.js');
+    const res = mockRes();
+    await handleAuditAgent(mockReq({ params: { platform: 'linkedin' } }) as any, res as any);
+    const body = res.body as { ok: boolean; report: string; durationMs: number };
+    expect(body.ok).toBe(true);
+    expect(body.report).toContain('Total: 56/70');
+    expect(body.durationMs).toBe(1234);
+    expect(runSpy).toHaveBeenCalledTimes(1);
+    const call = runSpy.mock.calls[0][0] as { model: string; prompt: string };
+    expect(call.model).toBe('sonnet');
+    expect(call.prompt).toContain('# Audit Agent: linkedin');
+  });
+
+  it('handleAuditAgent 500s when Claude exits non-zero', async () => {
+    writeFileSync(resolve(tmpDir, 'config.json'), JSON.stringify(VALID_CONFIG), 'utf-8');
+    const today = new Date().toISOString().slice(0, 10);
+    const ws = resolve(tmpDir, 'workspaces', 'agent-linkedin');
+    mkdirSync(resolve(ws, 'memory'), { recursive: true });
+    writeFileSync(resolve(ws, 'memory', `${today}.md`), 'activity', 'utf-8');
+
+    const claudeMod = await import('../util/claude.js');
+    const runSpy = claudeMod.runClaudeAgent as unknown as ReturnType<typeof vi.fn>;
+    runSpy.mockClear();
+    runSpy.mockResolvedValueOnce({ output: 'boom', durationMs: 500, exitCode: 1 });
+
+    const { handleAuditAgent } = await import('../ui/api/agents.js');
+    const res = mockRes();
+    await handleAuditAgent(mockReq({ params: { platform: 'linkedin' } }) as any, res as any);
+    expect(res.statusCode).toBe(500);
+    expect((res.body as { error: string }).error).toMatch(/Audit failed/);
+  });
 });
 
 describe('ui/api/browser', () => {

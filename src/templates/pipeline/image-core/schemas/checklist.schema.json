@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opentwins-image-core/checklist",
+  "title": "Checklist layout data",
+  "description": "Do/don't/maybe action items with color-coded icons.",
+  "type": "object",
+  "required": ["title", "items"],
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "items": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "required": ["text", "check"],
+        "additionalProperties": false,
+        "properties": {
+          "text": { "type": "string", "minLength": 1, "description": "The action. Keep to one line." },
+          "check": {
+            "type": "string",
+            "enum": ["do", "dont", "maybe"],
+            "description": "do=blue check, dont=red x with strikethrough, maybe=muted dash"
+          }
+        }
+      }
+    }
+  }
+}

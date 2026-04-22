@@ -1,0 +1,17 @@
+{
+  "title": "Questions I get about running agents",
+  "entries": [
+    {
+      "question": "Do agents replace PMs?",
+      "answer": "No. They raise the ceiling on what a sharp PM can ship, and the floor on what an unsharp one can get away with."
+    },
+    {
+      "question": "Which model is best?",
+      "answer": "The one whose failure modes you understand. Fluency is cheap; knowing where it lies is the skill."
+    },
+    {
+      "question": "How do you review agent PRs?",
+      "answer": "Read the test first. If the acceptance test matches the spec, the diff is usually trivial to approve."
+    }
+  ]
+}

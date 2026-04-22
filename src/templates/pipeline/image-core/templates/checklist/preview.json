@@ -1,0 +1,11 @@
+{
+  "title": "Before shipping an agent's output",
+  "items": [
+    { "text": "Write the acceptance test first", "check": "do" },
+    { "text": "Name the one measurable outcome", "check": "do" },
+    { "text": "Let the agent decide the scope", "check": "dont" },
+    { "text": "Skip the rollback plan", "check": "dont" },
+    { "text": "Add a feature flag if stakes are high", "check": "do" },
+    { "text": "Ship without reading the diff", "check": "dont" }
+  ]
+}

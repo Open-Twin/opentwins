@@ -157,6 +157,24 @@ describe('config/generator robustness', () => {
     expect(existsSync(resolve(tmpDir, 'workspaces', 'pipeline'))).toBe(false);
   });
 
+  it('scaffolds image-core pipeline asset with nested lib/, schemas/, templates/, scripts/ trees', async () => {
+    const { generateAgentFiles } = await import('../config/generator.js');
+    await generateAgentFiles(VALID_CONFIG);
+    const imageCore = resolve(tmpDir, 'workspaces', 'pipeline', 'image-core');
+    expect(existsSync(resolve(imageCore, 'server.mjs'))).toBe(true);
+    expect(existsSync(resolve(imageCore, 'cli.mjs'))).toBe(true);
+    expect(existsSync(resolve(imageCore, 'package.json'))).toBe(true);
+    expect(existsSync(resolve(imageCore, 'lib', 'render.mjs'))).toBe(true);
+    expect(existsSync(resolve(imageCore, 'schemas', 'stack.schema.json'))).toBe(true);
+    expect(existsSync(resolve(imageCore, 'templates', 'stack', 'template.mjs'))).toBe(true);
+    expect(existsSync(resolve(imageCore, 'templates', '_shared', 'tokens.mjs'))).toBe(true);
+    expect(existsSync(resolve(imageCore, 'scripts', 'start-dev.sh'))).toBe(true);
+    expect(existsSync(resolve(imageCore, 'routing.json'))).toBe(true);
+    // launchd bits were dropped from the opentwins port
+    expect(existsSync(resolve(imageCore, 'launchd'))).toBe(false);
+    expect(existsSync(resolve(imageCore, 'scripts', 'install-launchd.sh'))).toBe(false);
+  });
+
   it('handles handles without an @ prefix correctly in the slug helper', async () => {
     const { generateAgentFiles } = await import('../config/generator.js');
     const customConfig = {

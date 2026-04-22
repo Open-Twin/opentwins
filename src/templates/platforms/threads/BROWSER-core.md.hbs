@@ -34,6 +34,18 @@ Do NOT verify — replies/comments work reliably. Verification wastes steps and 
 
 ---
 
+## S 5d. Set Topic Tag (before body paste)
+
+Input: `topicTag` = `queries.json → hashtags[0]` with leading `#` stripped. Empty/missing → skip silently. Failure never blocks publish — topic is nice-to-have, body is the payload.
+
+```bash
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { var tag = window.__data.topicTag; if (!tag) return { skipped: 'empty' }; var dialog = document.querySelector('[role=\"dialog\"]'); var input = dialog && dialog.querySelector('input[placeholder=\"Add a topic\"]'); if (!input) return { skipped: 'no_input' }; input.focus(); var setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; setter.call(input, tag); input.dispatchEvent(new Event('input', { bubbles: true })); await new Promise(r => setTimeout(r, 1000)); input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); return { set: tag }; }", "data": {"topicTag": "TOPIC_TAG_HERE"}}
+ENDJSON
+```
+
+---
+
 ## S 5b. Multiline Post Flow (original posts + quotes with formatting)
 
 🚨 `execCommand('insertText')` with `\n` collapses to single line in Threads' Lexical editor. **Use clipboard paste for multiline content.**
@@ -48,3 +60,21 @@ exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evalu
 {"fn":"async () => { await new Promise(r => setTimeout(r, 1500)); const dialog = document.querySelector('[role=\"dialog\"]'); if (!dialog) return { error: 'no_dialog' }; const textbox = dialog.querySelector('[role=\"textbox\"][contenteditable=\"true\"]'); if (!textbox) return { error: 'no_textbox' }; textbox.focus(); document.execCommand('selectAll'); document.execCommand('delete'); await new Promise(r => setTimeout(r, 300)); var text = window.__data.text; var dt = new DataTransfer(); dt.setData('text/html', text.replace(/\\n/g, '<br>')); dt.setData('text/plain', text); textbox.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 1000)); const buttons = Array.from(dialog.querySelectorAll('div[role=\"button\"]')); const postButton = buttons.find(b => b.innerText.trim() === 'Post'); if (!postButton) return { typed: true, error: 'no_post_button_in_dialog' }; postButton.click(); return { typed: true, submitted: true, len: textbox.innerText.length }; }", "data": {"text": "YOUR_POST_TEXT"}}
 ENDJSON
 ```
+
+---
+
+## S 5c. Profile Verify (after original_post)
+
+🚨 S 5b returns `submitted: true` once the Post button click fires — this does NOT confirm the post landed. Threads silently drops original posts on auth/rate hiccups. Always verify on profile before incrementing the counter.
+
+```bash
+# 1. Navigate to profile
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/navigate -H 'Content-Type: application/json' -d '{"url":"https://www.threads.net/@{{handle_slug}}"}' 2>&1
+
+# 2. Verify the first post on the profile matches the published text (first 30 chars, lowercased + whitespace-collapsed)
+exec curl -s -X POST http://localhost:3847/api/browser/{{browser_profile}}/evaluate -H 'Content-Type: application/json' -d @- <<'ENDJSON'
+{"fn":"async () => { await new Promise(r => setTimeout(r, 4000)); var firstLink = document.querySelector('a[href*=\"/post/\"]'); if (!firstLink) return { verified: false, reason: 'no_posts_on_profile' }; var container = firstLink.closest('div'); while (container && container.innerText.length < 50 && container.parentElement) container = container.parentElement; var snippet = container ? container.innerText.slice(0, 400) : ''; var expected = window.__data.expectedFirst30; return { verified: snippet.toLowerCase().replace(/\\s+/g, ' ').includes(expected), firstHref: firstLink.getAttribute('href'), snippet }; }", "data": {"expectedFirst30": "FIRST_30_CHARS_LOWERCASE_COLLAPSED"}}
+ENDJSON
+```
+
+`expectedFirst30` = first 30 chars of the published post, lowercased with whitespace collapsed. If `verified: false`, retry once after 8s before declaring failure.

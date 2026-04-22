@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opentwins-image-core/venn",
+  "title": "Venn layout data",
+  "description": "Two overlapping ellipses with left/right bullets + center insight. Notebook aesthetic.",
+  "type": "object",
+  "required": ["title", "left", "right", "center", "overlap_label"],
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "left": {
+      "type": "object",
+      "required": ["label", "bullets"],
+      "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string", "minLength": 1 },
+        "bullets": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "maxItems": 6
+        }
+      }
+    },
+    "right": {
+      "type": "object",
+      "required": ["label", "bullets"],
+      "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string", "minLength": 1 },
+        "bullets": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "maxItems": 6
+        }
+      }
+    },
+    "center": { "type": "string", "minLength": 1, "description": "Insight shown in the overlap region." },
+    "overlap_label": { "type": "string", "minLength": 1, "description": "Short hand-script label below the Venn." },
+    "doodle": { "type": "string" }
+  }
+}
