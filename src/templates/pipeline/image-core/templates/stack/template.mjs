@@ -1,16 +1,17 @@
-// Stack layout — editorial "chapter heading" style.
-//   Dark canvas. Massive serif numeral on the left is the hero. Step label
-//   (mono caps) + serif body on the right. Hairline rules between items.
-//   Flex distribution so 3-5 items share vertical space naturally.
+// Stack layout — bold brand-blue cards on warm ivory.
+//   Clean ivory canvas frames 3-5 solid brand-blue cards. Each card has
+//   a huge white serif numeral on the left and sans title + muted body
+//   on the right. High contrast between canvas and cards; reads from
+//   across the room and in a scrolling feed.
 //
-// Data shape unchanged: { title, subtitle, items[{title, body}], doodle? }.
+// Data shape: { title, items[{title, body}], doodle? }.
 
 import { escapeHtml } from '../../lib/escape.mjs';
 import { requireString, requireArray } from '../../lib/validate.mjs';
 import { wrapDoc } from '../_shared/pageSetup.mjs';
 import T from '../_shared/tokens.mjs';
 
-export const TEMPLATE_VERSION = '2026-04-20-editorial-v9';
+export const TEMPLATE_VERSION = '2026-04-21-stack-bluecards-v1';
 
 export function validate(data) {
   const errors = [
@@ -33,98 +34,99 @@ export function validate(data) {
 
 export function render(data, { width, height }) {
   const count = data.items.length;
-  // All sizes scale with count so dense 5-item stacks still fit the canvas
-  // without overflow. Body stays ≥26px so text remains legible at mobile
-  // feed shrink (~3.5x).
-  const itemTitleSize = count >= 5 ? 32 : count === 4 ? 38 : 44;
-  const itemBodySize  = count >= 5 ? 26 : count === 4 ? 28 : 32;
+  // Size tuned per-count so dense 5-item stacks don't overflow the card.
+  const numSize   = count >= 5 ? 80  : count === 4 ? 100 : 120;
+  const numCol    = count >= 5 ? 110 : count === 4 ? 130 : 150;
+  const titleSize = count >= 5 ? 34  : count === 4 ? 40  : 46;
+  const bodySize  = count >= 5 ? 22  : count === 4 ? 26  : 28;
+  const cardPad   = count >= 5 ? 22  : count === 4 ? 28  : 34;
 
   const items = data.items.map((it, i) => `
-    <div class="item">
-      <div class="item-title"><span class="num">${String(i + 1).padStart(2, '0')}</span>${escapeHtml(it.title)}</div>
-      <div class="item-body">${escapeHtml(it.body)}</div>
+    <div class="card">
+      <div class="num">${String(i + 1).padStart(2, '0')}</div>
+      <div class="card-content">
+        <div class="card-title">${escapeHtml(it.title)}</div>
+        <div class="card-body">${escapeHtml(it.body)}</div>
+      </div>
     </div>
   `).join('');
 
-  // Typography rules for this template — single family, single weight,
-  // hierarchy via size + italic + color only.
-  //   - DM Serif Display regular throughout
-  //   - Italic used only on the header subtitle (one accent)
-  //   - Color: ivory-bright for primary, ivory-muted for secondary, brand
-  //     accent for numeric counters only
   const extraCss = `
   body {
-    background: ${T.editorial.bg};
-    color: ${T.editorial.fg};
-    font-family: ${T.fonts.serifDisplay};
-    padding: 86px 90px 80px;
+    background: #f7f2e8;
+    color: ${T.brand.navy};
+    font-family: ${T.fonts.sansSystem};
+    padding: 80px 72px 72px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
   .header {
     flex: 0 0 auto;
-    margin-bottom: 28px;
-    padding-bottom: 24px;
-    border-bottom: 1.5px solid ${T.editorial.rule};
+    margin-bottom: 30px;
   }
   .title {
-    font-family: ${T.fonts.serifDisplay};
-    font-size: 72px;
-    font-weight: 400;
-    line-height: 1.03;
-    letter-spacing: -1.5px;
-    color: ${T.editorial.fg};
-    max-width: 1020px;
+    font-family: ${T.fonts.sansSystem};
+    font-size: 78px;
+    font-weight: 800;
+    line-height: 0.98;
+    letter-spacing: -2px;
+    color: ${T.brand.navy};
+    max-width: 1060px;
+    text-wrap: balance;
   }
-  .subtitle {
-    font-family: ${T.fonts.serifDisplay};
-    font-size: 30px;
-    font-weight: 400;
-    font-style: italic;
-    line-height: 1.35;
-    color: ${T.editorial.fgMuted};
-    max-width: 960px;
-  }
-  .items {
+  .cards {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
+    gap: 16px;
     min-height: 0;
   }
-  .item {
+  .card {
     flex: 1 1 0;
+    display: grid;
+    grid-template-columns: ${numCol}px 1fr;
+    align-items: center;
+    gap: 28px;
+    padding: ${cardPad}px 40px;
+    background: ${T.brand.blue};
+    border-radius: 18px;
+    min-height: 0;
+    overflow: hidden;
+    box-shadow: 0 14px 32px rgba(10,26,43,0.12);
+  }
+  .num {
+    font-family: ${T.fonts.serifDisplay};
+    font-size: ${numSize}px;
+    font-weight: 400;
+    line-height: 0.92;
+    letter-spacing: -3px;
+    color: #ffffff;
+    font-feature-settings: 'lnum' on;
+    text-align: center;
+  }
+  .card-content {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: ${count >= 5 ? '12px' : '16px'} 0;
-    border-bottom: 1.5px solid ${T.editorial.rule};
-    min-height: 0;
+    gap: 10px;
+    min-width: 0;
   }
-  .item:last-child { border-bottom: none; }
-  .item-title {
-    font-family: ${T.fonts.serifDisplay};
-    font-size: ${itemTitleSize}px;
-    font-weight: 400;
-    line-height: 1.15;
-    letter-spacing: -0.5px;
-    color: ${T.editorial.fg};
-    margin-bottom: 8px;
+  .card-title {
+    font-family: ${T.fonts.sansSystem};
+    font-size: ${titleSize}px;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -1px;
+    color: #ffffff;
   }
-  .item-title .num {
-    font-family: ${T.fonts.serifDisplay};
+  .card-body {
+    font-family: ${T.fonts.sansSystem};
+    font-size: ${bodySize}px;
     font-weight: 400;
-    color: ${T.editorial.accent};
-    margin-right: 14px;
-    font-feature-settings: 'lnum' on;
-  }
-  .item-body {
-    font-family: ${T.fonts.serifDisplay};
-    font-size: ${itemBodySize}px;
-    font-weight: 400;
-    line-height: 1.3;
-    color: ${T.editorial.fgMuted};
-    max-width: 1020px;
+    line-height: 1.35;
+    color: rgba(255,255,255,0.85);
+    max-width: 820px;
   }
   `;
 
@@ -132,7 +134,7 @@ export function render(data, { width, height }) {
     <div class="header">
       <h1 class="title">${escapeHtml(data.title)}</h1>
     </div>
-    <div class="items">${items}</div>
+    <div class="cards">${items}</div>
   `;
 
   return wrapDoc({ width, height, body, extraCss });
