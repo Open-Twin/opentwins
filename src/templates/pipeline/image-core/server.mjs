@@ -14,7 +14,7 @@
 // Binds to 127.0.0.1 by default — localhost only.
 
 import { createServer } from 'node:http';
-import { readFileSync, readdirSync, appendFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { dirname, join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { render as coreRender, RENDER_VERSION } from './lib/render.mjs';
@@ -25,11 +25,11 @@ import { findChrome } from './lib/chrome.mjs';
 import { fontsAvailableLocally } from './templates/_shared/fonts.mjs';
 import * as cache from './lib/cache.mjs';
 import { alertRenderFailure } from './lib/alert.mjs';
+import { log } from './lib/log.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SCHEMAS_DIR = join(HERE, 'schemas');
 const TEMPLATES_DIR = join(HERE, 'templates');
-const LOGS_DIR = join(HERE, 'logs');
 
 const PORT = Number(process.env.PORT || 47293);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -37,25 +37,6 @@ const QUEUE_CONCURRENCY = Number(process.env.QUEUE_CONCURRENCY || 1);
 const QUEUE_MAX = Number(process.env.QUEUE_MAX_DEPTH || 10);
 
 const queue = new RenderQueue({ concurrency: QUEUE_CONCURRENCY, maxDepth: QUEUE_MAX });
-
-// ─── logging ───────────────────────────────────────────────────────────
-
-function ensureLogsDir() {
-  if (!existsSync(LOGS_DIR)) mkdirSync(LOGS_DIR, { recursive: true });
-}
-function logFilePath() {
-  const d = new Date();
-  const yyyy = d.getUTCFullYear();
-  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(d.getUTCDate()).padStart(2, '0');
-  return join(LOGS_DIR, `${yyyy}-${mm}-${dd}.log`);
-}
-function log(entry) {
-  ensureLogsDir();
-  const line = JSON.stringify({ t: new Date().toISOString(), ...entry }) + '\n';
-  try { appendFileSync(logFilePath(), line); } catch {}
-  if (process.env.NODE_ENV === 'development') process.stderr.write(line);
-}
 
 // ─── response helpers ─────────────────────────────────────────────────
 

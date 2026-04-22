@@ -20,6 +20,7 @@ import { findChrome } from './lib/chrome.mjs';
 import { fontsAvailableLocally } from './templates/_shared/fonts.mjs';
 import * as cache from './lib/cache.mjs';
 import { ImageCoreError } from './lib/errors.mjs';
+import { log } from './lib/log.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = join(HERE, 'templates');
@@ -60,12 +61,18 @@ async function cmdRender(args) {
     process.exit(2);
   }
   const data = JSON.parse(readFileSync(resolve(String(dataPath)), 'utf8'));
-  const result = await coreRender({ platform, layout, data, force: !!force });
-  if (out) {
-    copyFileSync(result.path, resolve(String(out)));
-    result.path = resolve(String(out));
+  try {
+    const result = await coreRender({ platform, layout, data, force: !!force });
+    if (out) {
+      copyFileSync(result.path, resolve(String(out)));
+      result.path = resolve(String(out));
+    }
+    log({ op: 'cli_render', platform, layout, specHash: result.specHash, cacheHit: result.cacheHit, durationMs: result.durationMs });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+  } catch (err) {
+    log({ op: 'cli_render_failed', platform, layout, code: err.code || 'unknown', error: String(err.message || err) });
+    throw err;
   }
-  process.stdout.write(JSON.stringify(result, null, 2) + '\n');
 }
 
 async function cmdPreview(args) {
@@ -82,16 +89,22 @@ async function cmdPreview(args) {
     process.exit(1);
   }
   const data = JSON.parse(readFileSync(previewPath, 'utf8'));
-  const result = await coreRender({ platform, layout, data, force: false });
-  if (out) {
-    copyFileSync(result.path, resolve(String(out)));
-    result.path = resolve(String(out));
-  }
-  process.stdout.write(JSON.stringify(result, null, 2) + '\n');
-  if (open) {
-    execFile('open', [result.path], (err) => {
-      if (err) process.stderr.write(`open failed: ${err.message}\n`);
-    });
+  try {
+    const result = await coreRender({ platform, layout, data, force: false });
+    if (out) {
+      copyFileSync(result.path, resolve(String(out)));
+      result.path = resolve(String(out));
+    }
+    log({ op: 'cli_preview', platform, layout, specHash: result.specHash, cacheHit: result.cacheHit, durationMs: result.durationMs });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    if (open) {
+      execFile('open', [result.path], (err) => {
+        if (err) process.stderr.write(`open failed: ${err.message}\n`);
+      });
+    }
+  } catch (err) {
+    log({ op: 'cli_preview_failed', platform, layout, code: err.code || 'unknown', error: String(err.message || err) });
+    throw err;
   }
 }
 
