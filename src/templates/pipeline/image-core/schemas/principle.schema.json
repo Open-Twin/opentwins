@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opentwins-image-core/principle",
+  "title": "Principle layout data",
+  "description": "Single thesis with supporting paragraphs. Modernist manifesto aesthetic — off-white canvas, bold serif principle statement, sans body paragraphs.",
+  "type": "object",
+  "required": ["number", "principle"],
+  "additionalProperties": false,
+  "properties": {
+    "number": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4,
+      "description": "Principle number in a series (e.g. '03', '12')."
+    },
+    "category": {
+      "type": "string",
+      "description": "Optional category appended to the label ('Specs & Agents')."
+    },
+    "principle": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The declarative principle statement. Keep punchy."
+    },
+    "paragraphs": {
+      "type": "array",
+      "maxItems": 3,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Optional. Accepted for back-compat but not rendered in the current design."
+    }
+  }
+}

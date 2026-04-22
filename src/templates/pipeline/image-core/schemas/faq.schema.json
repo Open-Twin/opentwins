@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opentwins-image-core/faq",
+  "title": "FAQ layout data",
+  "description": "2-4 Q/A pairs. Sage-paper canvas with forest-green markers.",
+  "type": "object",
+  "required": ["title", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "entries": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": ["question", "answer"],
+        "additionalProperties": false,
+        "properties": {
+          "question": { "type": "string", "minLength": 1 },
+          "answer":   { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

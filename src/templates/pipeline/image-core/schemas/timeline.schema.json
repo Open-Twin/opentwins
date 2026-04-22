@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opentwins-image-core/timeline",
+  "title": "Timeline layout data",
+  "description": "Chronological progression (3-5 entries). Cool steel-dark canvas with warm-orange markers.",
+  "type": "object",
+  "required": ["title", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "entries": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "required": ["when", "what"],
+        "additionalProperties": false,
+        "properties": {
+          "when":   { "type": "string", "minLength": 1, "description": "Date / time marker (e.g. 'Q1 2024', 'Jan 2025')." },
+          "what":   { "type": "string", "minLength": 1, "description": "Short headline for the entry." },
+          "detail": { "type": "string", "description": "Optional 1-2 line elaboration." }
+        }
+      }
+    }
+  }
+}

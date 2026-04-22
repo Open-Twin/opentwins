@@ -1,0 +1,113 @@
+{
+  "cover": {
+    "file_label": "SPEC.md",
+    "file_sub": "10 min read",
+    "headline": ["The PM Spec", "Field Manual"],
+    "subline": ["How to write specs", "agents can execute"],
+    "read_promise": "10 min · actionable"
+  },
+  "hook": {
+    "eyebrow": "The problem",
+    "headline_lines": [
+      { "text": "Your spec is the" },
+      { "text": "bottleneck.", "accent": true }
+    ],
+    "support_html": "Not the model. Not the prompt. The <b>spec</b> — because an agent can only execute what's been framed clearly enough to execute.",
+    "swipe": "keep going →"
+  },
+  "code": {
+    "eyebrow": "A spec as code",
+    "title": "What a sharp spec looks like",
+    "filename": "spec.yaml",
+    "body_lines": [
+      "<span class=\"c1\">outcome:</span> <span class=\"c3\">users finish onboarding 20% faster</span>",
+      "<span class=\"c1\">constraints:</span>",
+      "  <span class=\"c2\">-</span> <span class=\"c3\">no new backend calls</span>",
+      "  <span class=\"c2\">-</span> <span class=\"c3\">ship behind feature flag</span>",
+      "<span class=\"c1\">acceptance:</span>",
+      "  <span class=\"c2\">-</span> <span class=\"c3\">p95 time-to-first-action &lt; 30s</span>"
+    ],
+    "swipe": "four fields ahead →"
+  },
+  "fields": [
+    {
+      "name": "Outcome",
+      "icon": "target",
+      "definition": "Who benefits, what changes for them, how you know it shipped.",
+      "eng": "\"Add endpoint for bulk user import\"",
+      "pm": "\"Admins onboard a 500-person team in one step — currently takes a week\"",
+      "takeaway_html": "The eng version describes the work. The PM version describes <b>the change in the world</b>.",
+      "swipe": "next →"
+    },
+    {
+      "name": "Constraint",
+      "icon": "lock",
+      "definition": "Budget, deadline, risk tolerance, things already ruled out.",
+      "eng": "\"Use the existing queue\"",
+      "pm": "\"Must not increase queue latency by more than 10ms — SLO already tight\"",
+      "takeaway_html": "Constraints without <b>why</b> turn into suggestions. Name the reason and the number.",
+      "swipe": "next →"
+    },
+    {
+      "name": "Slice",
+      "icon": "notebook",
+      "definition": "Smallest real thing that proves the outcome.",
+      "eng": "\"Start with the API\"",
+      "pm": "\"Import 10 users from a CSV end-to-end before adding SSO path\"",
+      "takeaway_html": "A slice is <b>deployable</b>, not a checkpoint. If it can't be demoed, it's not a slice.",
+      "swipe": "next →"
+    },
+    {
+      "name": "Acceptance",
+      "icon": "shield",
+      "definition": "The exact check the agent's output must pass.",
+      "eng": "\"Tests green\"",
+      "pm": "\"Given a 500-row CSV, admin sees confirmation in under 10s, zero errors\"",
+      "takeaway_html": "Written <b>before</b> prompting. Otherwise you'll edit it to match what the agent produced.",
+      "swipe": "the pattern →"
+    }
+  ],
+  "pattern": {
+    "eyebrow": "Before / after",
+    "title": "Same team. Different specs.",
+    "card_left": {
+      "date": "WEEK 1",
+      "lab": "Fuzzy spec",
+      "feature": "Make onboarding faster",
+      "desc": "Agent drafts 4 approaches. PM picks one. Rework on review. Ships week 3."
+    },
+    "card_right": {
+      "date": "WEEK 1",
+      "lab": "Sharp spec",
+      "feature": "p95 TTFA < 30s, 500-user CSV, behind flag",
+      "desc": "Agent ships draft day 1. PM accepts day 2. Ships day 3."
+    },
+    "connector": "→",
+    "closer_html": "Same agent. Same PM. The <b>spec</b> changed.",
+    "swipe": "your turn →"
+  },
+  "cta": {
+    "eyebrow": "Try this week",
+    "question": "Pick one ticket on your board. Rewrite the spec with these 4 fields.",
+    "options": [
+      "· Outcome (what changes for who)",
+      "· Constraint (with the reason)",
+      "· Slice (the deployable piece)",
+      "· Acceptance (the measurable check)"
+    ],
+    "closer": "Run it through your agent before the standup.",
+    "swipe": "bonus →"
+  },
+  "bonus": {
+    "eyebrow": "Bonus",
+    "title": "Copy-paste template",
+    "intro": "Drop this into any ticket. Fill the blanks. Prompt your agent.",
+    "template_lines": [
+      "<span class=\"c1\">outcome:</span> <span class=\"blank\"></span>",
+      "<span class=\"c1\">constraint:</span> <span class=\"blank\"></span>",
+      "<span class=\"c1\">slice:</span> <span class=\"blank\"></span>",
+      "<span class=\"c1\">acceptance:</span> <span class=\"blank\"></span>"
+    ],
+    "outro_html": "Save this. Come back to it every time a ticket feels <b>too big to start</b>."
+  }
+}

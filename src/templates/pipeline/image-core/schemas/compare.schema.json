@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opentwins-image-core/compare",
+  "title": "Compare layout data",
+  "description": "Binary side-by-side. 50/50 split with tone-coded halves (bad on left, good on right by default).",
+  "type": "object",
+  "required": ["title", "left", "right"],
+  "additionalProperties": false,
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "left": {
+      "type": "object",
+      "required": ["label", "headline", "points"],
+      "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string", "minLength": 1, "description": "Short tag like 'Before' or 'Old way'." },
+        "tone": { "type": "string", "enum": ["good", "bad", "neutral"], "default": "bad" },
+        "headline": { "type": "string", "minLength": 1 },
+        "points": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 2,
+          "maxItems": 4
+        }
+      }
+    },
+    "right": {
+      "type": "object",
+      "required": ["label", "headline", "points"],
+      "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string", "minLength": 1 },
+        "tone": { "type": "string", "enum": ["good", "bad", "neutral"], "default": "good" },
+        "headline": { "type": "string", "minLength": 1 },
+        "points": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 2,
+          "maxItems": 4
+        }
+      }
+    }
+  }
+}

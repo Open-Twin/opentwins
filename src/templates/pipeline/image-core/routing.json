@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "description": "Platform + layout → {template module, dimensions, output format}. Platform is NOT load-bearing for visuals today — same layout renders identically across platforms. Exists so dimensions and future platform-specific variants can be added without caller changes.",
+  "defaults": {
+    "deviceScaleFactor": 2,
+    "chromeTimeoutMs": 15000
+  },
+  "routes": {
+    "linkedin/stack":    { "template": "stack",    "format": "png", "width": 1200, "height": 1200 },
+    "linkedin/matrix":   { "template": "matrix",   "format": "png", "width": 1200, "height": 1200 },
+    "linkedin/venn":     { "template": "venn",     "format": "png", "width": 1200, "height": 1200 },
+    "linkedin/note":     { "template": "note",     "format": "png", "width": 1200, "height": 1200 },
+    "linkedin/carousel": { "template": "carousel", "format": "pdf", "width": 1080, "height": 1080, "pages": 10 },
+
+    "twitter/stack":     { "template": "stack",    "format": "png", "width": 1200, "height": 1200 },
+    "twitter/matrix":    { "template": "matrix",   "format": "png", "width": 1200, "height": 1200 },
+    "twitter/venn":      { "template": "venn",     "format": "png", "width": 1200, "height": 1200 },
+    "twitter/note":      { "template": "note",     "format": "png", "width": 1200, "height": 1200 },
+
+    "bluesky/stack":     { "template": "stack",    "format": "png", "width": 1200, "height": 1200 },
+    "bluesky/matrix":    { "template": "matrix",   "format": "png", "width": 1200, "height": 1200 },
+    "bluesky/venn":      { "template": "venn",     "format": "png", "width": 1200, "height": 1200 },
+    "bluesky/note":      { "template": "note",     "format": "png", "width": 1200, "height": 1200 },
+
+    "substack/note":     { "template": "note",     "format": "png", "width": 1080, "height": 1080 },
+
+    "linkedin/quote":    { "template": "quote",    "format": "png", "width": 1200, "height": 1200 },
+    "twitter/quote":     { "template": "quote",    "format": "png", "width": 1200, "height": 1200 },
+    "bluesky/quote":     { "template": "quote",    "format": "png", "width": 1200, "height": 1200 },
+    "substack/quote":    { "template": "quote",    "format": "png", "width": 1080, "height": 1080 },
+
+    "linkedin/stat":     { "template": "stat",     "format": "png", "width": 1200, "height": 1200 },
+    "twitter/stat":      { "template": "stat",     "format": "png", "width": 1200, "height": 1200 },
+    "bluesky/stat":      { "template": "stat",     "format": "png", "width": 1200, "height": 1200 },
+
+    "linkedin/compare":  { "template": "compare",  "format": "png", "width": 1200, "height": 1200 },
+    "twitter/compare":   { "template": "compare",  "format": "png", "width": 1200, "height": 1200 },
+    "bluesky/compare":   { "template": "compare",  "format": "png", "width": 1200, "height": 1200 },
+
+    "linkedin/checklist":{ "template": "checklist","format": "png", "width": 1200, "height": 1200 },
+    "twitter/checklist": { "template": "checklist","format": "png", "width": 1200, "height": 1200 },
+    "bluesky/checklist": { "template": "checklist","format": "png", "width": 1200, "height": 1200 },
+
+    "linkedin/principle":{ "template": "principle","format": "png", "width": 1200, "height": 1200 },
+    "twitter/principle": { "template": "principle","format": "png", "width": 1200, "height": 1200 },
+    "bluesky/principle": { "template": "principle","format": "png", "width": 1200, "height": 1200 },
+    "substack/principle":{ "template": "principle","format": "png", "width": 1080, "height": 1080 },
+
+    "linkedin/timeline": { "template": "timeline", "format": "png", "width": 1200, "height": 1200 },
+    "twitter/timeline":  { "template": "timeline", "format": "png", "width": 1200, "height": 1200 },
+    "bluesky/timeline":  { "template": "timeline", "format": "png", "width": 1200, "height": 1200 },
+
+    "linkedin/faq":      { "template": "faq",      "format": "png", "width": 1200, "height": 1200 },
+    "twitter/faq":       { "template": "faq",      "format": "png", "width": 1200, "height": 1200 },
+    "bluesky/faq":       { "template": "faq",      "format": "png", "width": 1200, "height": 1200 },
+
+    "substack/stack":     { "template": "stack",    "format": "png", "width": 1080, "height": 1080 },
+    "substack/matrix":    { "template": "matrix",   "format": "png", "width": 1080, "height": 1080 },
+    "substack/venn":      { "template": "venn",     "format": "png", "width": 1080, "height": 1080 },
+    "substack/stat":      { "template": "stat",     "format": "png", "width": 1080, "height": 1080 },
+    "substack/compare":   { "template": "compare",  "format": "png", "width": 1080, "height": 1080 },
+    "substack/checklist": { "template": "checklist","format": "png", "width": 1080, "height": 1080 },
+    "substack/timeline":  { "template": "timeline", "format": "png", "width": 1080, "height": 1080 },
+    "substack/faq":       { "template": "faq",      "format": "png", "width": 1080, "height": 1080 }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "label": "Q1 2026 · measured across 47 tickets",
+  "value": "10×",
+  "unit": "faster delivery cycles",
+  "explanation": "From ticket open to merged PR, with agent drafting and human review. Same team, same product area, before and after spec rewrite.",
+  "source": "n=47, Jan-Mar 2026, internal telemetry"
+}

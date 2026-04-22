@@ -1,0 +1,10 @@
+{
+  "number": "03",
+  "category": "Specs & Agents",
+  "principle": "A spec is a contract. An agent can only execute what's been framed clearly enough to execute.",
+  "paragraphs": [
+    "The PM's job isn't to write better prompts. It's to write specs sharp enough that any competent executor - human, agent, or otherwise - can act on them without interpretation.",
+    "This is uncomfortable because it means the ambiguity sits with you, not the agent. You can't hide behind 'the model got confused.'",
+    "The payoff: every spec you sharpen compounds across every agent you ever run with it."
+  ]
+}

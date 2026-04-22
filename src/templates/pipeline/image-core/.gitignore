@@ -1,0 +1,10 @@
+cache/*
+!cache/.gitkeep
+logs/*
+!logs/.gitkeep
+node_modules/
+*.log
+.DS_Store
+templates/_shared/fonts/*.woff2
+templates/_shared/fonts/*.ttf
+!templates/_shared/fonts/.gitkeep

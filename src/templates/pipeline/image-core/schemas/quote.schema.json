@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opentwins-image-core/quote",
+  "title": "Quote layout data",
+  "description": "Pull-quote with attribution. Warm parchment aesthetic, italic serif quote, small sans attribution line.",
+  "type": "object",
+  "required": ["quote", "attribution"],
+  "additionalProperties": false,
+  "properties": {
+    "quote": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The quote text. 6-40 words recommended.",
+      "x-word-range": [6, 40]
+    },
+    "attribution": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Author or source (e.g. 'Kolya' or 'Anonymous')."
+    },
+    "context": {
+      "type": "string",
+      "description": "Optional framing context below attribution (e.g. 'from the field manual, 2026')."
+    }
+  }
+}

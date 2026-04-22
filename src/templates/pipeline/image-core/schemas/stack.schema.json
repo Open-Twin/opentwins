@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opentwins-image-core/stack",
+  "title": "Stack layout data",
+  "description": "Numbered vertical stack of 3-5 items with arrows between. Notebook aesthetic.",
+  "type": "object",
+  "required": ["title", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "description": "Main title. Escaped automatically." },
+    "items": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "required": ["title", "body"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "description": "Short step label." },
+          "body": { "type": "string", "minLength": 1, "description": "One-sentence description." }
+        }
+      }
+    },
+    "doodle": {
+      "type": "string",
+      "description": "Optional hand-script note in bottom-left. Multi-line via \\n."
+    }
+  }
+}
