@@ -346,7 +346,7 @@ Group name in `group:` must match EXACTLY (case + spacing). If unsure → `none`
 🚨 **Emit DATA only. Never HTML/CSS.** The visual is locked in a renderer; you produce structured JSON.
 
 **Two files:**
-- `linkedin-carousel.spec.json` — per-slide data. Full shape in `{{pipeline_workspace}}/content-writer/templates/linkedin-carousel-spec.example.json` — copy the shape, replace values with today's topic.
+- `linkedin-carousel.spec.json` — per-slide data. Carousel template + schema locked at `{{pipeline_workspace}}/image-core/templates/carousel/` and `{{pipeline_workspace}}/image-core/schemas/carousel.schema.json`; `{{pipeline_workspace}}/image-core/templates/carousel/preview.json` shows a full worked example — copy the shape, replace values with today's topic.
 - `linkedin-carousel.md` — title + 150-250-word commentary + hashtags. Voice rules identical to `linkedin-post.md`. Frontmatter: `status: pending`, `title: <100 chars`, `spec_source: <path>`.
 
 **Hard schema constraints (renderer validates and errors on violations):**
