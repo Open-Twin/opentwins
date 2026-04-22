@@ -210,11 +210,11 @@ Sun: no note.
 
 **Image spec (`substack-note-image.spec.json`) — emit alongside `substack-note.md`:**
 
-Pick layout via `type` (defaults to `note`). Any of the image-core layouts below renders at 1080×1080 for Substack. Shape is defined per-layout at `{{pipeline_workspace}}/image-core/schemas/{type}.schema.json`.
+Pick layout via `type` (required). Any of the image-core layouts below renders at 1080×1080 for Substack. Shape is defined per-layout at `{{pipeline_workspace}}/image-core/schemas/{type}.schema.json`.
 
 | `type` | Use when the content is… |
 |---|---|
-| `note` (default) | one bold quotable statement |
+| `note` | one bold quotable statement |
 | `quote` | attributed pull-quote |
 | `stack` | 3-5 numbered steps |
 | `matrix` | 2×2 classification |
