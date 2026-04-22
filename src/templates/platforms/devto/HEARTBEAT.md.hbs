@@ -219,8 +219,16 @@ Before executing any `publish_article` task:
 4. Series: ai_dev → "Vibe Coding Lessons", building → "Building in Public", productivity → "Developer Productivity"
 5. Tags: max 4, pick from `queries.json → hashtags` array (refreshed daily by content planner, stripped of `#` prefix for Dev.to tag format)
 6. Save as `new-article-{date}.md` with frontmatter (title, published: true, tags, series)
-7. `{{opentwins_home}}/agent-devto/scripts/devto-api.sh publish <file.md> --series "Series Name"`, log + mark done
-8. Update `weekly.articles.current += 1`
+7. If `{{pipeline_workspace}}/content-ready/{today_date}/devto-cover-image.spec.json` exists, render cover first:
+   ```bash
+   node {{pipeline_workspace}}/image-core/cli.mjs render \
+     --platform devto --layout banner \
+     --data {{pipeline_workspace}}/content-ready/{today_date}/devto-cover-image.spec.json \
+     --out /tmp/opentwins-uploads/devto-cover-{today_date}.png
+   ```
+   Non-zero exit → publish without cover (fail-soft).
+8. `{{opentwins_home}}/agent-devto/scripts/devto-api.sh publish <file.md> --series "Series Name" [--cover-image /tmp/opentwins-uploads/devto-cover-{today_date}.png]`, log + mark done
+9. Update `weekly.articles.current += 1`
 
 ### seed_article_comment
 

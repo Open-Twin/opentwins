@@ -274,6 +274,12 @@ tags: [relevant, topic, tags, from, pillars]
 [content]
 ```
 
+**Cover image spec (`devto-cover-image.spec.json`) — emit alongside `devto-article.md` on publish days:**
+
+Layout: `banner` (1000×420 wide cover). Data shape: `{ title, kicker?, subline? }`. See `{{pipeline_workspace}}/image-core/schemas/banner.schema.json`. The Dev.to agent renders this via image-core, uploads to Dev.to's `/api/images`, and sets the returned URL as `main_image`. Render/upload failure → article publishes without cover (fail-soft).
+
+Keep `title` ≤60 chars, `kicker` ≤30 chars, `subline` ≤80 chars to fit the banner.
+
 ### 11b. `devto-seed-comment.md` — self-seed comment for Dev.to article
 
 **Purpose:** posted by the Dev.to agent ~2h after publish to kickstart discussion if no external comments yet. Author jumps in with a self-counter that invites debate.
