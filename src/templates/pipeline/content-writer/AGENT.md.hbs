@@ -89,56 +89,27 @@ The user copies the article body (from `# [Title]` down to end of file — skip 
 **Hashtags:** MANDATORY. 4-5 on a separate line at the end. Use the brief's `## Hashtags & Keywords` LinkedIn section verbatim (1 broad + 2-3 niche + 1 branded if configured).
 **Mentions:** If the brief's `## Engagement Targets` names people active on LinkedIn, @-mention 1-2 of them naturally in the post body where their work is referenced. Do not force mentions — only when the post genuinely discusses their content or ideas.
 
-**Image spec (`linkedin-post-image.spec.json`) — optional, emit alongside `linkedin-post.md` for STRUCTURAL themes only:**
+**Image spec (`linkedin-post-image.spec.json`) — emit alongside `linkedin-post.md` when the theme has a visual structure:**
 
 🚨 **Emit DATA only. Never HTML/CSS.**
 
-**When to emit:** post's central claim is a *structure* (quadrants, overlap, numbered framework). Skip for narrative, milestone, or single-insight quip themes. Missing spec = text-only post.
+**Layout (pick one via `type`)** — match the content shape to the layout. Full data schema for each is at `{{pipeline_workspace}}/image-core/schemas/{type}.schema.json`; read it to know required fields, length caps, and allowed values.
 
-**Three layouts (pick one via `type`):**
-- `matrix` — 2×2 axes grid ("X vs Y, good/neutral/bad quadrants").
-- `venn` — two overlapping circles + center insight.
-- `stack` — 3-5 numbered vertical items.
+| `type` | Use when the content is… |
+|---|---|
+| `stack` | 3-5 numbered sequential steps or fields |
+| `matrix` | 2×2 classification with two axes |
+| `venn` | overlap of two concepts with a center insight |
+| `note` | one bold, quotable statement |
+| `quote` | attributed pull-quote |
+| `stat` | one striking number (10×, 47%, 3 wks) |
+| `compare` | before/after or A-vs-B contrast |
+| `checklist` | 4-7 do/don't action items |
+| `principle` | one numbered declarative rule |
+| `timeline` | 3-5 dated progressions over time |
+| `faq` | 2-4 question/answer pairs |
 
-**Schemas:**
-
-```json
-// matrix
-{
-  "type": "matrix",
-  "title": "Required. 5-15 words.",
-  "subtitle": "Required. 8-20 words.",
-  "axes": { "x": ["X-left", "X-right"], "y": ["Y-top", "Y-bottom"] },
-  "cells": [
-    { "label": "TL name (1-2 words)", "tone": "good|bad|neutral", "body": "12-25 words." },
-    { "label": "TR name", "tone": "...", "body": "..." },
-    { "label": "BL name", "tone": "...", "body": "..." },
-    { "label": "BR name", "tone": "...", "body": "..." }
-  ],
-  "doodle": "Optional. 3-10 words corner note. \\n for line break."
-}
-
-// venn
-{
-  "type": "venn",
-  "title": "...", "subtitle": "...",
-  "left":  { "label": "Left (2-4 words)", "bullets": ["3-5 items, 3-6 words each, → prefix OK"] },
-  "right": { "label": "Right",           "bullets": ["3-5 items, ← prefix OK"] },
-  "center": "12-20 words. The overlap insight.",
-  "overlap_label": "4-8 words. Headline claim under the venn.",
-  "doodle": "Optional."
-}
-
-// stack
-{
-  "type": "stack",
-  "title": "...", "subtitle": "...",
-  "items": [
-    { "title": "Field (1-2 words)", "body": "15-25 words defining it." }
-  ],
-  "doodle": "Optional."
-}
-```
+Missing spec = text-only post.
 
 Renderer: `{{pipeline_workspace}}/image-core/cli.mjs`. Output: 1200×1200 PNG.
 
@@ -150,11 +121,7 @@ Used for both `original_tweet` tasks (agent picks one thread) and general Twitte
 
 **Image spec (`twitter-post-image.spec.json`) — emit whenever you emit `linkedin-post-image.spec.json`:**
 
-Same schema (matrix/venn/stack) and same renderer as §3. Differences from LinkedIn:
-- Title: 4-10 words (vs 5-15)
-- Subtitle: 5-12 words (vs 8-20)
-- Cell/item body: 8-15 words (vs 12-25)
-- Doodle: skip or 3-5 words
+Same `type` options and schemas (see §3). Shorter copy than LinkedIn: trim titles ~30% and bodies ~40%. Drop `doodle` or keep it to 3-5 words.
 - Voice: punchier, hot-take flavor. Drop audience-labeling setup — Twitter readers don't need it.
 
 Skip this file on days you skip `linkedin-post-image.spec.json`.
@@ -222,7 +189,7 @@ Tags: [0-1 hashtag]
 
 **Rule:** Post 1 is the hook. Each later post is a reply to the previous one. No numbering (1/N).
 
-**Image spec (`bluesky-post-image.spec.json`) — emit alongside `bluesky-thread.md` on Mon+Sat.** Same schema as `twitter-post-image.spec.json` (type: `stack` | `matrix` | `venn`). Add top-level `"alt"` field (80–200 chars, accessibility). Attached to **Post 1 only**; replies stay text-only. Render/attach failure → agent publishes text-only (never blocks).
+**Image spec (`bluesky-post-image.spec.json`) — emit alongside `bluesky-thread.md` on Mon+Sat.** Same `type` options as `twitter-post-image.spec.json`. Add top-level `"alt"` field (80–200 chars, accessibility). Attached to **Post 1 only**; replies stay text-only. Render/attach failure → agent publishes text-only (never blocks).
 
 ### 8. `substack-note.md` — Substack Note (50-120 words, ~87 ideal)
 
@@ -243,15 +210,23 @@ Sun: no note.
 
 **Image spec (`substack-note-image.spec.json`) — emit alongside `substack-note.md`:**
 
-```json
-{
-  "headline": "Required. 5-30 words. The Note's hook visualized as image quote.",
-  "accent": "Optional. 1-3 words from headline to highlight in brand blue.",
-  "subline": "Optional. 4-15 words context/attribution under headline."
-}
-```
+Pick layout via `type` (defaults to `note`). Any of the image-core layouts below renders at 1080×1080 for Substack. Shape is defined per-layout at `{{pipeline_workspace}}/image-core/schemas/{type}.schema.json`.
 
-Single locked template (quote-card: dark gradient + brand-blue `#7cb5ff` accent + system sans, 1080×1080). Substack agent renders spec → PNG and attaches at publish. If render/attach fails, agent posts text-only — never blocks. **Renderer:** `{{pipeline_workspace}}/image-core/cli.mjs` (`--platform substack --layout note`).
+| `type` | Use when the content is… |
+|---|---|
+| `note` (default) | one bold quotable statement |
+| `quote` | attributed pull-quote |
+| `stack` | 3-5 numbered steps |
+| `matrix` | 2×2 classification |
+| `venn` | overlap of two concepts |
+| `stat` | one striking number |
+| `compare` | before/after or A-vs-B |
+| `checklist` | 4-7 do/don't items |
+| `principle` | one numbered declarative rule |
+| `timeline` | 3-5 dated progressions |
+| `faq` | 2-4 Q/A pairs |
+
+Renderer: `{{pipeline_workspace}}/image-core/cli.mjs`. On render/attach failure, agent posts text-only — never blocks the Note.
 
 ### 9. `substack-newsletter.md` — Substack newsletter (1000-2000 words)
 

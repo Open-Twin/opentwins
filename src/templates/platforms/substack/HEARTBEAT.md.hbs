@@ -176,11 +176,13 @@ Before executing any `publish_newsletter` or `publish_note` task:
   1. Read queries.json topics, INSIGHTS.md for what resonates
   2. Use content from `config.content_source` (per Content-Ready Override — content-writer drafts the note in right length/format/voice). 🚨 **NO hashtags** — Substack Notes have no functional hashtag system.
   3. Self-review (TOOLS.md SS Self-Review Gate)
-  3b. **🖼️ Render note image (if spec exists):** if `{{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json` exists, run:
+  3b. **🖼️ Render note image (if spec exists):** if `{{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json` exists, render PNG. `--layout` comes from spec's `type` field (defaults to `note`):
       ```bash
+      SPEC={{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json
+      LAYOUT=$(jq -r '.type // "note"' "$SPEC")
       node {{pipeline_workspace}}/image-core/cli.mjs render \
-        --platform substack --layout note \
-        --data {{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json \
+        --platform substack --layout "$LAYOUT" \
+        --data "$SPEC" \
         --out  /tmp/opentwins-uploads/substack-note-{today_date}.png
       ```
       On success: `image_path = /tmp/opentwins-uploads/substack-note-{today_date}.png`.
