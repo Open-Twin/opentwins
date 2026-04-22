@@ -97,9 +97,10 @@ Per AGENT.md section 14: if LinkedIn `weekly.carousels.limit > 0` and today's th
 After emitting `substack-note.md` + `substack-note-image.spec.json`, dry-run the renderer:
 
 ```bash
-node {{pipeline_workspace}}/content-writer/templates/render-note-image.mjs \
-  {{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json \
-  /tmp/note-image-check.png
+node {{pipeline_workspace}}/image-core/cli.mjs render \
+  --platform substack --layout note \
+  --data {{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json \
+  --out  /tmp/note-image-check.png
 ```
 
 Non-zero exit → fix spec, re-run. Invalid spec on disk means substack agent falls back to text-only.
@@ -109,9 +110,12 @@ Non-zero exit → fix spec, re-run. Invalid spec on disk means substack agent fa
 If `bluesky-post-image.spec.json` was emitted (Mon+Sat), dry-run the renderer:
 
 ```bash
-node {{pipeline_workspace}}/content-writer/templates/render-post-image.mjs \
-  {{pipeline_workspace}}/content-ready/{today_date}/bluesky-post-image.spec.json \
-  /tmp/bluesky-post-image-check.png
+SPEC={{pipeline_workspace}}/content-ready/{today_date}/bluesky-post-image.spec.json
+LAYOUT=$(jq -r .type "$SPEC")
+node {{pipeline_workspace}}/image-core/cli.mjs render \
+  --platform bluesky --layout "$LAYOUT" \
+  --data "$SPEC" \
+  --out /tmp/bluesky-post-image-check.png
 ```
 
 Non-zero exit → fix spec, re-run.

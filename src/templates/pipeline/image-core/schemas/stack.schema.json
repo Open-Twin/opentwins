@@ -5,7 +5,6 @@
   "description": "Numbered vertical stack of 3-5 items with arrows between. Notebook aesthetic.",
   "type": "object",
   "required": ["title", "items"],
-  "additionalProperties": false,
   "properties": {
     "title": { "type": "string", "minLength": 1, "description": "Main title. Escaped automatically." },
     "items": {

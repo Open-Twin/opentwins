@@ -5,7 +5,6 @@
   "description": "Big number hero. One dominant tabular numeral (~300px), unit line, explanation paragraph.",
   "type": "object",
   "required": ["label", "value", "unit", "explanation"],
-  "additionalProperties": false,
   "properties": {
     "label": {
       "type": "string",

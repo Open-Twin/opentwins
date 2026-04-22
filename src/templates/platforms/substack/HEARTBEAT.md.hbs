@@ -178,9 +178,10 @@ Before executing any `publish_newsletter` or `publish_note` task:
   3. Self-review (TOOLS.md SS Self-Review Gate)
   3b. **🖼️ Render note image (if spec exists):** if `{{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json` exists, run:
       ```bash
-      node {{pipeline_workspace}}/content-writer/templates/render-note-image.mjs \
-        {{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json \
-        /tmp/opentwins-uploads/substack-note-{today_date}.png
+      node {{pipeline_workspace}}/image-core/cli.mjs render \
+        --platform substack --layout note \
+        --data {{pipeline_workspace}}/content-ready/{today_date}/substack-note-image.spec.json \
+        --out  /tmp/opentwins-uploads/substack-note-{today_date}.png
       ```
       On success: `image_path = /tmp/opentwins-uploads/substack-note-{today_date}.png`.
       On failure OR missing spec: log `Type=Note image_render_failed` (or `image_spec_missing`), set `image_path = null`, continue text-only (never blocks the Note).

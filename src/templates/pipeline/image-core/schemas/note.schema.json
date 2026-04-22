@@ -5,7 +5,6 @@
   "description": "Substack Note image. Dark gradient, sans-serif, optional accent highlight.",
   "type": "object",
   "required": ["headline"],
-  "additionalProperties": false,
   "properties": {
     "headline": {
       "type": "string",

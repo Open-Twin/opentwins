@@ -140,7 +140,7 @@ The user copies the article body (from `# [Title]` down to end of file — skip 
 }
 ```
 
-Renderer: `{{pipeline_workspace}}/content-writer/templates/render-post-image.mjs`. Output: 1200×1200 PNG.
+Renderer: `{{pipeline_workspace}}/image-core/cli.mjs` (platform agents invoke it with `--platform` + `--layout` from spec `type`). Output: 1200×1200 PNG.
 
 ### 4. `twitter-thread.md` — Twitter thread (3-5 tweets)
 
@@ -222,7 +222,7 @@ Tags: [0-1 hashtag]
 
 **Rule:** Post 1 is the hook. Each later post is a reply to the previous one. No numbering (1/N).
 
-**Image spec (`bluesky-post-image.spec.json`) — emit alongside `bluesky-thread.md` on Mon+Sat.** Same schema as `twitter-post-image.spec.json` (type: `stack` | `matrix` | `venn`), rendered via `{{pipeline_workspace}}/content-writer/templates/render-post-image.mjs`. Add top-level `"alt"` field (80–200 chars, accessibility). Attached to **Post 1 only**; replies stay text-only. Render/attach failure → agent publishes text-only (never blocks).
+**Image spec (`bluesky-post-image.spec.json`) — emit alongside `bluesky-thread.md` on Mon+Sat.** Same schema as `twitter-post-image.spec.json` (type: `stack` | `matrix` | `venn`), rendered via `{{pipeline_workspace}}/image-core/cli.mjs` by the Bluesky agent. Add top-level `"alt"` field (80–200 chars, accessibility). Attached to **Post 1 only**; replies stay text-only. Render/attach failure → agent publishes text-only (never blocks).
 
 ### 8. `substack-note.md` — Substack Note (50-120 words, ~87 ideal)
 
@@ -251,7 +251,7 @@ Sun: no note.
 }
 ```
 
-Single locked template (quote-card: dark gradient + brand-blue `#7cb5ff` accent + system sans, 1080×1080). Substack agent renders spec → PNG and attaches at publish. If render/attach fails, agent posts text-only — never blocks. **Renderer:** `{{pipeline_workspace}}/content-writer/templates/render-note-image.mjs`.
+Single locked template (quote-card: dark gradient + brand-blue `#7cb5ff` accent + system sans, 1080×1080). Substack agent renders spec → PNG and attaches at publish. If render/attach fails, agent posts text-only — never blocks. **Renderer:** `{{pipeline_workspace}}/image-core/cli.mjs` (`--platform substack --layout note`).
 
 ### 9. `substack-newsletter.md` — Substack newsletter (1000-2000 words)
 
@@ -387,7 +387,7 @@ Group name in `group:` must match EXACTLY (case + spacing). If unsure → `none`
 
 **Skip path:** write single-line `linkedin-carousel.md` with `skipped: {reason}`, no spec file. On Tue/Fri a skip fires an Alert at the LinkedIn agent (no fallback post) — only use if reframing genuinely fails.
 
-**Post-emit sanity check:** run `node {{pipeline_workspace}}/content-writer/templates/render-carousel.mjs {spec} /tmp/check.html`. If non-zero exit, fix spec before continuing.
+**Post-emit sanity check:** run `node {{pipeline_workspace}}/image-core/cli.mjs render --platform linkedin --layout carousel --data {spec} --out /tmp/check.pdf`. If non-zero exit, fix spec before continuing.
 
 ---
 

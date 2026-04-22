@@ -5,7 +5,6 @@
   "description": "Binary side-by-side. 50/50 split with tone-coded halves (bad on left, good on right by default).",
   "type": "object",
   "required": ["title", "left", "right"],
-  "additionalProperties": false,
   "properties": {
     "title": { "type": "string", "minLength": 1 },
     "left": {

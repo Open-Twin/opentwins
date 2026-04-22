@@ -5,7 +5,6 @@
   "description": "Single thesis with supporting paragraphs. Modernist manifesto aesthetic — off-white canvas, bold serif principle statement, sans body paragraphs.",
   "type": "object",
   "required": ["number", "principle"],
-  "additionalProperties": false,
   "properties": {
     "number": {
       "type": "string",

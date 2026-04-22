@@ -122,11 +122,16 @@ Use when `content-ready/{today_date}/twitter-post-image.spec.json` exists. Inser
 
 ### Step 0: Render spec to PNG
 
+`--layout` comes from spec's `type` field (stack|matrix|venn).
+
 ```bash
 mkdir -p /tmp/opentwins-uploads
-node {{pipeline_workspace}}/content-writer/templates/render-post-image.mjs \
-  {{pipeline_workspace}}/content-ready/{today_date}/twitter-post-image.spec.json \
-  /tmp/opentwins-uploads/twitter-post-image.png
+SPEC={{pipeline_workspace}}/content-ready/{today_date}/twitter-post-image.spec.json
+LAYOUT=$(jq -r .type "$SPEC")
+node {{pipeline_workspace}}/image-core/cli.mjs render \
+  --platform twitter --layout "$LAYOUT" \
+  --data "$SPEC" \
+  --out /tmp/opentwins-uploads/twitter-post-image.png
 ```
 
 🚨 If render exits non-zero, skip image stage. Fall through to § 7 text-only. Never block the post.

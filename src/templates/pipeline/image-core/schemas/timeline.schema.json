@@ -5,7 +5,6 @@
   "description": "Chronological progression (3-5 entries). Cool steel-dark canvas with warm-orange markers.",
   "type": "object",
   "required": ["title", "entries"],
-  "additionalProperties": false,
   "properties": {
     "title": { "type": "string", "minLength": 1 },
     "entries": {

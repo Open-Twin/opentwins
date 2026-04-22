@@ -5,7 +5,6 @@
   "description": "Two overlapping ellipses with left/right bullets + center insight. Notebook aesthetic.",
   "type": "object",
   "required": ["title", "left", "right", "center", "overlap_label"],
-  "additionalProperties": false,
   "properties": {
     "title": { "type": "string", "minLength": 1 },
     "left": {

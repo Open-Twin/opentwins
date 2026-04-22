@@ -5,7 +5,6 @@
   "description": "Pull-quote with attribution. Warm parchment aesthetic, italic serif quote, small sans attribution line.",
   "type": "object",
   "required": ["quote", "attribution"],
-  "additionalProperties": false,
   "properties": {
     "quote": {
       "type": "string",
