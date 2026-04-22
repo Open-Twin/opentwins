@@ -7,7 +7,7 @@ import { escapeHtml } from '../../lib/escape.mjs';
 import { corporateHead } from '../_shared/corporate.mjs';
 import T from '../_shared/tokens.mjs';
 
-export const TEMPLATE_VERSION = '2026-04-21-a';
+export const TEMPLATE_VERSION = '2026-04-21-b';
 
 // HTML-contract fields. These accept inline HTML (<b>, <span class="c1">,
 // etc.) per Content Writer convention. Everything else is treated as plain
@@ -82,11 +82,8 @@ section {
 }
 section + section { page-break-before: always; }
 .stretch { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-.top { padding-top: 30px; }
-.foot { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-size: 21px; color: ${T.corporate.textDim}; padding-top: 32px; border-top: 1.5px solid ${T.corporate.border}; }
-.foot .swipe { justify-self: center; color: ${T.brand.blue}; font-weight: 700; font-size: 22px; letter-spacing: 0.3px; }
-.foot .pg { justify-self: end; font-weight: 700; font-size: 20px; color: ${T.corporate.textDim}; }
-.eyebrow { display: inline-block; padding: 9px 20px; border-radius: 8px; background: ${T.corporate.surfaceTint}; color: ${T.brand.blue}; font-size: 20px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 28px; }
+.pg-mini { position: absolute; top: 54px; right: 74px; font-family: ${T.fonts.monoSystem}; font-size: 18px; font-weight: 700; letter-spacing: 2px; color: ${T.corporate.textDim}; }
+.code-slide .pg-mini, .cta .pg-mini { color: rgba(255,255,255,0.55); }
 h2 { font-size: 66px; font-weight: 800; line-height: 1.06; letter-spacing: -1.8px; color: ${T.brand.navy}; }
 .cover { background: radial-gradient(circle at 25% 25%, ${T.brand.navyMid} 0%, ${T.brand.navy} 70%); color: white; padding: 90px; }
 .cover-grid { display: grid; grid-template-columns: 320px 1fr; gap: 56px; align-items: center; flex: 1; }
@@ -107,11 +104,7 @@ h2 { font-size: 66px; font-weight: 800; line-height: 1.06; letter-spacing: -1.8p
 .hook .support { margin-top: 46px; font-size: 30px; line-height: 1.4; color: ${T.corporate.textMuted}; max-width: 840px; }
 .hook .support b { color: ${T.brand.blue}; font-weight: 700; }
 .code-slide { background: ${T.brand.navy}; color: white; }
-.code-slide .eyebrow { background: rgba(10,102,194,0.22); color: ${T.brand.blueLight}; }
 .code-slide h2 { color: white; font-size: 48px; margin-bottom: 34px; letter-spacing: -1px; }
-.code-slide .foot { border-top: 1px solid rgba(255,255,255,0.12); }
-.code-slide .foot .pg { color: rgba(255,255,255,0.6); }
-.code-slide .foot .swipe { color: ${T.brand.blueLight}; }
 .code-window { background: ${T.code.bg}; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.09); box-shadow: 0 30px 80px rgba(0,0,0,0.5); }
 .code-header { background: ${T.code.bgHeader}; padding: 14px 20px; display: flex; align-items: center; gap: 10px; }
 .code-header .dot { width: 13px; height: 13px; border-radius: 50%; }
@@ -146,14 +139,10 @@ h2 { font-size: 66px; font-weight: 800; line-height: 1.06; letter-spacing: -1.8p
 .pattern .closer b { color: ${T.brand.blue}; }
 .cta { background: linear-gradient(135deg, ${T.brand.blue} 0%, ${T.brand.blueDark} 100%); color: white; }
 .cta .stretch { align-items: flex-start; justify-content: center; text-align: left; }
-.cta .eyebrow { background: rgba(255,255,255,0.16); color: white; }
 .cta h2 { color: white; font-size: 72px; line-height: 1.08; max-width: 900px; letter-spacing: -2px; }
 .cta .options { font-size: 28px; opacity: 0.88; line-height: 1.5; margin-top: 36px; font-weight: 500; }
 .cta .closer { font-size: 26px; opacity: 0.8; font-style: italic; margin-top: 22px; }
-.cta .foot { border-top: 1px solid rgba(255,255,255,0.18); }
-.cta .foot .pg { color: rgba(255,255,255,0.7); }
 .bonus { background: ${T.corporate.surface}; }
-.bonus .eyebrow { background: ${T.brand.blue}; color: white; }
 .bonus h2 { font-size: 54px; margin-bottom: 12px; letter-spacing: -1.5px; }
 .bonus .intro { font-size: 26px; color: ${T.corporate.textMuted}; margin-bottom: 22px; max-width: 840px; line-height: 1.4; font-weight: 500; }
 .template { background: white; border: 2px solid ${T.corporate.border}; border-radius: 12px; padding: 26px 36px; font-family: ${T.fonts.monoSystem}; font-size: 23px; line-height: 1.6; color: ${T.brand.navy}; box-shadow: 0 8px 24px rgba(0,0,0,0.04); margin-bottom: 22px; }
@@ -187,21 +176,16 @@ const renderHook = (s) => {
     return l.accent ? `<span class="accent">${safeText}</span>` : safeText;
   }).join('<br>');
   return `<section class="hook">
-  <div class="top"><div class="eyebrow">${escapeHtml(s.hook.eyebrow)}</div></div>
+  <div class="pg-mini">2 / 10</div>
   <div class="stretch">
     <h2>${h}</h2>
     <div class="support">${s.hook.support_html}</div>
-  </div>
-  <div class="foot">
-    <span></span>
-    <span class="swipe">${escapeHtml(s.hook.swipe)}</span>
-    <span class="pg">2 / 10</span>
   </div>
 </section>`;
 };
 
 const renderCode = (s) => `<section class="code-slide">
-  <div class="top"><div class="eyebrow">${escapeHtml(s.code.eyebrow)}</div></div>
+  <div class="pg-mini">3 / 10</div>
   <div class="stretch">
     <h2>${escapeHtml(s.code.title)}</h2>
     <div class="code-window">
@@ -212,15 +196,10 @@ const renderCode = (s) => `<section class="code-slide">
       <div class="code-body">${joinRaw(s.code.body_lines)}</div>
     </div>
   </div>
-  <div class="foot">
-    <span></span>
-    <span class="swipe">${escapeHtml(s.code.swipe)}</span>
-    <span class="pg">3 / 10</span>
-  </div>
 </section>`;
 
 const renderField = (f, idx) => `<section class="field">
-  <div class="top"><div class="eyebrow">Field ${idx + 1} · ${escapeHtml(f.name)}</div></div>
+  <div class="pg-mini">${idx + 4} / 10</div>
   <div class="stretch">
     <div class="icon-wrap"><svg viewBox="0 0 24 24">${ICONS[f.icon]}</svg></div>
     <h2>${escapeHtml(f.name)}</h2>
@@ -231,15 +210,10 @@ const renderField = (f, idx) => `<section class="field">
     </div>
     <div class="takeaway">${f.takeaway_html}</div>
   </div>
-  <div class="foot">
-    <span></span>
-    <span class="swipe">${escapeHtml(f.swipe)}</span>
-    <span class="pg">${idx + 4} / 10</span>
-  </div>
 </section>`;
 
 const renderPattern = (s) => `<section class="pattern">
-  <div class="top"><div class="eyebrow">${escapeHtml(s.pattern.eyebrow)}</div></div>
+  <div class="pg-mini">8 / 10</div>
   <div class="stretch">
     <h2>${escapeHtml(s.pattern.title)}</h2>
     <div class="grid">
@@ -259,39 +233,24 @@ const renderPattern = (s) => `<section class="pattern">
     </div>
     <div class="closer">${s.pattern.closer_html}</div>
   </div>
-  <div class="foot">
-    <span></span>
-    <span class="swipe">${escapeHtml(s.pattern.swipe)}</span>
-    <span class="pg">8 / 10</span>
-  </div>
 </section>`;
 
 const renderCTA = (s) => `<section class="cta">
-  <div class="top"><div class="eyebrow">${escapeHtml(s.cta.eyebrow)}</div></div>
+  <div class="pg-mini">9 / 10</div>
   <div class="stretch">
     <h2>${escapeHtml(s.cta.question)}</h2>
     <div class="options">${joinEscaped(s.cta.options)}</div>
     <div class="closer">${escapeHtml(s.cta.closer)}</div>
   </div>
-  <div class="foot">
-    <span></span>
-    <span class="swipe">${escapeHtml(s.cta.swipe)}</span>
-    <span class="pg">9 / 10</span>
-  </div>
 </section>`;
 
 const renderBonus = (s) => `<section class="bonus">
-  <div class="top"><div class="eyebrow">${escapeHtml(s.bonus.eyebrow)}</div></div>
+  <div class="pg-mini">10 / 10</div>
   <div class="stretch">
     <h2>${escapeHtml(s.bonus.title)}</h2>
     <div class="intro">${escapeHtml(s.bonus.intro)}</div>
     <div class="template">${joinRaw(s.bonus.template_lines)}</div>
     <div class="outro">${s.bonus.outro_html}</div>
-  </div>
-  <div class="foot">
-    <span></span>
-    <span></span>
-    <span class="pg">10 / 10</span>
   </div>
 </section>`;
 
