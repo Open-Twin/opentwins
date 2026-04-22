@@ -182,9 +182,9 @@ Tags: [0-1 hashtag]
 
 ### 6. `threads-post.md` — Threads single post (≤500 characters HARD CAP)
 
-🚨 **500 chars MAX including topic tag and `\n\n`. Count before saving.** Over the cap → emit `threads-thread.md` instead.
+🚨 **500 chars MAX. Count before saving.** Over the cap → emit `threads-thread.md` instead.
 
-**Voice:** Casual, text-a-friend. Paragraphs separated by `\n\n`. Lowercase starts fine. Half-thoughts, tangents OK. End with ONE topic tag on its own line — **use the FIRST entry from the brief's `## Hashtags & Keywords` Threads section**. No body hashtags.
+**Voice:** Casual, text-a-friend. Paragraphs separated by `\n\n`. Lowercase starts fine. Half-thoughts, tangents OK. No hashtags anywhere in body — topic tag is set natively by the agent at publish time from `queries.json → hashtags[0]`.
 
 🚨 **Emit 1 post only** (exception to Rule 2 — agent consumes Post 1, variants unused).
 
@@ -200,7 +200,7 @@ Same `type` options and schemas as `twitter-post-image.spec.json` (§4): `stack`
 
 **When to emit:** 🚨 **Tue/Fri = MANDATORY** (Planner's Structural-Theme Guardrail covers these). Other weekdays: emit only if theme is structural. Non-eligible: single line `skipped: {reason}`.
 
-**Topic tag:** ONE tag on the LAST post only.
+**No hashtags anywhere.** Agent sets native topic tag on Post 1 at publish time from `queries.json → hashtags[0]`.
 
 **Image spec (`threads-thread-image.spec.json`) — emit alongside `threads-thread.md` on Tue/Fri.** Same `type` options as §6. Attached to **Post 1 only**; follow-up posts text-only. Render/attach failure → agent publishes thread text-only (never blocks).
 

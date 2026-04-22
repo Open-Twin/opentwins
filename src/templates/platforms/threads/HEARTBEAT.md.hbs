@@ -183,7 +183,7 @@ Compose dialog is identical to reply/quote dialog. Same `[role="dialog"]`, same 
 1. If `weekly.posts.current >= limit` -> mark done, skip
 2. Publish content from `config.content_source` (first `status: pending` post). If missing/empty → mark `skipped`, log `Reason=no_content_source`. No drafting.
 3. Navigate to `https://www.threads.net` (home page — Create button is in left nav)
-4. Run BROWSER-engage.md S 8 (opens compose dialog)
+4. Run BROWSER-engage.md S 8 (opens compose dialog). Then run BROWSER-core.md **S 5d** with `topicTag = queries.json.hashtags[0].replace('#','')` — sets native topic tag. Failure = skip, never block.
 5. **Image attach (only if `{{pipeline_workspace}}/content-ready/{today_date}/threads-post-image.spec.json` exists).** Runs between S 8 and S 5b. Any failure → continue text-only (never block).
    a. Render PNG:
       ```bash
@@ -213,7 +213,7 @@ Compose dialog is identical to reply/quote dialog. Same `[role="dialog"]`, same 
 2. Read `config.content_source` (threads-thread.md). If file starts with `skipped:` OR no `status: pending` posts → mark `skipped`, log `Reason=no_thread_content`. No fallback.
 3. Parse posts: split on `---`, extract body of each `## Post N` with `status: pending`. Collect into ordered array (3-5 items).
 4. Navigate to `https://www.threads.net`
-5. Run BROWSER-engage.md S 8 (opens compose dialog)
+5. Run BROWSER-engage.md S 8 (opens compose dialog). Then run BROWSER-core.md **S 5d** with `topicTag = queries.json.hashtags[0].replace('#','')` — sets native topic tag on Post 1. Failure = skip, never block.
 6. **Image attach to Post 1 only (only if `{{pipeline_workspace}}/content-ready/{today_date}/threads-thread-image.spec.json` exists).** Runs AFTER S 8 and BEFORE S T — image stays pinned to Post 1 when S T adds subsequent textboxes. Any failure → continue text-only.
    a. Render PNG:
       ```bash
