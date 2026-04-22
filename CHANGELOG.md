@@ -2,6 +2,59 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026.4.22
+
+### Scheduler & CLI
+
+**New**
+- Lifecycle-manage image-core HTTP server with `opentwins start`/`stop` — spawns as child of daemon process, SIGTERM + 2s SIGKILL fallback on shutdown, shares process group.
+
+### Dashboard
+
+**New**
+- Per-agent daily audit button — modal with live progress, 7-dimension scoring (mechanical/length/diversity/reply-target/voice/content-ready/execution), grade pill header, markdown-rendered report.
+
+### Templates
+
+**New**
+- **image-core** platform-agnostic image rendering service scaffolded at `<pipeline>/image-core/` — HTTP server + CLI, 12 visual layouts (stack, matrix, venn, note, carousel, quote, stat, compare, checklist, principle, timeline, faq), 18+ platform routes.
+- Banner layout for article cover images (Dev.to 1000×420, Medium 1500×600).
+- Writer can emit any of 11 image-core layouts (unlocked from legacy stack/matrix/venn + note).
+- Layout rotation rule + 7-day usage log — hot-zone avoidance + cross-platform variety enforcement.
+- All 5 platform agents + content-writer sanity checks migrated to image-core CLI.
+- New image specs: `devto-cover-image`, `medium-cover-image`, `threads-post-image`, `threads-thread-image`.
+- Devto agent uploads cover via `/api/images` + sets `main_image`; Medium agent surfaces cover path in publish alert.
+- Threads agent attaches images on Post 1 of single posts + threads; sets native topic tag via `Add a topic` input (S 5d).
+- All agents log `Replying to:` field for reply-quality audits.
+- image-core writes one JSON line per render/preview/error to `logs/YYYY-MM-DD.log`.
+
+**Improved**
+- Stack layout redesigned as bold brand-blue cards on ivory canvas.
+- Carousel slides drop eyebrow pill + footer bar — kept only page count in top-right.
+- Carousel cover stops `file_label` from wrapping.
+- Twitter: per-author daily reply cap, runtime fallback queries, retry-reopen compose dialog (fixes Draft.js duplicate publish).
+- Twitter: strategic min_faves floor lowered 100 → 10.
+- Threads: runtime fallback queries, profile-verify gate, writer cap fix (500 chars).
+- Substack: cold-restack rule now MUST when cold-commented (was SHOULD); require `type` on spec.
+- Planner: stop referencing disabled linkedin-article in briefs.
+- Devto: exhausted tasks mark `done` — unblocks wasted retry heartbeats.
+- Audit prompt: reject fixes that push voice toward AI-like; stateless-heartbeat constraint.
+
+**Fixed**
+- LinkedIn: SS 3c like selector covers Pulse; Pulse dedup evaluate inlines the like step (was dead code); sharpen opener-dedup rule.
+- LinkedIn SOUL: ban quote-mirror openers, subject-less fragments, dash-aside default.
+- Devto SOUL: ban corporate openers/sign-offs; flatten reply voice to match first-comment register.
+- Bluesky SOUL: opener-variety + no-quote-mirror reply rules.
+- IH SOUL: ban "the X is Y" opener frame + require concrete anchor in deep-thread replies.
+- Medium SOUL: ban em-dash parentheticals, "the X is Y" opener, bare "exactly" agreement.
+- Reddit SOUL: require casual marker in 30+ word comments, ban same opener back-to-back.
+- Substack: ban "and" opener; pre-clear restack dropdown with Escape (Radix toggle).
+- Threads SOUL: ban "yeah" reply opener.
+- Content-writer: repoint carousel example from deleted legacy renderers.
+
+**Removed**
+- Legacy `render-*.mjs` and carousel template/example files from `content-writer/templates/` — image-core CLI is the only renderer now.
+
 ## 2026.4.19
 
 ### Scheduler & CLI

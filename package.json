@@ -1,6 +1,6 @@
 {
   "name": "opentwins",
-  "version": "2026.4.19",
+  "version": "2026.4.22",
   "description": "Your autonomous digital twins across every social platform",
   "type": "module",
   "bin": {
