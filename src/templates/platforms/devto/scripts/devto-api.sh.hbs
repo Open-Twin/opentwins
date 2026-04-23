@@ -18,18 +18,16 @@ case "$1" in
     
   publish)
     # Publish an article from a markdown file
-    # Usage: devto-api.sh publish <file.md> [--draft] [--series "Name"] [--cover-image <file>]
-    if [ -z "$2" ]; then echo "Usage: devto-api.sh publish <file.md> [--draft] [--series \"Name\"] [--cover-image <file>]"; exit 1; fi
+    # Usage: devto-api.sh publish <file.md> [--draft] [--series "Name"]
+    if [ -z "$2" ]; then echo "Usage: devto-api.sh publish <file.md> [--draft] [--series \"Name\"]"; exit 1; fi
     FILE="$2"
     PUBLISHED="true"
     SERIES=""
-    COVER=""
     shift 2
     while [[ $# -gt 0 ]]; do
       case $1 in
         --draft) PUBLISHED="false"; shift ;;
         --series) SERIES="$2"; shift 2 ;;
-        --cover-image) COVER="$2"; shift 2 ;;
         *) shift ;;
       esac
     done
@@ -70,43 +68,17 @@ except Exception as e:
     log(f'tag-gate: skip ({e})')
 PY
 
-    # Optional cover upload (fail-soft: log and publish without cover on any error)
-    MAIN_IMAGE=""
-    if [ -n "$COVER" ]; then
-      if [ -f "$COVER" ]; then
-        MAIN_IMAGE=$(curl -s -X POST "$BASE_URL/images" \
-          -H "api-key: $API_KEY" -H "User-Agent: $UA" \
-          -F "image[]=@$COVER" | jq -r '.image[0] // empty')
-        if [ -z "$MAIN_IMAGE" ]; then
-          echo "cover-image upload failed — publishing without cover" >&2
-        fi
-      else
-        echo "cover-image file not found: $COVER — publishing without cover" >&2
-      fi
-    fi
-
     BODY=$(cat "$FILE")
-    jq -n --arg body "$BODY" --argjson pub "$PUBLISHED" --arg series "$SERIES" --arg mi "$MAIN_IMAGE" \
+    jq -n --arg body "$BODY" --argjson pub "$PUBLISHED" --arg series "$SERIES" \
       '{"article": (
         {"body_markdown": $body, "published": $pub}
         + (if $series != "" then {series: $series} else {} end)
-        + (if $mi     != "" then {main_image: $mi} else {} end)
       )}' | \
     curl -s -X POST "$BASE_URL/articles" \
       -H "api-key: $API_KEY" \
       -H "Content-Type: application/json" \
       -H "User-Agent: $UA" \
-      -d @- | jq '{id, title, url, cover_image, series, published_at}'
-    ;;
-
-  upload-image)
-    # Upload an image via Dev.to's images API. Returns the hosted URL.
-    # Usage: devto-api.sh upload-image <file>
-    if [ -z "$2" ]; then echo "Usage: devto-api.sh upload-image <file>"; exit 1; fi
-    if [ ! -f "$2" ]; then echo "File not found: $2" >&2; exit 1; fi
-    curl -s -X POST "$BASE_URL/images" \
-      -H "api-key: $API_KEY" -H "User-Agent: $UA" \
-      -F "image[]=@$2" | jq -r '.image[0] // .error // empty'
+      -d @- | jq '{id, title, url, series, published_at}'
     ;;
 
   update)
@@ -178,10 +150,8 @@ PY
     echo ""
     echo "Articles:"
     echo "  my-articles [count]     - List our published articles"
-    echo "  publish <file.md> [--draft] [--series \"Name\"] [--cover-image <file>]"
-    echo "                          - Publish article from markdown (uploads cover via /api/images if supplied)"
+    echo "  publish <file.md> [--draft] [--series \"Name\"] - Publish article from markdown"
     echo "  update <id> <file.md>   - Update existing article"
-    echo "  upload-image <file>     - Upload image and return hosted URL"
     echo ""
     echo "Search:"
     echo "  search <tag> [days] [per_page] - Search by tag"

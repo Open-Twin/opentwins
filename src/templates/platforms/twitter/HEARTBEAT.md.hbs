@@ -102,6 +102,7 @@ Promo pre-check: `current >= limit` → mark done.
    🚨 **MAX 5 search queries per promo task.** If 0 qualifying after the assigned 5 → retry with up to 2 broader queries from `queries.json` not in `config.queries` (different niche keywords) before marking "failed". Do NOT exceed 7 total searches per task.
    **Query order:** Try broadest queries first (broad topic before niche subtopic). Broad queries surface more qualifying targets within the 5-search cap.
 4. Pick the FRESHEST qualifying tweet. Qualifying = `ageMin < 120` with 2+ likes, OR `ageMin < 60` with any likes. Fall back to 20+ likes + any age only if no fresh candidates after 5 searches.
+   🚨 **Early-bail after query 2:** if any candidate seen so far has 20+ likes, USE IT. Keep searching only if both queries returned zero candidates meeting fresh OR 20+ like floors.
 5. 🚨 **MANDATORY: Grep pre-check** — extract tweet ID from URL (the numeric string after `/status/`, e.g. `2023716964955550168`):
    ```bash
    grep -q "^{tweet_id}$" memory/commented_posts.txt && echo "SKIP" || echo "OK"
