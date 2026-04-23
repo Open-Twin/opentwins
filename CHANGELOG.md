@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026.4.23
+
+### Templates
+
+**Improved**
+- Content-writer: ASCII-only punctuation rule (curly quotes / ellipsis / en-dash break CDP paste into Draft.js editors).
+- Twitter: early-bail after queries 1-2 if a 20+ likes candidate was seen — saves 60-90s per task.
+- Reddit: flair selector + modal guidance for shadow DOM (`r-post-flairs-modal` shadow → `#reddit-post-flair-button`, "View all flairs" hint for hidden flairs, hidden link-field false-signal guard on TEXT submits).
+- Substack BROWSER-restack: URL-anchored Notes picker + position-based Articles (walks up from each Restack button to match `/note/c-X` ancestor; picks the `post-ufi-button` after the Comments button — works for any restack count).
+
+**Fixed**
+- Bluesky S 3 search extract: move `hasMedia` / `isMemeLikely` declarations above the filter guards + prose warning — guards against Sonnet paraphrase-induced TDZ errors when agents regenerate the evaluate body.
+
+**Removed**
+- Devto: cover-image publishing disabled. Dev.to's `/api/images` path dropped inline-URL main_image support; serving covers now requires Cloudflare Images / S3 credentials, which opentwins users shouldn't need to configure.
+
+### Docs
+
+**Removed**
+- README: deprecated CLI commands (`run`, `browser`, `logs`, `audit`, `init --cli`) — all available in the dashboard.
+
 ## 2026.4.22
 
 ### Scheduler & CLI
