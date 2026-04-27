@@ -76,9 +76,11 @@ Read `memory/today_summary.json`. Use tallies to inform comment decisions:
 - `questions` is 50%+ of `comments` AND `comments >= 3` → next must NOT end with a question
 - `avg_words` above platform cap → next comment MUST be under 20 words
 
+- Draft's first word matches either entry in `first_words` → pick a different opener (avoids "the...the" / "yeah...yeah" streaks)
+
 If file doesn't exist or `date != today`, initialize:
 ```bash
-printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":""}' "$(date +%Y-%m-%d)" > memory/today_summary.json
+printf '{"date":"%s","comments":0,"styles":{},"disagreements":0,"questions":0,"avg_words":0,"last_style":"none","last_snippet":"","first_words":[]}' "$(date +%Y-%m-%d)" > memory/today_summary.json
 ```
 
 ## 2. Browser Startup (with retry)
@@ -254,7 +256,7 @@ Read PLAYBOOK.md -> "Memory Update"
 
 2. Update limits.json: current+=1 per action.
 
-3. 🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment).
+3. 🚨 **Update Today Summary** — update `memory/today_summary.json` with this heartbeat's tallies: increment `comments`, update `styles` counts, `disagreements`, `questions`, `avg_words`, set `last_style` and `last_snippet` (first 40 chars of last comment), append draft's first word (lowercased) to `first_words` array (keep last 3 only).
    - 🚨 Use the **Read** then **Write** tool to update this file — `printf > file` crashes on non-ASCII (smart quotes, em-dash) in `last_snippet`.
 
 4. **MANDATORY Slack report (NEVER skip):**
