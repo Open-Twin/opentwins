@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026.4.27
+
+### Templates
+
+**Improved**
+- All 10 agents: `first_words` dedup field in `today_summary.json` — rule rejects drafts whose first word matches the last 3 used (avoids "the…the" / "yeah…yeah" streaks within a heartbeat).
+- Devto SOUL: contractions rule. Devto BROWSER-engage §J: self-review items 8/9/10 fire at submit time (tricolon cut, contractions check).
+- Threads + content-writer: anti-AI drafting rules — no tricolons, no contrastive "isn't X — it's Y", contraction floor when 2+ consecutive sentences have zero contractions.
+- Twitter §C broadened from "X is the new Y" only → also bans "isn't X - it's Y" pivots, aphoristic closers ("that's the bet"), and full 3-item source-list citation.
+- LinkedIn: 3 mechanical pre-submit self-checks (quote-mirror detection, bare-verb opener, cite-any-number).
+- IH SOUL DON'T: tricolon ban, no contrastive, contraction floor.
+- Reddit SOUL: never end on universal takeaway / poster line; karma-building subs lead with specific memory not confirming observation.
+- Substack SOUL: cap contrastive "X, not Y" at once per session.
+- Bluesky SOUL "Anti-AI Conversation Patterns": tricolon ban on 3-item echoes, ban "yeah, and" / "yeah but" openers, skip candidates with no specific phrase/number/tool to cite.
+
+### Dependencies
+
+**Improved**
+- typescript 5.9.3 → 6.0.3 (major).
+- vitest 4.1.4 → 4.1.5; @vitest/coverage-v8 4.1.4 → 4.1.5.
+- @inquirer/prompts 8.4.1 → 8.4.2.
+- ora 9.3.0 → 9.4.0.
+- better-sqlite3 12.8.0 → 12.9.0.
+
+**Fixed**
+- `package-lock.json` regenerated with public `registry.npmjs.org` URLs (had been contaminated with private Artifactory host references — would have broken `npm install` for users outside that network).
+
 ## 2026.4.23
 
 ### Templates
