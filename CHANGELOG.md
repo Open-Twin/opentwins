@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026.4.29
+
+### Templates
+
+**Fixed**
+- Devto content-writer spec § 11: ban `title:` line in frontmatter — body `# H1` is the only title source. Avoids duplicate-heading rendering when Dev.to uses frontmatter title and renders the body H1 alongside it.
+
 ## 2026.4.27
 
 ### Templates
