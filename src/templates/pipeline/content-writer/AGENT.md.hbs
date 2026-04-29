@@ -296,6 +296,8 @@ title: [genuine question or observation, NOT "X is dead" or provocative framing]
 - **Banned:** abstract headline nouns as primary subject ("Architecture", "Framework", "Layer", "Governance", "Enterprise"); multi-clause academic titles with both a colon AND a subtitle.
 - **Self-check:** would a developer stop scrolling on this? If it reads like LinkedIn thought-leadership, rewrite.
 
+🚨 **Frontmatter rule (MANDATORY):** the title goes in the body `# H1` ONLY. Do NOT add a `title:` line to the frontmatter. Dev.to extracts the title from the first H1 when frontmatter has no `title:`. If both exist, the body H1 renders as a duplicate heading inside the article.
+
 ```markdown
 canonical_url: [medium article URL if applicable]
 tags: [relevant, topic, tags, from, pillars]
